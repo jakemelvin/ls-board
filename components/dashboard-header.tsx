@@ -1,8 +1,9 @@
 'use client';
 
-import { Bell, ChevronDown, Shield, MapPin, Truck } from 'lucide-react';
+import { Bell, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { User, UserRole } from '@/lib/mock-data';
+import { ALL_ROLES, ROLE_CONFIG } from '@/lib/roles';
 
 interface DashboardHeaderProps {
   currentUser: User;
@@ -10,22 +11,14 @@ interface DashboardHeaderProps {
   onRoleChange: (role: UserRole) => void;
 }
 
-const ROLE_CONFIG: Record<UserRole, { label: string; icon: React.ElementType; color: string }> = {
-  ADMIN: { label: 'Admin Entreprise', icon: Shield, color: 'bg-primary text-primary-foreground' },
-  COLLECTOR: { label: 'Collecteur', icon: MapPin, color: 'bg-chart-2 text-foreground' },
-  TRANSPORTER: { label: 'Transporteur', icon: Truck, color: 'bg-warning text-warning-foreground' },
-};
-
 export function DashboardHeader({ currentUser, currentRole, onRoleChange }: DashboardHeaderProps) {
-  const roles: UserRole[] = ['ADMIN', 'COLLECTOR', 'TRANSPORTER'];
-
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       {/* Role Switcher (Demo) */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Mode démo :</span>
         <div className="flex items-center gap-1 rounded-xl bg-secondary p-1">
-          {roles.map((role) => {
+          {ALL_ROLES.map((role) => {
             const config = ROLE_CONFIG[role];
             const Icon = config.icon;
             const isActive = currentRole === role;

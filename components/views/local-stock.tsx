@@ -12,12 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import {
+  formatCollectionPointLoadRatio,
+  getCollectionPointSaturationRate,
+} from '@/lib/collection-point-capacity';
+import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
 import { getStatusLabel, getStatusColor } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export function LocalStock() {
-  const { parcels, collectionPoints } = useStore();
+  const { parcels, collectionPoints, countries, cities, zones } = useStore();
   const [selectedPoint, setSelectedPoint] = useState<string | null>(
     collectionPoints[0]?.id || null
   );
@@ -42,7 +48,7 @@ export function LocalStock() {
       {/* Point Selection */}
       <div className="grid gap-4 md:grid-cols-3">
         {collectionPoints.map((point) => {
-          const saturation = Math.round((point.currentStock / point.capacity) * 100);
+          const saturation = getCollectionPointSaturationRate(point, parcels);
           const isSelected = selectedPoint === point.id;
 
           return (
@@ -67,7 +73,9 @@ export function LocalStock() {
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">{point.name}</p>
-                      <p className="text-xs text-muted-foreground">{point.city}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getCollectionPointLocationLabel(point, zones, cities, countries)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -86,7 +94,7 @@ export function LocalStock() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {point.currentStock} / {point.capacity} colis
+                    {formatCollectionPointLoadRatio(point, parcels)}
                   </p>
                 </div>
               </CardContent>
@@ -129,9 +137,8 @@ export function LocalStock() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
                           <Package className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-mono font-medium text-foreground">
-                          {parcel.trackingNumber}
-                        </span>
+                        <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
+                        <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
                       </div>
                     </TableCell>
                     <TableCell className="text-foreground">{parcel.senderName}</TableCell>

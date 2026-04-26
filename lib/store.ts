@@ -2,6 +2,9 @@
 
 import { create } from 'zustand';
 import {
+  CITIES,
+  COUNTRIES,
+  ZONES,
   PARCELS,
   VEHICLES,
   COLLECTION_POINTS,
@@ -11,12 +14,16 @@ import {
   type Parcel,
   type Vehicle,
   type CollectionPoint,
+  type Country,
+  type City,
+  type Zone,
   type User,
   type TransferRequest,
   type PricingRule,
   type ParcelStatus,
   type VehicleStatus,
   type UserRole,
+  type CreateParcelInput,
 } from './mock-data';
 
 interface StoreState {
@@ -24,11 +31,15 @@ interface StoreState {
   parcels: Parcel[];
   vehicles: Vehicle[];
   collectionPoints: CollectionPoint[];
+  countries: Country[];
+  cities: City[];
+  zones: Zone[];
   users: User[];
   transferRequests: TransferRequest[];
   pricingRules: PricingRule[];
 
   // Parcel actions
+  addParcel: (parcel: CreateParcelInput) => Parcel;
   updateParcelStatus: (parcelId: string, status: ParcelStatus, actorId: string, actorName: string, location: string, vehicleId?: string) => void;
   assignParcelToVehicle: (parcelId: string, vehicleId: string) => void;
   removeParcelFromVehicle: (parcelId: string) => void;
@@ -38,7 +49,7 @@ interface StoreState {
   updateVehicle: (vehicleId: string, updates: Partial<Vehicle>) => void;
   deleteVehicle: (vehicleId: string) => void;
   updateVehicleStatus: (vehicleId: string, status: VehicleStatus) => void;
-  assignVehicleToTransporter: (vehicleId: string, transporterId: string) => void;
+  assignVehicleToTransporters: (vehicleId: string, transporterIds: string[]) => void;
 
   // User actions
   addUser: (user: Omit<User, 'id'>) => void;
@@ -49,7 +60,17 @@ interface StoreState {
   addCollectionPoint: (point: Omit<CollectionPoint, 'id'>) => void;
   updateCollectionPoint: (pointId: string, updates: Partial<CollectionPoint>) => void;
   deleteCollectionPoint: (pointId: string) => void;
-  updatePointStock: (pointId: string, change: number) => void;
+
+  // Territory actions
+  addCountry: (country: Omit<Country, 'id'>) => void;
+  updateCountry: (countryId: string, updates: Partial<Country>) => void;
+  deleteCountry: (countryId: string) => void;
+  addCity: (city: Omit<City, 'id'>) => void;
+  updateCity: (cityId: string, updates: Partial<City>) => void;
+  deleteCity: (cityId: string) => void;
+  addZone: (zone: Omit<Zone, 'id'>) => void;
+  updateZone: (zoneId: string, updates: Partial<Zone>) => void;
+  deleteZone: (zoneId: string) => void;
 
   // Transfer Request actions
   createTransferRequest: (request: Omit<TransferRequest, 'id' | 'createdAt'>) => void;
@@ -62,17 +83,72 @@ interface StoreState {
 }
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const createTrackingNumber = () => {
+  const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  return `EXP-${timestamp}-${suffix}`;
+};
 
 export const useStore = create<StoreState>((set, get) => ({
   // Initial data
   parcels: PARCELS,
   vehicles: VEHICLES,
   collectionPoints: COLLECTION_POINTS,
+  countries: COUNTRIES,
+  cities: CITIES,
+  zones: ZONES,
   users: DEMO_USERS,
   transferRequests: TRANSFER_REQUESTS,
   pricingRules: PRICING_RULES,
 
   // Parcel actions
+  addParcel: (parcel) => {
+    const now = new Date();
+    const originCollectionPointName =
+      get().collectionPoints.find((point) => point.id === parcel.originPointId)?.name ??
+      'Point de collecte';
+    const newParcel: Parcel = {
+      id: `parcel-${generateId()}`,
+      trackingNumber: createTrackingNumber(),
+      senderName: parcel.senderName,
+      senderPhone: parcel.senderPhone,
+      recipientName: parcel.recipientName,
+      recipientPhone: parcel.recipientPhone,
+      weight: parcel.weight,
+      volume: parcel.volume,
+      description: parcel.description,
+      declaredValue: parcel.declaredValue,
+      packageCondition: parcel.packageCondition,
+      senderKyc: {
+        ...parcel.senderKyc,
+        verificationStatus: 'VERIFIED',
+        verifiedAt: now,
+      },
+      status: 'RECEIVED_AT_COLLECTION_POINT',
+      originPointId: parcel.originPointId,
+      destinationPointId: parcel.destinationPointId,
+      images: parcel.images ?? [],
+      collectedByUserId: parcel.createdBy.id,
+      collectedAt: now,
+      createdAt: now,
+      updatedAt: now,
+      history: [
+        {
+          status: 'RECEIVED_AT_COLLECTION_POINT',
+          timestamp: now,
+          actorId: parcel.createdBy.id,
+          actorName: parcel.createdBy.name,
+          location: originCollectionPointName,
+        },
+      ],
+    };
+
+    set((state) => ({ parcels: [newParcel, ...state.parcels] }));
+
+    return newParcel;
+  },
+
   updateParcelStatus: (parcelId, status, actorId, actorName, location, vehicleId) => {
     set((state) => ({
       parcels: state.parcels.map((parcel) =>
@@ -132,6 +208,9 @@ export const useStore = create<StoreState>((set, get) => ({
   deleteVehicle: (vehicleId) => {
     set((state) => ({
       vehicles: state.vehicles.filter((vehicle) => vehicle.id !== vehicleId),
+      users: state.users.map((user) =>
+        user.assignedVehicleId === vehicleId ? { ...user, assignedVehicleId: undefined } : user
+      ),
     }));
   },
 
@@ -143,10 +222,28 @@ export const useStore = create<StoreState>((set, get) => ({
     }));
   },
 
-  assignVehicleToTransporter: (vehicleId, transporterId) => {
+  assignVehicleToTransporters: (vehicleId, transporterIds) => {
     set((state) => ({
+      users: state.users.map((user) => {
+        if (user.role !== 'TRANSPORTER') {
+          return user;
+        }
+
+        const shouldBeAssigned = transporterIds.includes(user.id);
+        const isAssignedToVehicle = user.assignedVehicleId === vehicleId;
+
+        if (shouldBeAssigned) {
+          return { ...user, assignedVehicleId: vehicleId };
+        }
+
+        if (isAssignedToVehicle) {
+          return { ...user, assignedVehicleId: undefined };
+        }
+
+        return user;
+      }),
       vehicles: state.vehicles.map((vehicle) =>
-        vehicle.id === vehicleId ? { ...vehicle, assignedTransporterId: transporterId } : vehicle
+        vehicle.id === vehicleId ? { ...vehicle } : vehicle
       ),
     }));
   },
@@ -188,16 +285,62 @@ export const useStore = create<StoreState>((set, get) => ({
   deleteCollectionPoint: (pointId) => {
     set((state) => ({
       collectionPoints: state.collectionPoints.filter((point) => point.id !== pointId),
+      users: state.users.map((user) =>
+        user.assignedPointId === pointId ? { ...user, assignedPointId: undefined } : user
+      ),
     }));
   },
 
-  updatePointStock: (pointId, change) => {
+  addCountry: (country) => {
+    const newCountry: Country = { ...country, id: `country-${generateId()}` };
+    set((state) => ({ countries: [...state.countries, newCountry] }));
+  },
+
+  updateCountry: (countryId, updates) => {
     set((state) => ({
-      collectionPoints: state.collectionPoints.map((point) =>
-        point.id === pointId
-          ? { ...point, currentStock: Math.max(0, point.currentStock + change) }
-          : point
+      countries: state.countries.map((country) =>
+        country.id === countryId ? { ...country, ...updates } : country
       ),
+    }));
+  },
+
+  deleteCountry: (countryId) => {
+    set((state) => ({
+      countries: state.countries.filter((country) => country.id !== countryId),
+    }));
+  },
+
+  addCity: (city) => {
+    const newCity: City = { ...city, id: `city-${generateId()}` };
+    set((state) => ({ cities: [...state.cities, newCity] }));
+  },
+
+  updateCity: (cityId, updates) => {
+    set((state) => ({
+      cities: state.cities.map((city) => (city.id === cityId ? { ...city, ...updates } : city)),
+    }));
+  },
+
+  deleteCity: (cityId) => {
+    set((state) => ({
+      cities: state.cities.filter((city) => city.id !== cityId),
+    }));
+  },
+
+  addZone: (zone) => {
+    const newZone: Zone = { ...zone, id: `zone-${generateId()}` };
+    set((state) => ({ zones: [...state.zones, newZone] }));
+  },
+
+  updateZone: (zoneId, updates) => {
+    set((state) => ({
+      zones: state.zones.map((zone) => (zone.id === zoneId ? { ...zone, ...updates } : zone)),
+    }));
+  },
+
+  deleteZone: (zoneId) => {
+    set((state) => ({
+      zones: state.zones.filter((zone) => zone.id !== zoneId),
     }));
   },
 

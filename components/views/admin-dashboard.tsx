@@ -16,8 +16,11 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import {
+  formatCollectionPointLoadRatio,
+  getCollectionPointSaturationRate,
+} from '@/lib/collection-point-capacity';
 import { useStore } from '@/lib/store';
-import { getStatusLabel } from '@/lib/mock-data';
 
 const volumeData = [
   { name: 'Lun', colis: 45 },
@@ -45,9 +48,15 @@ export function AdminDashboard() {
   const deliveredParcels = parcels.filter((p) => p.status === 'DELIVERED').length;
   const deliveryRate = totalParcels > 0 ? Math.round((deliveredParcels / totalParcels) * 100) : 0;
   const activeVehicles = vehicles.filter((v) => v.status === 'IN_TRANSIT').length;
-  const totalCapacity = collectionPoints.reduce((sum, p) => sum + p.capacity, 0);
-  const currentStock = collectionPoints.reduce((sum, p) => sum + p.currentStock, 0);
-  const saturationRate = totalCapacity > 0 ? Math.round((currentStock / totalCapacity) * 100) : 0;
+  const saturationRate =
+    collectionPoints.length > 0
+      ? Math.round(
+          collectionPoints.reduce(
+            (sum, point) => sum + getCollectionPointSaturationRate(point, parcels),
+            0
+          ) / collectionPoints.length
+        )
+      : 0;
 
   const statusDistribution = [
     { name: 'Cree', value: parcels.filter((p) => p.status === 'CREATED').length, color: 'var(--muted)' },
@@ -247,13 +256,13 @@ export function AdminDashboard() {
           <CardContent>
             <div className="space-y-4">
               {collectionPoints.map((point) => {
-                const saturation = Math.round((point.currentStock / point.capacity) * 100);
+                const saturation = getCollectionPointSaturationRate(point, parcels);
                 return (
                   <div key={point.id}>
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-foreground">{point.name}</span>
                       <span className="text-muted-foreground">
-                        {point.currentStock}/{point.capacity}
+                        {formatCollectionPointLoadRatio(point, parcels)}
                       </span>
                     </div>
                     <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -298,7 +307,7 @@ export function AdminDashboard() {
                     <Users className="h-5 w-5 text-chart-2" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Employes</p>
+                    <p className="text-sm font-medium text-foreground">Membres d'equipe</p>
                     <p className="text-xs text-muted-foreground">Total equipe</p>
                   </div>
                 </div>

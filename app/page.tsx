@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { AdminDashboard } from '@/components/views/admin-dashboard';
+import { CollectorDashboard } from '@/components/views/collector-dashboard';
 import { FleetManagement } from '@/components/views/fleet-management';
 import { PricingEngine } from '@/components/views/pricing-engine';
 import { TeamManagement } from '@/components/views/team-management';
@@ -12,13 +13,16 @@ import { CollectionPointsView } from '@/components/views/collection-points';
 import { CollectorReception } from '@/components/views/collector-reception';
 import { LocalStock } from '@/components/views/local-stock';
 import { TransporterTour } from '@/components/views/transporter-tour';
+import { TransporterDashboard } from '@/components/views/transporter-dashboard';
 import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
+import { isAdminLikeRole } from '@/lib/roles';
 
 // Map roles to their default users
 const ROLE_USERS: Record<UserRole, User> = {
   ADMIN: DEMO_USERS.find((u) => u.role === 'ADMIN')!,
+  EMPLOYEE: DEMO_USERS.find((u) => u.role === 'EMPLOYEE')!,
   COLLECTOR: DEMO_USERS.find((u) => u.role === 'COLLECTOR')!,
   TRANSPORTER: DEMO_USERS.find((u) => u.role === 'TRANSPORTER')!,
 };
@@ -26,8 +30,9 @@ const ROLE_USERS: Record<UserRole, User> = {
 // Default section for each role
 const DEFAULT_SECTIONS: Record<UserRole, string> = {
   ADMIN: 'dashboard',
-  COLLECTOR: 'reception',
-  TRANSPORTER: 'my-tour',
+  EMPLOYEE: 'dashboard',
+  COLLECTOR: 'dashboard',
+  TRANSPORTER: 'dashboard',
 };
 
 export default function DashboardPage() {
@@ -45,6 +50,14 @@ export default function DashboardPage() {
     switch (activeSection) {
       // Admin sections
       case 'dashboard':
+        if (currentRole === 'COLLECTOR') {
+          return <CollectorDashboard currentUser={currentUser} />;
+        }
+
+        if (currentRole === 'TRANSPORTER') {
+          return <TransporterDashboard currentUser={currentUser} />;
+        }
+
         return <AdminDashboard />;
       case 'fleet':
         return <FleetManagement />;
@@ -53,11 +66,11 @@ export default function DashboardPage() {
       case 'team':
         return <TeamManagement />;
       case 'parcels':
-        return <ParcelManagement />;
+        return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
       case 'collection-points':
         return <CollectionPointsView />;
       case 'tracking':
-        return <ParcelManagement />;
+        return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
       case 'transfer-requests':
         return <TransferRequests currentRole={currentRole} />;
 
@@ -74,7 +87,11 @@ export default function DashboardPage() {
         return <PickupRequest />;
 
       default:
-        return <AdminDashboard />;
+        return isAdminLikeRole(currentRole) ? (
+          <AdminDashboard />
+        ) : (
+          <CollectorDashboard currentUser={currentUser} />
+        );
     }
   };
 

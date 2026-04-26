@@ -1,10 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Package, Check, X, AlertTriangle, QrCode, ShieldCheck, UserRound, CircleAlert } from 'lucide-react';
+import {
+  Package,
+  Check,
+  X,
+  AlertTriangle,
+  QrCode,
+  ShieldCheck,
+  CircleAlert,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -22,6 +31,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import {
   getKycDocumentLabel,
   getKycVerificationStatusColor,
@@ -34,32 +44,39 @@ import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export function CollectorReception() {
-  const { parcels, collectionPoints, updateParcelStatus, updatePointStock } = useStore();
+  const { parcels, collectionPoints, updateParcelStatus } = useStore();
   const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
   const [isKycChecked, setIsKycChecked] = useState(false);
   const [isParcelChecked, setIsParcelChecked] = useState(false);
+  const [referenceInput, setReferenceInput] = useState('');
   const [rejectReason, setRejectReason] = useState('');
 
-  // Parcels waiting to be received (CREATED status)
-  const pendingParcels = parcels.filter((p) => p.status === 'CREATED');
-  const receivedToday = parcels.filter((p) => p.status === 'RECEIVED_AT_COLLECTION_POINT').length;
-  const rejectedTotal = parcels.filter((p) => p.status === 'REJECTED').length;
+  const pendingParcels = parcels.filter((parcel) => parcel.status === 'CREATED');
+  const receivedToday = parcels.filter(
+    (parcel) => parcel.status === 'RECEIVED_AT_COLLECTION_POINT'
+  ).length;
+  const rejectedTotal = parcels.filter((parcel) => parcel.status === 'REJECTED').length;
 
-  const getPointName = (pointId: string) => {
-    return collectionPoints.find((p) => p.id === pointId)?.name || pointId;
-  };
+  const getPointName = (pointId: string) =>
+    collectionPoints.find((point) => point.id === pointId)?.name || pointId;
+
+  const normalizedReference = referenceInput.trim().toUpperCase();
+  const expectedReference = selectedParcel?.trackingNumber.trim().toUpperCase() ?? '';
+  const isReferenceValid = normalizedReference.length > 0 && normalizedReference === expectedReference;
+  const isReadyForFinalValidation = isKycChecked && isParcelChecked && isReferenceValid;
 
   const handleValidate = (parcel: Parcel) => {
     setSelectedParcel(parcel);
     setIsKycChecked(false);
     setIsParcelChecked(false);
+    setReferenceInput('');
     setIsValidateDialogOpen(true);
   };
 
   const handleFinalValidation = () => {
-    if (!selectedParcel || !isKycChecked || !isParcelChecked) {
+    if (!selectedParcel || !isReadyForFinalValidation) {
       return;
     }
 
@@ -70,10 +87,10 @@ export function CollectorReception() {
       'Jean Bastos',
       getPointName(selectedParcel.originPointId)
     );
-    updatePointStock(selectedParcel.originPointId, 1);
     setSelectedParcel(null);
     setIsKycChecked(false);
     setIsParcelChecked(false);
+    setReferenceInput('');
     setIsValidateDialogOpen(false);
   };
 
@@ -104,6 +121,7 @@ export function CollectorReception() {
       setSelectedParcel(null);
       setIsKycChecked(false);
       setIsParcelChecked(false);
+      setReferenceInput('');
     }
   };
 
@@ -116,18 +134,20 @@ export function CollectorReception() {
     }
   };
 
-  const isReadyForFinalValidation = isKycChecked && isParcelChecked;
+  const referenceHelperText =
+    referenceInput.trim().length === 0
+      ? 'Saisissez le numero de reference figurant sur le colis ou le bordereau client.'
+      : isReferenceValid
+      ? 'Numero de reference valide.'
+      : 'Le numero de reference saisi ne correspond pas au colis en cours de reception.';
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">Flux de Reception</h2>
-        <p className="text-muted-foreground">
-          Validez ou rejetez les colis soumis par les clients
-        </p>
+        <p className="text-muted-foreground">Validez ou rejetez les colis soumis par les clients</p>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 p-4">
@@ -164,7 +184,6 @@ export function CollectorReception() {
         </Card>
       </div>
 
-      {/* Pending Parcels Table */}
       <Card className="border-border bg-card">
         <CardContent className="p-0">
           <Table>
@@ -186,9 +205,8 @@ export function CollectorReception() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
                         <Package className="h-4 w-4 text-primary" />
                       </div>
-                      <span className="font-mono font-medium text-foreground">
-                        {parcel.trackingNumber}
-                      </span>
+                      <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
+                      <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
                     </div>
                   </TableCell>
                   <TableCell className="text-foreground">{parcel.senderName}</TableCell>
@@ -235,7 +253,9 @@ export function CollectorReception() {
                     <div className="flex flex-col items-center gap-2">
                       <Check className="h-8 w-8 text-success" />
                       <p className="font-medium text-foreground">Tous les colis sont traites</p>
-                      <p className="text-sm text-muted-foreground">Aucun colis en attente de validation</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun colis en attente de validation
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -245,52 +265,36 @@ export function CollectorReception() {
         </CardContent>
       </Card>
 
-      {/* Validate Dialog */}
       <Dialog open={isValidateDialogOpen} onOpenChange={handleValidateDialogChange}>
-        <DialogContent className="max-w-3xl border-border bg-card">
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Verification avant prise en charge</DialogTitle>
             <DialogDescription>
-              Controlez les informations KYC du deposant ainsi que les caracteristiques du colis avant la validation finale.
+              Controlez le deposant, le colis et le numero de reference avant la validation finale.
             </DialogDescription>
           </DialogHeader>
 
           {selectedParcel && (
             <div className="space-y-4">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
-                      <UserRound className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">Identite du deposant</p>
-                      <p className="text-sm text-muted-foreground">Point de controle KYC</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Nom complet</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Identite deposant</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Nom</span>
                       <span className="font-medium text-foreground">{selectedParcel.senderName}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">Telephone</span>
                       <span className="font-medium text-foreground">{selectedParcel.senderPhone}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Piece presentee</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Piece</span>
                       <span className="font-medium text-foreground">
                         {getKycDocumentLabel(selectedParcel.senderKyc.documentType)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Numero de piece</span>
-                      <span className="font-mono font-medium text-foreground">
-                        {selectedParcel.senderKyc.documentNumber}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">Statut KYC</span>
                       <span
                         className={cn(
@@ -301,54 +305,33 @@ export function CollectorReception() {
                         {getKycVerificationStatusLabel(selectedParcel.senderKyc.verificationStatus)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Derniere verification</span>
-                      <span className="font-medium text-foreground">
-                        {selectedParcel.senderKyc.verifiedAt.toLocaleString('fr-FR')}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-secondary/50 p-4">
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/15">
-                      <Package className="h-5 w-5 text-success" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">Informations du colis</p>
-                      <p className="text-sm text-muted-foreground">Controle physique avant acceptation</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Numero de suivi</span>
-                      <span className="font-mono font-medium text-foreground">{selectedParcel.trackingNumber}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
+                <div className="rounded-lg border border-border bg-secondary/40 p-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Colis a receptionner</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">Destinataire</span>
                       <span className="font-medium text-foreground">{selectedParcel.recipientName}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Description</span>
-                      <span className="font-medium text-foreground">{selectedParcel.description}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Poids declare</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Poids</span>
                       <span className="font-medium text-foreground">{selectedParcel.weight} kg</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Valeur declaree</span>
-                      <span className="font-medium text-foreground">{selectedParcel.declaredValue.toLocaleString('fr-FR')} EUR</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Valeur</span>
+                      <span className="font-medium text-foreground">
+                        {selectedParcel.declaredValue.toLocaleString('fr-FR')} EUR
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
-                      <span className="text-muted-foreground">Etat du colis</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Etat</span>
                       <span className="font-medium text-foreground">
                         {selectedParcel.packageCondition === 'FRAGILE' ? 'Fragile' : 'Conforme'}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">Destination</span>
                       <span className="font-medium text-foreground">
                         {getPointName(selectedParcel.destinationPointId)}
@@ -358,17 +341,42 @@ export function CollectorReception() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium text-foreground">Checklist de validation</p>
+                    <p className="text-sm font-semibold text-foreground">Numero de reference</p>
                     <p className="text-sm text-muted-foreground">
-                      La validation finale reste bloquee tant que les deux controles ne sont pas confirmes.
+                      Saisissez la reference du colis pour confirmer qu&apos;il s&apos;agit bien de la bonne remise client.
                     </p>
                   </div>
                 </div>
+                <Input
+                  value={referenceInput}
+                  onChange={(event) => setReferenceInput(event.target.value)}
+                  placeholder="Entrer le numero de reference"
+                  className="bg-secondary"
+                />
+                <div
+                  className={cn(
+                    'mt-3 flex items-start gap-3 rounded-lg border px-3 py-3',
+                    isReferenceValid
+                      ? 'border-success/40 bg-success/10'
+                      : 'border-warning/40 bg-warning/10'
+                  )}
+                >
+                  <CircleAlert
+                    className={cn(
+                      'mt-0.5 h-5 w-5',
+                      isReferenceValid ? 'text-success' : 'text-warning'
+                    )}
+                  />
+                  <p className="text-sm text-muted-foreground">{referenceHelperText}</p>
+                </div>
+              </div>
 
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="mb-3 text-sm font-semibold text-foreground">Checklist obligatoire</p>
                 <div className="space-y-3">
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
@@ -377,10 +385,9 @@ export function CollectorReception() {
                       aria-label="Confirmer la verification KYC"
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai verifie l&apos;identite du deposant, la piece presentee et la coherence des informations KYC.
+                      J&apos;ai verifie l&apos;identite du deposant et la coherence des informations KYC.
                     </span>
                   </label>
-
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
                       checked={isParcelChecked}
@@ -388,28 +395,18 @@ export function CollectorReception() {
                       aria-label="Confirmer la verification du colis"
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai controle le colis physiquement, son etat, son poids declare et les informations de destination.
+                      J&apos;ai controle le colis physiquement, son etat et ses informations logistiques.
                     </span>
                   </label>
                 </div>
               </div>
-
-              {!isReadyForFinalValidation && (
-                <div className="flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4">
-                  <CircleAlert className="mt-0.5 h-5 w-5 text-warning" />
-                  <div>
-                    <p className="font-medium text-foreground">Validation finale verrouillee</p>
-                    <p className="text-sm text-muted-foreground">
-                      Les confirmations KYC et colis sont requises avant la prise en charge.
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleValidateDialogChange(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => handleValidateDialogChange(false)}>
+              Annuler
+            </Button>
             <Button
               onClick={handleFinalValidation}
               disabled={!isReadyForFinalValidation}
@@ -422,9 +419,8 @@ export function CollectorReception() {
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={handleRejectDialogChange}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Rejeter le colis</DialogTitle>
             <DialogDescription>
@@ -435,13 +431,15 @@ export function CollectorReception() {
             <label className="mb-2 block text-sm font-medium text-foreground">Motif du rejet</label>
             <Textarea
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(event) => setRejectReason(event.target.value)}
               placeholder="Colis endommage, poids incorrect, emballage non conforme..."
-              className="bg-secondary min-h-[100px]"
+              className="min-h-[100px] bg-secondary"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleRejectDialogChange(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => handleRejectDialogChange(false)}>
+              Annuler
+            </Button>
             <Button variant="destructive" onClick={handleReject} className="gap-2">
               <AlertTriangle className="h-4 w-4" />
               Confirmer le rejet

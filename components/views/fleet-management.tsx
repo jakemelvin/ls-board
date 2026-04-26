@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -50,13 +51,14 @@ const VEHICLE_TYPES: VehicleType[] = ['MOTO', 'VAN', 'CAMION', 'AVION'];
 const VEHICLE_STATUSES: VehicleStatus[] = ['AVAILABLE', 'IN_TRANSIT', 'MAINTENANCE'];
 
 export function FleetManagement() {
-  const { vehicles, users, addVehicle, updateVehicle, deleteVehicle, assignVehicleToTransporter } = useStore();
+  const { vehicles, users, addVehicle, updateVehicle, deleteVehicle, assignVehicleToTransporters } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedTransporterIds, setSelectedTransporterIds] = useState<string[]>([]);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -75,10 +77,8 @@ export function FleetManagement() {
       getVehicleTypeLabel(v.type).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getAssignedTransporter = (transporterId?: string) => {
-    if (!transporterId) return null;
-    return users.find((u) => u.id === transporterId);
-  };
+  const getAssignedTransporters = (vehicleId: string) =>
+    transporters.filter((transporter) => transporter.assignedVehicleId === vehicleId);
 
   const handleAdd = () => {
     if (formData.plate && formData.maxVolume && formData.maxWeight) {
@@ -116,10 +116,11 @@ export function FleetManagement() {
     }
   };
 
-  const handleAssign = (transporterId: string) => {
+  const handleAssign = () => {
     if (selectedVehicle) {
-      assignVehicleToTransporter(selectedVehicle.id, transporterId === 'none' ? '' : transporterId);
+      assignVehicleToTransporters(selectedVehicle.id, selectedTransporterIds);
       setSelectedVehicle(null);
+      setSelectedTransporterIds([]);
       setIsAssignDialogOpen(false);
     }
   };
@@ -143,7 +144,18 @@ export function FleetManagement() {
 
   const openAssignDialog = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
+    setSelectedTransporterIds(
+      getAssignedTransporters(vehicle.id).map((transporter) => transporter.id)
+    );
     setIsAssignDialogOpen(true);
+  };
+
+  const toggleTransporterSelection = (transporterId: string, checked: boolean) => {
+    setSelectedTransporterIds((currentIds) =>
+      checked
+        ? [...currentIds, transporterId]
+        : currentIds.filter((currentId) => currentId !== transporterId)
+    );
   };
 
   return (
@@ -216,7 +228,7 @@ export function FleetManagement() {
             <TableBody>
               {filteredVehicles.map((vehicle) => {
                 const Icon = VEHICLE_ICONS[vehicle.type];
-                const transporter = getAssignedTransporter(vehicle.assignedTransporterId);
+                const assignedTransporters = getAssignedTransporters(vehicle.id);
 
                 return (
                   <TableRow key={vehicle.id} className="border-border">
@@ -244,12 +256,19 @@ export function FleetManagement() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      {transporter ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                            {transporter.avatar}
-                          </div>
-                          <span className="text-sm text-foreground">{transporter.name}</span>
+                      {assignedTransporters.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {assignedTransporters.map((transporter) => (
+                            <div
+                              key={transporter.id}
+                              className="flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-1"
+                            >
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                {transporter.avatar}
+                              </div>
+                              <span className="text-sm text-foreground">{transporter.name}</span>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">Non assigne</span>
@@ -480,31 +499,80 @@ export function FleetManagement() {
 
       {/* Assign Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="border-border bg-card sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Assigner un transporteur</DialogTitle>
+            <DialogTitle className="text-foreground">Assigner des transporteurs</DialogTitle>
             <DialogDescription>
-              Selectionnez un transporteur pour le vehicule {selectedVehicle?.plate}
+              Selectionnez une ou plusieurs personnes pour le vehicule {selectedVehicle?.plate}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Select
-              defaultValue={selectedVehicle?.assignedTransporterId || 'none'}
-              onValueChange={handleAssign}
-            >
-              <SelectTrigger className="bg-secondary">
-                <SelectValue placeholder="Selectionnez un transporteur" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucun</SelectItem>
-                {transporters.map((transporter) => (
-                  <SelectItem key={transporter.id} value={transporter.id}>
-                    {transporter.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4 py-4">
+            <div className="rounded-xl border border-border bg-secondary/30 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Equipe assignee</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedTransporterIds.length} personne{selectedTransporterIds.length > 1 ? 's' : ''} selectionnee{selectedTransporterIds.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedTransporterIds([])}
+                >
+                  Tout retirer
+                </Button>
+              </div>
+            </div>
+
+            <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+              {transporters.map((transporter) => {
+                const isChecked = selectedTransporterIds.includes(transporter.id);
+
+                return (
+                  <label
+                    key={transporter.id}
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={(checked) =>
+                        toggleTransporterSelection(transporter.id, checked === true)
+                      }
+                      className="mt-0.5"
+                    />
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{transporter.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {transporter.email}
+                        </p>
+                      </div>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                        {transporter.avatar}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAssignDialogOpen(false);
+                setSelectedVehicle(null);
+                setSelectedTransporterIds([]);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button onClick={handleAssign} className="gap-2">
+              <Save className="h-4 w-4" />
+              Enregistrer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

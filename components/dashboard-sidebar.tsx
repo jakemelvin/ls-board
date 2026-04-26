@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/mock-data';
+import { ADMIN_LIKE_ROLES } from '@/lib/roles';
 
 interface SidebarItem {
   id: string;
@@ -25,14 +26,14 @@ interface SidebarItem {
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['ADMIN', 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: ['ADMIN', 'COLLECTOR'] },
-  { id: 'tracking', label: 'Suivi des Étapes', icon: ClipboardList, roles: ['ADMIN', 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: ['ADMIN', 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ['ADMIN'] },
-  { id: 'collection-points', label: 'Points de Collecte', icon: MapPin, roles: ['ADMIN'] },
-  { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ['ADMIN'] },
-  { id: 'team', label: 'Gestion d\'Équipe', icon: Users, roles: ['ADMIN'] },
+  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
+  { id: 'tracking', label: 'Gestion des Colis', icon: ClipboardList, roles: [...ADMIN_LIKE_ROLES, 'TRANSPORTER'] },
+  { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
+  { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },
+  { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
+  { id: 'team', label: 'Gestion d\'Équipe', icon: Users, roles: ADMIN_LIKE_ROLES },
   // Collector specific
   { id: 'reception', label: 'Flux de Réception', icon: PackageCheck, roles: ['COLLECTOR'] },
   { id: 'local-stock', label: 'Stock Local', icon: Warehouse, roles: ['COLLECTOR'] },

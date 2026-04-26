@@ -20,12 +20,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
 import { getStatusLabel, getStatusColor, type Parcel } from '@/lib/mock-data';
+import {
+  getRecipientColumnLabel,
+  getRecipientDisplayName,
+  getSenderColumnLabel,
+  getSenderDisplayName,
+} from '@/lib/parcel-privacy';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export function PickupRequest() {
-  const { parcels, collectionPoints, createTransferRequest } = useStore();
+  const { parcels, collectionPoints, countries, cities, zones, createTransferRequest } = useStore();
   const [selectedParcels, setSelectedParcels] = useState<string[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -154,7 +162,9 @@ export function PickupRequest() {
                     <div>
                       <CardTitle className="text-foreground">{point?.name}</CardTitle>
                       <CardDescription>
-                        {point?.city} - {pointParcels.length} colis disponibles
+                        {point
+                          ? `${getCollectionPointLocationLabel(point, zones, cities, countries)} - ${pointParcels.length} colis disponibles`
+                          : `${pointParcels.length} colis disponibles`}
                         {selectedInPoint > 0 && ` (${selectedInPoint} selectionne(s))`}
                       </CardDescription>
                     </div>
@@ -174,9 +184,13 @@ export function PickupRequest() {
                     <TableRow className="border-border hover:bg-transparent">
                       <TableHead className="w-12"></TableHead>
                       <TableHead className="text-muted-foreground">N° Suivi</TableHead>
-                      <TableHead className="text-muted-foreground">Expediteur</TableHead>
+                      <TableHead className="text-muted-foreground">
+                        {getSenderColumnLabel('TRANSPORTER')}
+                      </TableHead>
                       <TableHead className="text-muted-foreground">Poids</TableHead>
-                      <TableHead className="text-muted-foreground">Destination</TableHead>
+                      <TableHead className="text-muted-foreground">
+                        {getRecipientColumnLabel('TRANSPORTER')}
+                      </TableHead>
                       <TableHead className="text-muted-foreground">Statut</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -211,15 +225,16 @@ export function PickupRequest() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Package className="h-4 w-4 text-primary" />
-                              <span className="font-mono font-medium text-foreground">
-                                {parcel.trackingNumber}
-                              </span>
+                              <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
+                              <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
                             </div>
                           </TableCell>
-                          <TableCell className="text-foreground">{parcel.senderName}</TableCell>
+                          <TableCell className="text-foreground">
+                            {getSenderDisplayName(parcel.senderName, 'TRANSPORTER')}
+                          </TableCell>
                           <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
                           <TableCell className="text-muted-foreground">
-                            {getPointName(parcel.destinationPointId)}
+                            {getRecipientDisplayName(parcel.recipientName, 'TRANSPORTER')}
                           </TableCell>
                           <TableCell>
                             <span

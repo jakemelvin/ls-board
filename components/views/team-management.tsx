@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Plus, Edit2, Trash2, Shield, MapPin, Truck, Mail, Save } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Mail, Save } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,20 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
 import { type User, type UserRole } from '@/lib/mock-data';
+import { ALL_ROLES, ROLE_CONFIG } from '@/lib/roles';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-const ROLE_CONFIG: Record<UserRole, { label: string; icon: React.ElementType; color: string }> = {
-  ADMIN: { label: 'Admin', icon: Shield, color: 'bg-primary/20 text-primary' },
-  COLLECTOR: { label: 'Collecteur', icon: MapPin, color: 'bg-chart-2/20 text-chart-2' },
-  TRANSPORTER: { label: 'Transporteur', icon: Truck, color: 'bg-warning/20 text-warning' },
-};
-
-const ROLES: UserRole[] = ['ADMIN', 'COLLECTOR', 'TRANSPORTER'];
-
 export function TeamManagement() {
-  const { users, collectionPoints, vehicles, addUser, updateUser, deleteUser } = useStore();
+  const { users, collectionPoints, countries, cities, zones, vehicles, addUser, updateUser, deleteUser } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'ALL'>('ALL');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -67,7 +61,13 @@ export function TeamManagement() {
 
   const getAssignedResource = (user: User) => {
     if (user.role === 'COLLECTOR' && user.assignedPointId) {
-      return collectionPoints.find((p) => p.id === user.assignedPointId)?.name;
+      const point = collectionPoints.find((p) => p.id === user.assignedPointId);
+
+      if (!point) {
+        return null;
+      }
+
+      return `${point.name} - ${getCollectionPointLocationLabel(point, zones, cities, countries)}`;
     }
     if (user.role === 'TRANSPORTER' && user.assignedVehicleId) {
       const vehicle = vehicles.find((v) => v.id === user.assignedVehicleId);
@@ -145,7 +145,7 @@ export function TeamManagement() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Gestion d&apos;Equipe</h2>
-          <p className="text-muted-foreground">Gerez les comptes employes, collecteurs et transporteurs</p>
+          <p className="text-muted-foreground">Gerez les comptes admins, employes, collecteurs et transporteurs</p>
         </div>
         <Button className="gap-2" onClick={() => {
           setFormData({ name: '', email: '', role: 'COLLECTOR', assignedPointId: '', assignedVehicleId: '' });
@@ -172,7 +172,7 @@ export function TeamManagement() {
           >
             Tous ({users.length})
           </Button>
-          {ROLES.map((role) => {
+          {ALL_ROLES.map((role) => {
             const config = ROLE_CONFIG[role];
             const count = users.filter((u) => u.role === role).length;
             return (
@@ -191,7 +191,7 @@ export function TeamManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Card className="border-border bg-card">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
@@ -203,14 +203,19 @@ export function TeamManagement() {
             </div>
           </CardContent>
         </Card>
-        {ROLES.map((role) => {
+        {ALL_ROLES.map((role) => {
           const config = ROLE_CONFIG[role];
           const Icon = config.icon;
           const count = users.filter((u) => u.role === role).length;
           return (
             <Card key={role} className="border-border bg-card">
               <CardContent className="flex items-center gap-3 p-4">
-                <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', config.color)}>
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg',
+                    config.surfaceColor
+                  )}
+                >
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
@@ -262,7 +267,7 @@ export function TeamManagement() {
                       <span
                         className={cn(
                           'flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium',
-                          roleConfig.color
+                          roleConfig.badgeColor
                         )}
                       >
                         <Icon className="h-3 w-3" />
@@ -343,7 +348,7 @@ export function TeamManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((role) => (
+                  {ALL_ROLES.map((role) => (
                     <SelectItem key={role} value={role}>
                       {ROLE_CONFIG[role].label}
                     </SelectItem>
@@ -361,7 +366,7 @@ export function TeamManagement() {
                   <SelectContent>
                     {collectionPoints.map((point) => (
                       <SelectItem key={point.id} value={point.id}>
-                        {point.name} - {point.city}
+                        {point.name} - {getCollectionPointLocationLabel(point, zones, cities, countries)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -430,7 +435,7 @@ export function TeamManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((role) => (
+                  {ALL_ROLES.map((role) => (
                     <SelectItem key={role} value={role}>
                       {ROLE_CONFIG[role].label}
                     </SelectItem>
@@ -448,7 +453,7 @@ export function TeamManagement() {
                   <SelectContent>
                     {collectionPoints.map((point) => (
                       <SelectItem key={point.id} value={point.id}>
-                        {point.name} - {point.city}
+                        {point.name} - {getCollectionPointLocationLabel(point, zones, cities, countries)}
                       </SelectItem>
                     ))}
                   </SelectContent>

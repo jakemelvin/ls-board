@@ -1,16 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  ArrowRightLeft,
-  Package,
-  Check,
-  X,
-  Clock,
-  QrCode,
-  CircleAlert,
-  ShieldCheck,
-} from 'lucide-react';
+import { ArrowRightLeft, Check, X, Clock, QrCode, Eye, Truck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,8 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import { type Parcel, type UserRole } from '@/lib/mock-data';
+import { getRecipientDisplayName, getSenderDisplayName } from '@/lib/parcel-privacy';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +37,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     transferRequests,
     parcels,
     users,
+    vehicles,
     collectionPoints,
     updateTransferRequestStatus,
     updateParcelStatus,
@@ -52,12 +45,12 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
   } = useStore();
   const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isHistoryDetailDialogOpen, setIsHistoryDetailDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [referenceInput, setReferenceInput] = useState('');
 
-  const getUser = (userId: string) => users.find((u) => u.id === userId);
-  const getPoint = (pointId: string) => collectionPoints.find((p) => p.id === pointId);
-  const getParcel = (parcelId: string) => parcels.find((p) => p.id === parcelId);
+  const getUser = (userId: string) => users.find((user) => user.id === userId);
+  const getPoint = (pointId: string) => collectionPoints.find((point) => point.id === pointId);
+  const getParcel = (parcelId: string) => parcels.find((parcel) => parcel.id === parcelId);
 
   const pendingRequests = transferRequests.filter((request) => request.status === 'PENDING');
   const processedRequests = transferRequests.filter((request) => request.status !== 'PENDING');
@@ -66,43 +59,13 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     : null;
   const selectedRequestParcels =
     selectedRequest?.parcelIds.map((parcelId) => getParcel(parcelId)).filter(isParcel) ?? [];
-  const expectedReferences = selectedRequestParcels.map((parcel) =>
-    parcel.trackingNumber.trim().toUpperCase()
-  );
-  const enteredReferences = referenceInput
-    .split(/[\n,;]+/)
-    .map((reference) => reference.trim().toUpperCase())
-    .filter(Boolean);
-  const uniqueEnteredReferences = [...new Set(enteredReferences)];
-  const missingReferences = expectedReferences.filter(
-    (reference) => !uniqueEnteredReferences.includes(reference)
-  );
-  const unexpectedReferences = uniqueEnteredReferences.filter(
-    (reference) => !expectedReferences.includes(reference)
-  );
-  const hasReferenceCountMismatch =
-    referenceInput.trim().length > 0 && uniqueEnteredReferences.length !== expectedReferences.length;
-  const areReferencesValid =
-    expectedReferences.length > 0 &&
-    missingReferences.length === 0 &&
-    unexpectedReferences.length === 0 &&
-    uniqueEnteredReferences.length === expectedReferences.length;
-
-  const referenceValidationMessage =
-    referenceInput.trim().length === 0
-      ? `Saisissez ${expectedReferences.length} numero${expectedReferences.length > 1 ? 's' : ''} de reference, un par ligne.`
-      : areReferencesValid
-      ? 'Les references saisies correspondent exactement a la demande.'
-      : missingReferences.length > 0
-      ? `Reference${missingReferences.length > 1 ? 's' : ''} manquante${missingReferences.length > 1 ? 's' : ''} pour cette demande.`
-      : unexpectedReferences.length > 0
-      ? 'Une ou plusieurs references saisies ne correspondent pas aux colis attendus.'
-      : hasReferenceCountMismatch
-      ? 'Le nombre de references saisies ne correspond pas au nombre de colis a transferer.'
-      : 'Les references saisies sont invalides.';
+  const selectedTransporter = selectedRequest ? getUser(selectedRequest.transporterId) : null;
+  const selectedTransporterVehicle = selectedTransporter?.assignedVehicleId
+    ? vehicles.find((vehicle) => vehicle.id === selectedTransporter.assignedVehicleId) ?? null
+    : null;
 
   const handleAccept = () => {
-    if (!selectedRequestId || !areReferencesValid) {
+    if (!selectedRequestId) {
       return;
     }
 
@@ -130,7 +93,6 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     }
 
     setSelectedRequestId(null);
-    setReferenceInput('');
     setIsAcceptDialogOpen(false);
   };
 
@@ -144,7 +106,6 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
 
   const openAcceptDialog = (requestId: string) => {
     setSelectedRequestId(requestId);
-    setReferenceInput('');
     setIsAcceptDialogOpen(true);
   };
 
@@ -158,12 +119,24 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
 
     if (!open) {
       setSelectedRequestId(null);
-      setReferenceInput('');
     }
   };
 
   const handleRejectDialogChange = (open: boolean) => {
     setIsRejectDialogOpen(open);
+
+    if (!open) {
+      setSelectedRequestId(null);
+    }
+  };
+
+  const openHistoryDetailDialog = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setIsHistoryDetailDialogOpen(true);
+  };
+
+  const handleHistoryDetailDialogChange = (open: boolean) => {
+    setIsHistoryDetailDialogOpen(open);
 
     if (!open) {
       setSelectedRequestId(null);
@@ -280,7 +253,9 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                             {requestParcels.length} colis a transferer
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {requestParcels.map((parcel) => parcel.senderName).join(', ')}
+                            {currentRole === 'TRANSPORTER'
+                              ? 'Informations expediteur masquees'
+                              : requestParcels.map((parcel) => parcel.senderName).join(', ')}
                           </p>
                         </div>
                       </TableCell>
@@ -353,6 +328,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                     <TableHead className="text-muted-foreground">Point</TableHead>
                     <TableHead className="text-muted-foreground">Colis</TableHead>
                     <TableHead className="text-muted-foreground">Statut</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Details</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -380,6 +356,16 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                             {request.status === 'ACCEPTED' ? 'Acceptee' : 'Rejetee'}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openHistoryDetailDialog(request.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -391,108 +377,41 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       )}
 
       <Dialog open={isAcceptDialogOpen} onOpenChange={handleAcceptDialogChange}>
-        <DialogContent className="border-border bg-card">
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Accepter la demande</DialogTitle>
             <DialogDescription>
-              Avant la validation finale, saisissez les numeros de reference des colis pour confirmer que la demande correspond exactement aux colis remis.
+              Confirmez le transfert des colis au transporteur. Les colis passeront au statut EN_TRANSIT.
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
-            <div className="space-y-4">
-              <div className="rounded-lg bg-secondary p-4">
-                <div className="mb-3 flex items-start gap-3">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Synthese de la demande</p>
-                    <p className="text-sm text-muted-foreground">
-                      Les references ne sont plus visibles dans la liste. Elles doivent etre confirmees dans ce modal.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg bg-card px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Transporteur</p>
-                    <p className="font-medium text-foreground">
-                      {getUser(selectedRequest.transporterId)?.name}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-card px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Point de collecte</p>
-                    <p className="font-medium text-foreground">
-                      {getPoint(selectedRequest.collectionPointId)?.name}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-card px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Nombre de colis</p>
-                    <p className="font-medium text-foreground">{selectedRequestParcels.length}</p>
-                  </div>
-                  <div className="rounded-lg bg-card px-3 py-2">
-                    <p className="text-xs text-muted-foreground">Poids total</p>
-                    <p className="font-medium text-foreground">
-                      {selectedRequestParcels.reduce((total, parcel) => total + parcel.weight, 0).toFixed(1)} kg
-                    </p>
-                  </div>
-                </div>
+            <div className="space-y-3 rounded-lg bg-secondary p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Transporteur</span>
+                <span className="text-sm font-medium text-foreground">
+                  {getUser(selectedRequest.transporterId)?.name}
+                </span>
               </div>
-
-              <div className="rounded-lg border border-border bg-card p-4">
-                <p className="mb-2 text-sm font-medium text-foreground">Colis concernes</p>
-                <div className="space-y-2">
-                  {selectedRequestParcels.map((parcel) => (
-                    <div
-                      key={parcel.id}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-secondary px-3 py-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {parcel.senderName} vers {parcel.recipientName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{parcel.weight} kg</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {getPoint(parcel.destinationPointId)?.city}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Point de collecte</span>
+                <span className="text-sm font-medium text-foreground">
+                  {getPoint(selectedRequest.collectionPointId)?.name}
+                </span>
               </div>
-
-              <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Numeros de reference</p>
-                  <p className="text-sm text-muted-foreground">
-                    Entrez un numero de reference par ligne. La validation finale reste verrouillee tant que les references attendues ne sont pas saisies exactement.
-                  </p>
-                </div>
-                <Textarea
-                  value={referenceInput}
-                  onChange={(event) => setReferenceInput(event.target.value)}
-                  placeholder={'EXP-2024-001\nEXP-2024-002'}
-                  className="min-h-[140px] bg-secondary"
-                />
-                <div
-                  className={cn(
-                    'flex items-start gap-3 rounded-lg border px-3 py-3',
-                    areReferencesValid
-                      ? 'border-success/40 bg-success/10'
-                      : 'border-warning/40 bg-warning/10'
-                  )}
-                >
-                  <CircleAlert
-                    className={cn(
-                      'mt-0.5 h-5 w-5',
-                      areReferencesValid ? 'text-success' : 'text-warning'
-                    )}
-                  />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">Controle de coherence</p>
-                    <p className="text-sm text-muted-foreground">{referenceValidationMessage}</p>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Nombre de colis</span>
+                <span className="text-sm font-medium text-foreground">
+                  {selectedRequestParcels.length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Poids total</span>
+                <span className="text-sm font-medium text-foreground">
+                  {selectedRequestParcels
+                    .reduce((total, parcel) => total + parcel.weight, 0)
+                    .toFixed(1)}{' '}
+                  kg
+                </span>
               </div>
             </div>
           )}
@@ -502,7 +421,6 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             </Button>
             <Button
               onClick={handleAccept}
-              disabled={!areReferencesValid}
               className="gap-2 bg-success text-success-foreground hover:bg-success/90"
             >
               <Check className="h-4 w-4" />
@@ -513,7 +431,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       </Dialog>
 
       <Dialog open={isRejectDialogOpen} onOpenChange={handleRejectDialogChange}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Rejeter la demande</DialogTitle>
             <DialogDescription>
@@ -527,6 +445,127 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             <Button variant="destructive" onClick={handleReject} className="gap-2">
               <X className="h-4 w-4" />
               Rejeter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHistoryDetailDialogOpen} onOpenChange={handleHistoryDetailDialogChange}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Details de la demande</DialogTitle>
+            <DialogDescription>
+              Consultez les informations du transporteur et les references des colis pris en charge.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-secondary p-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Demande</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">ID</span>
+                      <span className="font-medium text-foreground">
+                        #{selectedRequest.id.split('-')[1]}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Statut</span>
+                      <span
+                        className={cn(
+                          'rounded-lg px-2 py-1 text-xs font-medium',
+                          selectedRequest.status === 'ACCEPTED'
+                            ? 'bg-success/20 text-success'
+                            : 'bg-destructive/20 text-destructive'
+                        )}
+                      >
+                        {selectedRequest.status === 'ACCEPTED' ? 'Acceptee' : 'Rejetee'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="font-medium text-foreground">
+                        {selectedRequest.createdAt.toLocaleString('fr-FR')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Point de collecte</span>
+                      <span className="font-medium text-foreground">
+                        {getPoint(selectedRequest.collectionPointId)?.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-secondary p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">Transporteur</p>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Nom</span>
+                      <span className="font-medium text-foreground">
+                        {selectedTransporter?.name || 'Non renseigne'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Email</span>
+                      <span className="font-medium text-foreground">
+                        {selectedTransporter?.email || 'Non renseigne'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Vehicule assigne</span>
+                      <span className="font-medium text-foreground">
+                        {selectedTransporterVehicle?.plate || 'Non renseigne'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Type vehicule</span>
+                      <span className="font-medium text-foreground">
+                        {selectedTransporterVehicle?.type || 'Non renseigne'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="mb-3 text-sm font-semibold text-foreground">Colis pris en charge</p>
+                <div className="space-y-3">
+                  {selectedRequestParcels.map((parcel) => (
+                    <div
+                      key={parcel.id}
+                      className="rounded-lg border border-border bg-secondary px-4 py-3"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <p className="font-mono text-sm font-semibold text-foreground">
+                              {parcel.trackingNumber}
+                            </p>
+                            <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {getSenderDisplayName(parcel.senderName, currentRole)} vers{' '}
+                            {getRecipientDisplayName(parcel.recipientName, currentRole)}
+                          </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {parcel.weight} kg
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleHistoryDetailDialogChange(false)}>
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>

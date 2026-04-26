@@ -6,7 +6,8 @@ export type KycVerificationStatus = 'VERIFIED' | 'PENDING_REVIEW';
 export type VehicleType = 'MOTO' | 'VAN' | 'CAMION' | 'AVION';
 export type VehicleStatus = 'AVAILABLE' | 'IN_TRANSIT' | 'MAINTENANCE';
 
-export type UserRole = 'ADMIN' | 'COLLECTOR' | 'TRANSPORTER';
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'COLLECTOR' | 'TRANSPORTER';
+export type CollectionPointCapacityUnit = 'KG' | 'M3';
 
 export interface User {
   id: string;
@@ -22,10 +23,30 @@ export interface CollectionPoint {
   id: string;
   name: string;
   address: string;
-  city: string;
-  capacity: number;
-  currentStock: number;
+  zoneId: string;
+  maxCapacity: {
+    value: number;
+    unit: CollectionPointCapacityUnit;
+  };
   responsibleId: string;
+}
+
+export interface Country {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface City {
+  id: string;
+  countryId: string;
+  name: string;
+}
+
+export interface Zone {
+  id: string;
+  cityId: string;
+  name: string;
 }
 
 export interface Vehicle {
@@ -35,7 +56,6 @@ export interface Vehicle {
   maxVolume: number; // m³
   maxWeight: number; // kg
   status: VehicleStatus;
-  assignedTransporterId?: string;
 }
 
 export interface Parcel {
@@ -44,7 +64,9 @@ export interface Parcel {
   senderName: string;
   senderPhone: string;
   recipientName: string;
+  recipientPhone?: string;
   weight: number; // kg
+  volume: number; // m3
   description: string;
   declaredValue: number;
   packageCondition: 'GOOD' | 'FRAGILE';
@@ -58,9 +80,20 @@ export interface Parcel {
   originPointId: string;
   destinationPointId: string;
   currentVehicleId?: string;
+  images?: ParcelImage[];
+  collectedByUserId?: string;
+  collectedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   history: ParcelHistoryEntry[];
+}
+
+export interface ParcelImage {
+  id: string;
+  name: string;
+  url: string;
+  mimeType: string;
+  sizeInBytes: number;
 }
 
 export interface ParcelHistoryEntry {
@@ -91,6 +124,26 @@ export interface PricingRule {
   zoneMultiplier: number;
 }
 
+export interface CreateParcelInput {
+  senderName: string;
+  senderPhone: string;
+  recipientName: string;
+  recipientPhone?: string;
+  weight: number;
+  volume: number;
+  description: string;
+  declaredValue: number;
+  packageCondition: 'GOOD' | 'FRAGILE';
+  senderKyc: {
+    documentType: KycDocumentType;
+    documentNumber: string;
+  };
+  destinationPointId: string;
+  originPointId: string;
+  createdBy: Pick<User, 'id' | 'name'>;
+  images?: ParcelImage[];
+}
+
 // Demo accounts
 export const DEMO_USERS: User[] = [
   {
@@ -99,6 +152,13 @@ export const DEMO_USERS: User[] = [
     name: 'Marie Dupont',
     role: 'ADMIN',
     avatar: 'MD',
+  },
+  {
+    id: 'employee-1',
+    email: 'employe@express.com',
+    name: 'Claire Martin',
+    role: 'EMPLOYEE',
+    avatar: 'CM',
   },
   {
     id: 'collector-1',
@@ -135,32 +195,107 @@ export const DEMO_USERS: User[] = [
 ];
 
 // Collection Points
+export const COUNTRIES: Country[] = [
+  {
+    id: 'country-1',
+    name: 'France',
+    code: 'FR',
+  },
+  {
+    id: 'country-2',
+    name: 'Cameroun',
+    code: 'CM',
+  },
+];
+
+export const CITIES: City[] = [
+  {
+    id: 'city-1',
+    countryId: 'country-1',
+    name: 'Paris',
+  },
+  {
+    id: 'city-2',
+    countryId: 'country-1',
+    name: 'Lille',
+  },
+  {
+    id: 'city-3',
+    countryId: 'country-1',
+    name: 'Marseille',
+  },
+  {
+    id: 'city-4',
+    countryId: 'country-2',
+    name: 'Douala',
+  },
+  {
+    id: 'city-5',
+    countryId: 'country-2',
+    name: 'Yaounde',
+  },
+];
+
+export const ZONES: Zone[] = [
+  {
+    id: 'zone-1',
+    cityId: 'city-1',
+    name: 'Centre Ville',
+  },
+  {
+    id: 'zone-2',
+    cityId: 'city-2',
+    name: 'Nord Gare',
+  },
+  {
+    id: 'zone-3',
+    cityId: 'city-3',
+    name: 'Sud Littoral',
+  },
+  {
+    id: 'zone-4',
+    cityId: 'city-4',
+    name: 'Akwa',
+  },
+  {
+    id: 'zone-5',
+    cityId: 'city-5',
+    name: 'Centre Administratif',
+  },
+];
+
 export const COLLECTION_POINTS: CollectionPoint[] = [
   {
     id: 'point-1',
     name: 'Pharmacie du Centre',
     address: '15 Rue de la Paix',
-    city: 'Paris',
-    capacity: 100,
-    currentStock: 45,
+    zoneId: 'zone-1',
+    maxCapacity: {
+      value: 180,
+      unit: 'KG',
+    },
     responsibleId: 'collector-1',
   },
   {
     id: 'point-2',
     name: 'Boutique Nord',
     address: '78 Avenue du Nord',
-    city: 'Lille',
-    capacity: 80,
-    currentStock: 32,
+    zoneId: 'zone-2',
+    maxCapacity: {
+      value: 4.5,
+      unit: 'M3',
+    },
     responsibleId: 'collector-2',
   },
   {
     id: 'point-3',
     name: 'Relais Express Sud',
     address: '42 Boulevard du Sud',
-    city: 'Marseille',
-    capacity: 120,
-    currentStock: 67,
+    zoneId: 'zone-3',
+    maxCapacity: {
+      value: 260,
+      unit: 'KG',
+    },
     responsibleId: 'collector-1',
   },
 ];
@@ -174,7 +309,6 @@ export const VEHICLES: Vehicle[] = [
     maxVolume: 12,
     maxWeight: 1500,
     status: 'AVAILABLE',
-    assignedTransporterId: 'transporter-1',
   },
   {
     id: 'vehicle-2',
@@ -183,7 +317,6 @@ export const VEHICLES: Vehicle[] = [
     maxVolume: 0.5,
     maxWeight: 50,
     status: 'IN_TRANSIT',
-    assignedTransporterId: 'transporter-2',
   },
   {
     id: 'vehicle-3',
@@ -212,6 +345,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 12 34 56 78',
     recipientName: 'Marc Petit',
     weight: 2.5,
+    volume: 0.03,
     description: 'Boite de medicaments',
     declaredValue: 85,
     packageCondition: 'GOOD',
@@ -241,6 +375,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 22 11 44 55',
     recipientName: 'Thomas Grand',
     weight: 5.0,
+    volume: 0.08,
     description: 'Pieces detachees auto',
     declaredValue: 220,
     packageCondition: 'FRAGILE',
@@ -269,6 +404,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 98 76 54 32',
     recipientName: 'Emma Blanc',
     weight: 1.2,
+    volume: 0.01,
     description: 'Documents contractuels',
     declaredValue: 35,
     packageCondition: 'GOOD',
@@ -295,6 +431,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 77 88 91 12',
     recipientName: 'David Rouge',
     weight: 3.8,
+    volume: 0.05,
     description: 'Cosmetiques scelles',
     declaredValue: 140,
     packageCondition: 'FRAGILE',
@@ -320,6 +457,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 18 27 36 45',
     recipientName: 'Laura Bleu',
     weight: 0.8,
+    volume: 0.015,
     description: 'Accessoires telephonie',
     declaredValue: 60,
     packageCondition: 'GOOD',
@@ -348,6 +486,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 54 44 33 22',
     recipientName: 'Antoine Gris',
     weight: 4.2,
+    volume: 0.09,
     description: 'Textiles premium',
     declaredValue: 180,
     packageCondition: 'GOOD',
@@ -376,6 +515,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 70 80 90 10',
     recipientName: 'Camille Orange',
     weight: 2.0,
+    volume: 0.025,
     description: 'Produits cosmetiques',
     declaredValue: 95,
     packageCondition: 'FRAGILE',
@@ -402,6 +542,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 15 25 35 45',
     recipientName: 'Maxime Indigo',
     weight: 6.5,
+    volume: 0.18,
     description: 'Petit electromenager',
     declaredValue: 310,
     packageCondition: 'FRAGILE',
@@ -428,6 +569,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 23 45 67 89',
     recipientName: 'Sarah Beige',
     weight: 1.5,
+    volume: 0.02,
     description: 'Dossier papier',
     declaredValue: 40,
     packageCondition: 'GOOD',
@@ -453,6 +595,7 @@ export const PARCELS: Parcel[] = [
     senderPhone: '+33 6 66 77 88 99',
     recipientName: 'Théo Magenta',
     weight: 3.0,
+    volume: 0.06,
     description: 'Vetements enfant',
     declaredValue: 120,
     packageCondition: 'GOOD',

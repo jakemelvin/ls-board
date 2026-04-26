@@ -20,12 +20,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { getCollectionPointFullAddress } from '@/lib/collection-point-location';
 import { getStatusLabel, getStatusColor, type Parcel } from '@/lib/mock-data';
+import {
+  getRecipientColumnLabel,
+  getRecipientDisplayName,
+  getSenderColumnLabel,
+  getSenderDisplayName,
+} from '@/lib/parcel-privacy';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export function TransporterTour() {
-  const { parcels, vehicles, collectionPoints, updateParcelStatus, removeParcelFromVehicle, updatePointStock } = useStore();
+  const {
+    parcels,
+    vehicles,
+    collectionPoints,
+    countries,
+    cities,
+    zones,
+    updateParcelStatus,
+    removeParcelFromVehicle,
+  } = useStore();
   const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
 
@@ -59,7 +76,6 @@ export function TransporterTour() {
         destinationPoint?.name || 'Point de destination'
       );
       removeParcelFromVehicle(selectedParcel.id);
-      updatePointStock(selectedParcel.destinationPointId, 1);
       setSelectedParcel(null);
       setIsDeliverDialogOpen(false);
     }
@@ -134,8 +150,12 @@ export function TransporterTour() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">N° Suivi</TableHead>
-                <TableHead className="text-muted-foreground">Expediteur</TableHead>
-                <TableHead className="text-muted-foreground">Destinataire</TableHead>
+                <TableHead className="text-muted-foreground">
+                  {getSenderColumnLabel('TRANSPORTER')}
+                </TableHead>
+                <TableHead className="text-muted-foreground">
+                  {getRecipientColumnLabel('TRANSPORTER')}
+                </TableHead>
                 <TableHead className="text-muted-foreground">Poids</TableHead>
                 <TableHead className="text-muted-foreground">Destination</TableHead>
                 <TableHead className="text-muted-foreground">Statut</TableHead>
@@ -153,13 +173,16 @@ export function TransporterTour() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
                           <Package className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-mono font-medium text-foreground">
-                          {parcel.trackingNumber}
-                        </span>
+                        <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
+                        <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
                       </div>
                     </TableCell>
-                    <TableCell className="text-foreground">{parcel.senderName}</TableCell>
-                    <TableCell className="text-foreground">{parcel.recipientName}</TableCell>
+                    <TableCell className="text-foreground">
+                      {getSenderDisplayName(parcel.senderName, 'TRANSPORTER')}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {getRecipientDisplayName(parcel.recipientName, 'TRANSPORTER')}
+                    </TableCell>
                     <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -225,7 +248,15 @@ export function TransporterTour() {
                     {collectionPoints.find((p) => p.id === selectedParcel.destinationPointId)?.name}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {collectionPoints.find((p) => p.id === selectedParcel.destinationPointId)?.address}
+                    {(() => {
+                      const point = collectionPoints.find(
+                        (collectionPoint) => collectionPoint.id === selectedParcel.destinationPointId
+                      );
+
+                      return point
+                        ? getCollectionPointFullAddress(point, zones, cities, countries)
+                        : '';
+                    })()}
                   </p>
                 </div>
               </div>
