@@ -21,8 +21,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { isCollectionPointVisibleToClients } from '@/lib/collection-point-availability';
 import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
-import { getStatusLabel, getStatusColor, type Parcel } from '@/lib/mock-data';
+import { getStatusLabel, getStatusColor, type Parcel, type User } from '@/lib/mock-data';
 import {
   getRecipientColumnLabel,
   getRecipientDisplayName,
@@ -32,7 +33,11 @@ import {
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-export function PickupRequest() {
+interface PickupRequestProps {
+  currentUser: User;
+}
+
+export function PickupRequest({ currentUser }: PickupRequestProps) {
   const { parcels, collectionPoints, countries, cities, zones, createTransferRequest } = useStore();
   const [selectedParcels, setSelectedParcels] = useState<string[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
@@ -40,7 +45,12 @@ export function PickupRequest() {
   const [requestSent, setRequestSent] = useState(false);
 
   // Available parcels for pickup (RECEIVED_AT_COLLECTION_POINT)
-  const availableParcels = parcels.filter((p) => p.status === 'RECEIVED_AT_COLLECTION_POINT');
+  const visibleCollectionPointIds = new Set(
+    collectionPoints.filter(isCollectionPointVisibleToClients).map((point) => point.id)
+  );
+  const availableParcels = parcels.filter(
+    (p) => p.status === 'RECEIVED_AT_COLLECTION_POINT' && visibleCollectionPointIds.has(p.originPointId)
+  );
 
   const toggleParcel = (parcelId: string) => {
     setSelectedParcels((prev) =>
@@ -49,11 +59,13 @@ export function PickupRequest() {
   };
 
   const handleSendRequest = () => {
-    if (selectedParcels.length > 0 && selectedPoint) {
+    const selectedCollectionPoint = collectionPoints.find((point) => point.id === selectedPoint);
+
+    if (selectedParcels.length > 0 && selectedPoint && selectedCollectionPoint) {
       createTransferRequest({
         parcelIds: selectedParcels,
-        transporterId: 'transporter-1',
-        collectorId: 'collector-1',
+        transporterId: currentUser.id,
+        collectorId: selectedCollectionPoint.responsibleId,
         collectionPointId: selectedPoint,
         status: 'PENDING',
       });
@@ -88,7 +100,7 @@ export function PickupRequest() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Demande de Prise en Charge</h2>
+        <h2 className="text-2xl font-bold text-foreground">Nouvelle demande de prise</h2>
         <p className="text-muted-foreground">
           Selectionnez les colis a recuperer et envoyez une demande au collecteur
         </p>

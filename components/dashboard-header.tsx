@@ -1,6 +1,7 @@
 'use client';
 
 import { Bell, ChevronDown } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { User, UserRole } from '@/lib/mock-data';
 import { ALL_ROLES, ROLE_CONFIG } from '@/lib/roles';
@@ -54,9 +55,14 @@ export function DashboardHeader({ currentUser, currentRole, onRoleChange }: Dash
 
         {/* User */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-            {currentUser.avatar}
-          </div>
+          <Avatar className="h-10 w-10 rounded-xl">
+            {currentUser.profilePhotoUrl && (
+              <AvatarImage src={currentUser.profilePhotoUrl} alt={currentUser.name} />
+            )}
+            <AvatarFallback className="rounded-xl bg-primary text-sm font-bold text-primary-foreground">
+              {currentUser.avatar}
+            </AvatarFallback>
+          </Avatar>
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-foreground">{currentUser.name}</p>
             <p className="text-xs text-muted-foreground">{currentUser.email}</p>

@@ -1,26 +1,28 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    @media (prefers-color-scheme: light) {
-      .background { fill: black; }
-      .foreground { fill: white; }
-    }
-    @media (prefers-color-scheme: dark) {
-      .background { fill: white; }
-      .foreground { fill: black; }
-    }
-  </style>
-  <g clip-path="url(#clip0_7960_43945)">
-    <rect class="background" width="180" height="180" rx="37" />
-    <g style="transform: scale(95%); transform-origin: center">
-      <path class="foreground"
-        d="M101.141 53H136.632C151.023 53 162.689 64.6662 162.689 79.0573V112.904H148.112V79.0573C148.112 78.7105 148.098 78.3662 148.072 78.0251L112.581 112.898C112.701 112.902 112.821 112.904 112.941 112.904H148.112V126.672H112.941C98.5504 126.672 86.5638 114.891 86.5638 100.5V66.7434H101.141V100.5C101.141 101.15 101.191 101.792 101.289 102.422L137.56 66.7816C137.255 66.7563 136.945 66.7434 136.632 66.7434H101.141V53Z" />
-      <path class="foreground"
-        d="M65.2926 124.136L14 66.7372H34.6355L64.7495 100.436V66.7372H80.1365V118.47C80.1365 126.278 70.4953 129.958 65.2926 124.136Z" />
-    </g>
-  </g>
+﻿<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <clipPath id="clip0_7960_43945">
-      <rect width="180" height="180" fill="white" />
-    </clipPath>
+    <linearGradient id="bg" x1="22" y1="18" x2="154" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B4BA1"/>
+      <stop offset="0.55" stop-color="#123E82"/>
+      <stop offset="1" stop-color="#102D66"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(52 38) rotate(53) scale(128)">
+      <stop stop-color="#4EA1FF" stop-opacity="0.62"/>
+      <stop offset="0.48" stop-color="#1268D9" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#0B2D6B" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="23" y="28" width="134" height="132" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#05265F" flood-opacity="0.36"/>
+    </filter>
   </defs>
+  <rect width="180" height="180" rx="38" fill="url(#bg)"/>
+  <rect width="180" height="180" rx="38" fill="url(#glow)"/>
+  <path d="M16 118C43 89 62 87 86 113C106 135 119 128 130 104C137 89 146 82 164 78" stroke="#2F7EEB" stroke-opacity="0.22" stroke-width="5" stroke-linecap="round"/>
+  <g filter="url(#shadow)">
+    <rect x="43" y="42" width="94" height="94" rx="31" fill="#1C579B" fill-opacity="0.92"/>
+    <rect x="44" y="43" width="92" height="92" rx="30" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+    <text x="90" y="103" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="900" letter-spacing="-4">SA</text>
+  </g>
+  <circle cx="130" cy="58" r="16" fill="#0D6DFD"/>
+  <circle cx="130" cy="58" r="20" stroke="#0D6DFD" stroke-opacity="0.22" stroke-width="8"/>
+  <path d="M121 52.5H131.5V63H121V52.5ZM132.5 56H137L140 59.5V63H132.5V56ZM124.5 66.5A2.5 2.5 0 1 0 124.5 61.5A2.5 2.5 0 0 0 124.5 66.5ZM136.5 66.5A2.5 2.5 0 1 0 136.5 61.5A2.5 2.5 0 0 0 136.5 66.5Z" fill="white"/>
 </svg>

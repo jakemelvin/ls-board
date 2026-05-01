@@ -4,6 +4,7 @@ import { ChangeEvent, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Camera,
+  Calculator,
   Clock3,
   Eye,
   FileImage,
@@ -22,6 +23,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -53,6 +55,7 @@ import {
   type Parcel,
   type ParcelImage,
   type ParcelStatus,
+  type ShipmentType,
   type User,
   type UserRole,
 } from '@/lib/mock-data';
@@ -65,6 +68,12 @@ import {
 } from '@/lib/parcel-privacy';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import {
+  calculateOperationPrice,
+  estimateRouteDistanceKm,
+  getPricingRuleForShipmentType,
+  shipmentTypeLabels,
+} from '@/lib/pricing';
 
 const STATUS_FILTERS: { value: ParcelStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'Tous' },
@@ -81,7 +90,13 @@ const parcelConditionOptions: { value: 'GOOD' | 'FRAGILE'; label: string }[] = [
   { value: 'FRAGILE', label: 'Fragile' },
 ];
 
-const collectorParcelRequiredFieldCount = 8;
+const shipmentTypeOptions: { value: ShipmentType; label: string }[] = [
+  { value: 'STANDARD', label: shipmentTypeLabels.STANDARD },
+  { value: 'EXPRESS', label: shipmentTypeLabels.EXPRESS },
+  { value: 'ECONOMY', label: shipmentTypeLabels.ECONOMY },
+];
+
+const collectorParcelRequiredFieldCount = 13;
 
 interface ParcelManagementProps {
   currentRole: UserRole;
@@ -93,11 +108,15 @@ interface CollectorParcelFormState {
   senderPhone: string;
   recipientName: string;
   recipientPhone: string;
+  recipientFullAddress: string;
+  destinationCountryId: string;
+  destinationCityId: string;
+  destinationZoneId: string;
   destinationPointId: string;
   weight: string;
   volume: string;
-  declaredValue: string;
   description: string;
+  shipmentType: ShipmentType;
   packageCondition: 'GOOD' | 'FRAGILE';
   senderKycDocumentType: KycDocumentType;
   senderKycDocumentNumber: string;
@@ -109,11 +128,15 @@ const initialCollectorParcelFormState: CollectorParcelFormState = {
   senderPhone: '',
   recipientName: '',
   recipientPhone: '',
+  recipientFullAddress: '',
+  destinationCountryId: '',
+  destinationCityId: '',
+  destinationZoneId: '',
   destinationPointId: '',
   weight: '',
   volume: '',
-  declaredValue: '',
   description: '',
+  shipmentType: 'STANDARD',
   packageCondition: 'GOOD',
   senderKycDocumentType: 'CNI',
   senderKycDocumentNumber: '',
@@ -139,7 +162,7 @@ async function fileToDataUrl(file: File) {
 }
 
 export function ParcelManagement({ currentRole, currentUser }: ParcelManagementProps) {
-  const { parcels, collectionPoints, addParcel } = useStore();
+  const { parcels, collectionPoints, countries, cities, zones, pricingRules, addParcel } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ParcelStatus | 'ALL'>(
     currentRole === 'TRANSPORTER' ? 'IN_TRANSIT' : 'ALL'
@@ -147,6 +170,7 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCreateViewOpen, setIsCreateViewOpen] = useState(false);
+  const [isPricingDialogOpen, setIsPricingDialogOpen] = useState(false);
   const [isSubmittingParcel, setIsSubmittingParcel] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
   const [collectorParcelForm, setCollectorParcelForm] = useState<CollectorParcelFormState>(
@@ -188,15 +212,112 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
     [assignedCollectionPoint, collectionPoints]
   );
 
+  const destinationZoneIdsWithPoints = useMemo(
+    () => new Set(collectorDestinationOptions.map((point) => point.zoneId)),
+    [collectorDestinationOptions]
+  );
+
+  const destinationCountryOptions = useMemo(
+    () =>
+      countries.filter((country) =>
+        cities.some(
+          (city) =>
+            city.countryId === country.id &&
+            zones.some(
+              (zone) => zone.cityId === city.id && destinationZoneIdsWithPoints.has(zone.id)
+            )
+        )
+      ),
+    [cities, countries, destinationZoneIdsWithPoints, zones]
+  );
+
+  const destinationCityOptions = useMemo(
+    () =>
+      collectorParcelForm.destinationCountryId
+        ? cities.filter(
+            (city) =>
+              city.countryId === collectorParcelForm.destinationCountryId &&
+              zones.some(
+                (zone) => zone.cityId === city.id && destinationZoneIdsWithPoints.has(zone.id)
+              )
+          )
+        : [],
+    [cities, collectorParcelForm.destinationCountryId, destinationZoneIdsWithPoints, zones]
+  );
+
+  const destinationZoneOptions = useMemo(
+    () =>
+      collectorParcelForm.destinationCityId
+        ? zones.filter(
+            (zone) =>
+              zone.cityId === collectorParcelForm.destinationCityId &&
+              destinationZoneIdsWithPoints.has(zone.id)
+          )
+        : [],
+    [collectorParcelForm.destinationCityId, destinationZoneIdsWithPoints, zones]
+  );
+
+  const destinationPointOptions = useMemo(
+    () =>
+      collectorParcelForm.destinationZoneId
+        ? collectorDestinationOptions.filter(
+            (point) => point.zoneId === collectorParcelForm.destinationZoneId
+          )
+        : [],
+    [collectorDestinationOptions, collectorParcelForm.destinationZoneId]
+  );
+
+  const selectedDestinationCountry = countries.find(
+    (country) => country.id === collectorParcelForm.destinationCountryId
+  );
+  const selectedDestinationCity = cities.find(
+    (city) => city.id === collectorParcelForm.destinationCityId
+  );
+  const selectedDestinationZone = zones.find(
+    (zone) => zone.id === collectorParcelForm.destinationZoneId
+  );
+  const selectedDestinationPoint = collectionPoints.find(
+    (point) => point.id === collectorParcelForm.destinationPointId
+  );
+  const selectedPricingRule = useMemo(
+    () => getPricingRuleForShipmentType(pricingRules, collectorParcelForm.shipmentType),
+    [collectorParcelForm.shipmentType, pricingRules]
+  );
+  const estimatedDistanceKm = useMemo(
+    () =>
+      estimateRouteDistanceKm(
+        assignedCollectionPoint ?? undefined,
+        selectedDestinationPoint,
+        zones,
+        cities,
+        countries
+      ),
+    [assignedCollectionPoint, cities, collectionPoints, countries, selectedDestinationPoint, zones]
+  );
+  const estimatedOperationPrice = useMemo(() => {
+    const weight = Number(collectorParcelForm.weight);
+
+    if (!selectedPricingRule || !Number.isFinite(weight) || weight <= 0 || estimatedDistanceKm <= 0) {
+      return null;
+    }
+
+    return calculateOperationPrice(selectedPricingRule, weight, estimatedDistanceKm);
+  }, [collectorParcelForm.weight, estimatedDistanceKm, selectedPricingRule]);
+
   const collectorParcelCompletion = useMemo(() => {
     const requiredFields = [
       collectorParcelForm.senderName.trim(),
       collectorParcelForm.senderPhone.trim(),
       collectorParcelForm.recipientName.trim(),
       collectorParcelForm.recipientPhone.trim(),
+      collectorParcelForm.destinationCountryId,
+      collectorParcelForm.destinationCityId,
+      collectorParcelForm.destinationZoneId,
       collectorParcelForm.destinationPointId,
       collectorParcelForm.weight.trim(),
       collectorParcelForm.volume.trim(),
+      collectorParcelForm.description.trim(),
+      collectorParcelForm.shipmentType,
       collectorParcelForm.senderKycDocumentNumber.trim(),
     ];
 
@@ -222,6 +343,12 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
 
   const getPointName = (pointId: string) =>
     collectionPoints.find((point) => point.id === pointId)?.name || pointId;
+  const getCountryName = (countryId?: string) =>
+    countryId ? countries.find((country) => country.id === countryId)?.name : undefined;
+  const getCityName = (cityId?: string) =>
+    cityId ? cities.find((city) => city.id === cityId)?.name : undefined;
+  const getZoneName = (zoneId?: string) =>
+    zoneId ? zones.find((zone) => zone.id === zoneId)?.name : undefined;
 
   const openDetailDialog = (parcel: Parcel) => {
     setSelectedParcel(parcel);
@@ -235,6 +362,7 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
 
   const closeCreateView = () => {
     setIsCreateViewOpen(false);
+    setIsPricingDialogOpen(false);
     resetCollectorParcelForm();
     setIsSubmittingParcel(false);
   };
@@ -273,38 +401,64 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
     event.target.value = '';
   };
 
-  const handleCollectorParcelSubmit = async () => {
+  const validateCollectorParcelForm = () => {
     if (!assignedCollectionPoint) {
       setCreationError("Ce collecteur n'a pas de point de collecte assigne.");
-      return;
+      return null;
     }
 
     const weight = Number(collectorParcelForm.weight);
     const volume = Number(collectorParcelForm.volume);
-    const declaredValue = Number(collectorParcelForm.declaredValue);
 
     if (
       !collectorParcelForm.senderName.trim() ||
       !collectorParcelForm.senderPhone.trim() ||
       !collectorParcelForm.recipientName.trim() ||
       !collectorParcelForm.recipientPhone.trim() ||
+      !collectorParcelForm.destinationCountryId ||
+      !collectorParcelForm.destinationCityId ||
+      !collectorParcelForm.destinationZoneId ||
       !collectorParcelForm.destinationPointId ||
       !collectorParcelForm.description.trim() ||
+      !collectorParcelForm.shipmentType ||
       !collectorParcelForm.senderKycDocumentNumber.trim()
     ) {
       setCreationError('Renseignez tous les champs obligatoires avant de valider.');
-      return;
+      return null;
     }
 
     if (
       !Number.isFinite(weight) ||
       weight <= 0 ||
       !Number.isFinite(volume) ||
-      volume <= 0 ||
-      !Number.isFinite(declaredValue) ||
-      declaredValue < 0
+      volume <= 0
     ) {
-      setCreationError('Les valeurs logistiques et financieres doivent etre valides.');
+      setCreationError('Les valeurs logistiques doivent etre valides.');
+      return null;
+    }
+
+    if (!selectedPricingRule || estimatedOperationPrice === null || estimatedDistanceKm <= 0) {
+      setCreationError("Aucune tarification valide n'est configuree pour ce type d'envoi.");
+      return null;
+    }
+
+    setCreationError(null);
+
+    return { weight, volume };
+  };
+
+  const handleCollectorParcelSubmit = () => {
+    if (!validateCollectorParcelForm()) {
+      return;
+    }
+
+    setIsPricingDialogOpen(true);
+  };
+
+  const handleConfirmCollectorParcelCreation = async () => {
+    const validatedForm = validateCollectorParcelForm();
+
+    if (!assignedCollectionPoint || !selectedPricingRule || estimatedOperationPrice === null || !validatedForm) {
       return;
     }
 
@@ -317,15 +471,22 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
         senderPhone: collectorParcelForm.senderPhone.trim(),
         recipientName: collectorParcelForm.recipientName.trim(),
         recipientPhone: collectorParcelForm.recipientPhone.trim(),
-        weight,
-        volume,
+        recipientFullAddress: collectorParcelForm.recipientFullAddress.trim() || undefined,
+        weight: validatedForm.weight,
+        volume: validatedForm.volume,
         description: collectorParcelForm.description.trim(),
-        declaredValue,
+        shipmentType: collectorParcelForm.shipmentType,
+        pricingRuleId: selectedPricingRule.id,
+        estimatedDistanceKm,
+        estimatedPrice: estimatedOperationPrice,
         packageCondition: collectorParcelForm.packageCondition,
         senderKyc: {
           documentType: collectorParcelForm.senderKycDocumentType,
           documentNumber: collectorParcelForm.senderKycDocumentNumber.trim(),
         },
+        destinationCountryId: collectorParcelForm.destinationCountryId,
+        destinationCityId: collectorParcelForm.destinationCityId,
+        destinationZoneId: collectorParcelForm.destinationZoneId,
         destinationPointId: collectorParcelForm.destinationPointId,
         originPointId: assignedCollectionPoint.id,
         createdBy: {
@@ -523,7 +684,90 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                 </div>
                 <div className="min-w-0">
                   <label className="mb-2 block text-sm font-medium text-foreground">
-                    Point de destination
+                    Pays
+                  </label>
+                  <Select
+                    value={collectorParcelForm.destinationCountryId}
+                    onValueChange={(value) =>
+                      setCollectorParcelForm((current) => ({
+                        ...current,
+                        destinationCountryId: value,
+                        destinationCityId: '',
+                        destinationZoneId: '',
+                        destinationPointId: '',
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-secondary">
+                      <SelectValue placeholder="Selectionnez le pays" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinationCountryOptions.map((country) => (
+                        <SelectItem key={country.id} value={country.id}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Ville
+                  </label>
+                  <Select
+                    value={collectorParcelForm.destinationCityId}
+                    onValueChange={(value) =>
+                      setCollectorParcelForm((current) => ({
+                        ...current,
+                        destinationCityId: value,
+                        destinationZoneId: '',
+                        destinationPointId: '',
+                      }))
+                    }
+                    disabled={!collectorParcelForm.destinationCountryId}
+                  >
+                    <SelectTrigger className="w-full bg-secondary">
+                      <SelectValue placeholder="Selectionnez la ville" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinationCityOptions.map((city) => (
+                        <SelectItem key={city.id} value={city.id}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Zone
+                  </label>
+                  <Select
+                    value={collectorParcelForm.destinationZoneId}
+                    onValueChange={(value) =>
+                      setCollectorParcelForm((current) => ({
+                        ...current,
+                        destinationZoneId: value,
+                        destinationPointId: '',
+                      }))
+                    }
+                    disabled={!collectorParcelForm.destinationCityId}
+                  >
+                    <SelectTrigger className="w-full bg-secondary">
+                      <SelectValue placeholder="Selectionnez la zone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinationZoneOptions.map((zone) => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Point de collecte
                   </label>
                   <Select
                     value={collectorParcelForm.destinationPointId}
@@ -533,18 +777,35 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                         destinationPointId: value,
                       }))
                     }
+                    disabled={!collectorParcelForm.destinationZoneId}
                   >
                     <SelectTrigger className="w-full bg-secondary">
-                      <SelectValue placeholder="Selectionnez la destination" />
+                      <SelectValue placeholder="Selectionnez le point" />
                     </SelectTrigger>
                     <SelectContent>
-                      {collectorDestinationOptions.map((point) => (
+                      {destinationPointOptions.map((point) => (
                         <SelectItem key={point.id} value={point.id}>
                           {point.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="min-w-0 md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Adresse complete <span className="text-muted-foreground">(optionnel)</span>
+                  </label>
+                  <Textarea
+                    value={collectorParcelForm.recipientFullAddress}
+                    onChange={(event) =>
+                      setCollectorParcelForm((current) => ({
+                        ...current,
+                        recipientFullAddress: event.target.value,
+                      }))
+                    }
+                    placeholder="Quartier, rue, immeuble, repere de livraison..."
+                    className="min-h-[88px] resize-none bg-secondary"
+                  />
                 </div>
               </div>
             </section>
@@ -597,22 +858,28 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                 </div>
                 <div className="min-w-0">
                   <label className="mb-2 block text-sm font-medium text-foreground">
-                    Valeur declaree
+                    Type d'envoi
                   </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={collectorParcelForm.declaredValue}
-                    onChange={(event) =>
+                  <Select
+                    value={collectorParcelForm.shipmentType}
+                    onValueChange={(value: ShipmentType) =>
                       setCollectorParcelForm((current) => ({
                         ...current,
-                        declaredValue: event.target.value,
+                        shipmentType: value,
                       }))
                     }
-                    placeholder="85"
-                    className="bg-secondary"
-                  />
+                  >
+                    <SelectTrigger className="w-full bg-secondary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shipmentTypeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="min-w-0">
                   <label className="mb-2 block text-sm font-medium text-foreground">
@@ -683,13 +950,39 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     Destination
                   </p>
-                  <p className="mt-2 truncate text-sm font-semibold text-foreground">
+                  <p className="mt-2 text-sm font-semibold text-foreground">
                     {collectorParcelForm.destinationPointId
                       ? getPointName(collectorParcelForm.destinationPointId)
                       : 'A definir'}
                   </p>
+                  {(selectedDestinationCountry ||
+                    selectedDestinationCity ||
+                    selectedDestinationZone) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[
+                        selectedDestinationCountry?.name,
+                        selectedDestinationCity?.name,
+                        selectedDestinationZone?.name,
+                      ]
+                        .filter(Boolean)
+                        .join(' / ')}
+                    </p>
+                  )}
+                  {collectorParcelForm.recipientFullAddress.trim() && (
+                    <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
+                      {collectorParcelForm.recipientFullAddress.trim()}
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-xl bg-secondary px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      Type
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {shipmentTypeLabels[collectorParcelForm.shipmentType]}
+                    </p>
+                  </div>
                   <div className="rounded-xl bg-secondary px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                       Poids
@@ -705,6 +998,26 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                     <p className="mt-2 text-sm font-semibold text-foreground">
                       {collectorParcelForm.volume || '0'} m3
                     </p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <Calculator className="mt-0.5 h-4 w-4 text-primary" />
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        Estimation
+                      </p>
+                      <p className="mt-2 text-lg font-bold text-foreground">
+                        {estimatedOperationPrice !== null
+                          ? `${estimatedOperationPrice.toFixed(2)} EUR`
+                          : 'A calculer'}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selectedPricingRule
+                          ? `${selectedPricingRule.name} - ${estimatedDistanceKm} km estimes`
+                          : "Aucune regle pour ce type d'envoi"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -789,13 +1102,86 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   disabled={isSubmittingParcel || !assignedCollectionPoint}
                   className="gap-2"
                 >
-                  <Save className="h-4 w-4" />
-                  Enregistrer et prendre en charge
+                  <Calculator className="h-4 w-4" />
+                  Voir l'estimation
                 </Button>
               </div>
             </div>
           </aside>
         </div>
+
+        <Dialog open={isPricingDialogOpen} onOpenChange={setIsPricingDialogOpen}>
+          <DialogContent className="max-w-xl border-border bg-card">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Calculator className="h-5 w-5 text-primary" />
+                Estimation de l'operation
+              </DialogTitle>
+              <DialogDescription>
+                Verifiez le tarif calcule avant l'enregistrement definitif du colis.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Prix estime
+                </p>
+                <p className="mt-2 text-3xl font-bold text-foreground">
+                  {estimatedOperationPrice !== null
+                    ? `${estimatedOperationPrice.toFixed(2)} EUR`
+                    : 'Indisponible'}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {selectedPricingRule
+                    ? `${selectedPricingRule.name} - ${shipmentTypeLabels[collectorParcelForm.shipmentType]}`
+                    : "Aucune regle associee au type d'envoi"}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-secondary px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Origine</p>
+                  <p className="mt-1 font-medium text-foreground">
+                    {assignedCollectionPoint?.name ?? 'Non assigne'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-secondary px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Destination</p>
+                  <p className="mt-1 font-medium text-foreground">
+                    {selectedDestinationPoint?.name ?? 'A definir'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-secondary px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Poids facture</p>
+                  <p className="mt-1 font-medium text-foreground">
+                    {collectorParcelForm.weight || '0'} kg
+                  </p>
+                </div>
+                <div className="rounded-xl bg-secondary px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Distance estimee</p>
+                  <p className="mt-1 font-medium text-foreground">
+                    {estimatedDistanceKm} km
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsPricingDialogOpen(false)}>
+                Retour
+              </Button>
+              <Button
+                onClick={handleConfirmCollectorParcelCreation}
+                disabled={isSubmittingParcel || estimatedOperationPrice === null}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Confirmer l'enregistrement
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-border bg-card">
@@ -859,11 +1245,34 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                     <p className="font-medium text-foreground">
                       {getPointName(selectedParcel.destinationPointId)}
                     </p>
+                    {[
+                      getCountryName(selectedParcel.destinationCountryId),
+                      getCityName(selectedParcel.destinationCityId),
+                      getZoneName(selectedParcel.destinationZoneId),
+                    ].some(Boolean) && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {[
+                          getCountryName(selectedParcel.destinationCountryId),
+                          getCityName(selectedParcel.destinationCityId),
+                          getZoneName(selectedParcel.destinationZoneId),
+                        ]
+                          .filter(Boolean)
+                          .join(' / ')}
+                      </p>
+                    )}
                   </div>
                   {selectedParcel.recipientPhone && (
                     <div>
                       <p className="text-xs text-muted-foreground">Telephone destinataire</p>
                       <p className="font-medium text-foreground">{selectedParcel.recipientPhone}</p>
+                    </div>
+                  )}
+                  {selectedParcel.recipientFullAddress && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-muted-foreground">Adresse complete</p>
+                      <p className="font-medium text-foreground">
+                        {selectedParcel.recipientFullAddress}
+                      </p>
                     </div>
                   )}
                   <div>
@@ -874,11 +1283,25 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Valeur declaree</p>
+                    <p className="text-xs text-muted-foreground">Type d'envoi</p>
                     <p className="font-medium text-foreground">
-                      {selectedParcel.declaredValue.toLocaleString('fr-FR')} EUR
+                      {selectedParcel.shipmentType
+                        ? shipmentTypeLabels[selectedParcel.shipmentType]
+                        : 'Non renseigne'}
                     </p>
                   </div>
+                  {selectedParcel.estimatedPrice !== undefined && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Prix estime</p>
+                      <p className="font-medium text-foreground">
+                        {selectedParcel.estimatedPrice.toLocaleString('fr-FR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        EUR
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-muted-foreground">Volume</p>
                     <p className="font-medium text-foreground">{selectedParcel.volume} m3</p>
@@ -1198,11 +1621,34 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   <p className="font-medium text-foreground">
                     {getPointName(selectedParcel.destinationPointId)}
                   </p>
+                  {[
+                    getCountryName(selectedParcel.destinationCountryId),
+                    getCityName(selectedParcel.destinationCityId),
+                    getZoneName(selectedParcel.destinationZoneId),
+                  ].some(Boolean) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[
+                        getCountryName(selectedParcel.destinationCountryId),
+                        getCityName(selectedParcel.destinationCityId),
+                        getZoneName(selectedParcel.destinationZoneId),
+                      ]
+                        .filter(Boolean)
+                        .join(' / ')}
+                    </p>
+                  )}
                 </div>
                 {selectedParcel.recipientPhone && (
                   <div>
                     <p className="text-xs text-muted-foreground">Telephone destinataire</p>
                     <p className="font-medium text-foreground">{selectedParcel.recipientPhone}</p>
+                  </div>
+                )}
+                {selectedParcel.recipientFullAddress && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-muted-foreground">Adresse complete</p>
+                    <p className="font-medium text-foreground">
+                      {selectedParcel.recipientFullAddress}
+                    </p>
                   </div>
                 )}
                 <div>
@@ -1213,11 +1659,25 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Valeur declaree</p>
+                  <p className="text-xs text-muted-foreground">Type d'envoi</p>
                   <p className="font-medium text-foreground">
-                    {selectedParcel.declaredValue.toLocaleString('fr-FR')} EUR
+                    {selectedParcel.shipmentType
+                      ? shipmentTypeLabels[selectedParcel.shipmentType]
+                      : 'Non renseigne'}
                   </p>
                 </div>
+                {selectedParcel.estimatedPrice !== undefined && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Prix estime</p>
+                    <p className="font-medium text-foreground">
+                      {selectedParcel.estimatedPrice.toLocaleString('fr-FR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      EUR
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-muted-foreground">Volume</p>
                   <p className="font-medium text-foreground">{selectedParcel.volume} m3</p>

@@ -6,12 +6,16 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   Clock3,
+  Eye,
+  EyeOff,
   MapPin,
   Package,
+  Power,
   ShieldCheck,
   Warehouse,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -25,6 +29,11 @@ import {
   getCollectionPointParcelCount,
   getCollectionPointSaturationRate,
 } from '@/lib/collection-point-capacity';
+import {
+  formatOpeningHours,
+  getCollectionPointStatusClassName,
+  getCollectionPointStatusLabel,
+} from '@/lib/collection-point-availability';
 import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
 import { getKycVerificationStatusLabel, getStatusColor, getStatusLabel, type User } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
@@ -43,6 +52,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
     cities,
     zones,
     transferRequests,
+    setCollectionPointOpenStatus,
   } = useStore();
 
   const collector = users.find((user) => user.id === currentUser.id) ?? currentUser;
@@ -151,14 +161,49 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
             {getCollectionPointLocationLabel(assignedPoint, zones, cities, countries)}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card px-4 py-3">
-          <p className="text-sm text-muted-foreground">Capacite du point</p>
-          <p className="mt-1 text-lg font-semibold text-foreground">
-            {formatCollectionPointLoadRatio(assignedPoint, parcels)}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {storedParcelsCount} colis physiquement presents
-          </p>
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 lg:min-w-80">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Disponibilite du point</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{formatOpeningHours(assignedPoint)}</p>
+            </div>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium',
+                getCollectionPointStatusClassName(assignedPoint)
+              )}
+            >
+              {assignedPoint.isOpen ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {getCollectionPointStatusLabel(assignedPoint)}
+            </span>
+          </div>
+          {!assignedPoint.isOpen && assignedPoint.closedReason && (
+            <p className="text-xs text-muted-foreground">Motif: {assignedPoint.closedReason}</p>
+          )}
+          <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Capacite</p>
+              <p className="text-sm font-semibold text-foreground">
+                {formatCollectionPointLoadRatio(assignedPoint, parcels)}
+              </p>
+              <p className="text-xs text-muted-foreground">{storedParcelsCount} colis presents</p>
+            </div>
+            <Button
+              variant={assignedPoint.isOpen ? 'outline' : 'default'}
+              size="sm"
+              className="gap-2"
+              onClick={() =>
+                setCollectionPointOpenStatus(
+                  assignedPoint.id,
+                  !assignedPoint.isOpen,
+                  assignedPoint.isOpen ? 'Ferme par le collecteur' : undefined
+                )
+              }
+            >
+              <Power className="h-4 w-4" />
+              {assignedPoint.isOpen ? 'Fermer le point' : 'Rouvrir'}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -6,6 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,7 +28,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { type PricingRule } from '@/lib/mock-data';
+import { type PricingRule, type ShipmentType } from '@/lib/mock-data';
+import { calculateOperationPrice, shipmentTypeLabels } from '@/lib/pricing';
 import { useStore } from '@/lib/store';
 
 export function PricingEngine() {
@@ -39,22 +47,24 @@ export function PricingEngine() {
     pricePerKg: '',
     pricePerKm: '',
     zoneMultiplier: '1.0',
+    shipmentType: 'STANDARD' as ShipmentType,
   });
 
   const calculatePrice = (rule: PricingRule, weight: number, distance: number) => {
-    return (rule.basePrice + rule.pricePerKg * weight + rule.pricePerKm * distance) * rule.zoneMultiplier;
+    return calculateOperationPrice(rule, weight, distance);
   };
 
   const handleAdd = () => {
     if (formData.name && formData.basePrice && formData.pricePerKg && formData.pricePerKm) {
       addPricingRule({
         name: formData.name,
+        shipmentType: formData.shipmentType,
         basePrice: parseFloat(formData.basePrice),
         pricePerKg: parseFloat(formData.pricePerKg),
         pricePerKm: parseFloat(formData.pricePerKm),
         zoneMultiplier: parseFloat(formData.zoneMultiplier) || 1.0,
       });
-      setFormData({ name: '', basePrice: '', pricePerKg: '', pricePerKm: '', zoneMultiplier: '1.0' });
+      setFormData({ name: '', basePrice: '', pricePerKg: '', pricePerKm: '', zoneMultiplier: '1.0', shipmentType: 'STANDARD' });
       setIsAddDialogOpen(false);
     }
   };
@@ -63,6 +73,7 @@ export function PricingEngine() {
     if (selectedRule && formData.name && formData.basePrice && formData.pricePerKg && formData.pricePerKm) {
       updatePricingRule(selectedRule.id, {
         name: formData.name,
+        shipmentType: formData.shipmentType,
         basePrice: parseFloat(formData.basePrice),
         pricePerKg: parseFloat(formData.pricePerKg),
         pricePerKm: parseFloat(formData.pricePerKm),
@@ -89,6 +100,7 @@ export function PricingEngine() {
       pricePerKg: rule.pricePerKg.toString(),
       pricePerKm: rule.pricePerKm.toString(),
       zoneMultiplier: rule.zoneMultiplier.toString(),
+      shipmentType: rule.shipmentType,
     });
     setIsEditDialogOpen(true);
   };
@@ -106,7 +118,7 @@ export function PricingEngine() {
           <p className="text-muted-foreground">Configurez vos grilles de prix</p>
         </div>
         <Button className="gap-2" onClick={() => {
-          setFormData({ name: '', basePrice: '', pricePerKg: '', pricePerKm: '', zoneMultiplier: '1.0' });
+          setFormData({ name: '', basePrice: '', pricePerKg: '', pricePerKm: '', zoneMultiplier: '1.0', shipmentType: 'STANDARD' });
           setIsAddDialogOpen(true);
         }}>
           <Plus className="h-4 w-4" />
@@ -123,6 +135,7 @@ export function PricingEngine() {
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
                     <TableHead className="text-muted-foreground">Nom</TableHead>
+                    <TableHead className="text-muted-foreground">Type</TableHead>
                     <TableHead className="text-muted-foreground">Prix de base</TableHead>
                     <TableHead className="text-muted-foreground">Par kg</TableHead>
                     <TableHead className="text-muted-foreground">Par km</TableHead>
@@ -140,6 +153,9 @@ export function PricingEngine() {
                           </div>
                           <span className="font-medium text-foreground">{rule.name}</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-foreground">
+                        {shipmentTypeLabels[rule.shipmentType]}
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         {rule.basePrice.toFixed(2)} EUR
@@ -177,7 +193,7 @@ export function PricingEngine() {
                   ))}
                   {pricingRules.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                         Aucune tarification configuree
                       </TableCell>
                     </TableRow>
@@ -258,6 +274,26 @@ export function PricingEngine() {
                 className="bg-secondary"
               />
             </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">Type d'envoi</label>
+              <Select
+                value={formData.shipmentType}
+                onValueChange={(value: ShipmentType) =>
+                  setFormData({ ...formData, shipmentType: value })
+                }
+              >
+                <SelectTrigger className="w-full bg-secondary">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(shipmentTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">Prix de base (EUR)</label>
@@ -332,6 +368,26 @@ export function PricingEngine() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="bg-secondary"
               />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">Type d'envoi</label>
+              <Select
+                value={formData.shipmentType}
+                onValueChange={(value: ShipmentType) =>
+                  setFormData({ ...formData, shipmentType: value })
+                }
+              >
+                <SelectTrigger className="w-full bg-secondary">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(shipmentTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

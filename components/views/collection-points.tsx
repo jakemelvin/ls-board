@@ -4,10 +4,13 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   Edit2,
+  Eye,
+  EyeOff,
   Globe2,
   Layers3,
   Map as MapIcon,
   MapPin,
+  Power,
   Plus,
   Save,
   Trash2,
@@ -50,10 +53,20 @@ import {
   getCollectionPointLocationLabel,
 } from '@/lib/collection-point-location';
 import {
+  formatCommissionRate,
+  formatOpeningHours,
+  getCollectionPointStatusClassName,
+  getCollectionPointStatusLabel,
+  WEEKDAY_LABELS,
+} from '@/lib/collection-point-availability';
+import {
   type City,
   type CollectionPoint,
   type CollectionPointCapacityUnit,
   type Country,
+  type User,
+  type UserRole,
+  type WeekdayKey,
   type Zone,
 } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
@@ -72,9 +85,22 @@ type PointFormState = {
   maxCapacityValue: string;
   maxCapacityUnit: CollectionPointCapacityUnit;
   responsibleId: string;
+  isOpen: boolean;
+  opensAt: string;
+  closesAt: string;
+  openingDays: WeekdayKey[];
+  commissionRate: string;
 };
 
-export function CollectionPointsView() {
+interface CollectionPointsViewProps {
+  currentRole: UserRole;
+  currentUser: User;
+}
+
+const DEFAULT_OPENING_DAYS: WeekdayKey[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+const ALL_WEEKDAYS = Object.keys(WEEKDAY_LABELS) as WeekdayKey[];
+
+export function CollectionPointsView({ currentRole }: CollectionPointsViewProps) {
   const {
     countries,
     cities,
@@ -94,8 +120,11 @@ export function CollectionPointsView() {
     deleteZone,
     addCollectionPoint,
     updateCollectionPoint,
+    setCollectionPointOpenStatus,
     deleteCollectionPoint,
   } = useStore();
+
+  const canConfigureCommission = currentRole === 'ADMIN' || currentRole === 'EMPLOYEE';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
@@ -123,6 +152,11 @@ export function CollectionPointsView() {
     maxCapacityValue: '',
     maxCapacityUnit: 'KG',
     responsibleId: '',
+    isOpen: true,
+    opensAt: '08:00',
+    closesAt: '18:00',
+    openingDays: DEFAULT_OPENING_DAYS,
+    commissionRate: '',
   });
 
   const collectors = users.filter((user) => user.role === 'COLLECTOR');
@@ -363,6 +397,11 @@ export function CollectionPointsView() {
       maxCapacityValue: '',
       maxCapacityUnit: 'KG',
       responsibleId: '',
+      isOpen: true,
+      opensAt: '08:00',
+      closesAt: '18:00',
+      openingDays: DEFAULT_OPENING_DAYS,
+      commissionRate: '',
     });
     setEditingPoint(null);
   };
@@ -410,6 +449,11 @@ export function CollectionPointsView() {
         maxCapacityValue: point.maxCapacity.value.toString(),
         maxCapacityUnit: point.maxCapacity.unit,
         responsibleId: point.responsibleId,
+        isOpen: point.isOpen,
+        opensAt: point.openingHours.opensAt,
+        closesAt: point.openingHours.closesAt,
+        openingDays: point.openingHours.days,
+        commissionRate: point.commissionRate?.toString() ?? '',
       });
     } else {
       resetPointForm();
@@ -482,8 +526,20 @@ export function CollectionPointsView() {
     }
 
     const maxCapacityValue = Number(pointForm.maxCapacityValue);
+    const commissionRate = pointForm.commissionRate.trim() === '' ? undefined : Number(pointForm.commissionRate);
 
     if (!Number.isFinite(maxCapacityValue) || maxCapacityValue <= 0) {
+      return;
+    }
+
+    if (
+      commissionRate !== undefined &&
+      (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100)
+    ) {
+      return;
+    }
+
+    if (pointForm.openingDays.length === 0 || pointForm.opensAt >= pointForm.closesAt) {
       return;
     }
 
@@ -500,6 +556,14 @@ export function CollectionPointsView() {
         unit: pointForm.maxCapacityUnit,
       },
       responsibleId: pointForm.responsibleId,
+      isOpen: pointForm.isOpen,
+      openingHours: {
+        days: pointForm.openingDays,
+        opensAt: pointForm.opensAt,
+        closesAt: pointForm.closesAt,
+      },
+      closedReason: pointForm.isOpen ? undefined : editingPoint?.closedReason ?? 'Indisponible temporairement',
+      commissionRate,
     };
 
     if (editingPoint) {
@@ -538,6 +602,15 @@ export function CollectionPointsView() {
   };
 
   const deleteMeta = getDeleteMeta(deleteTarget);
+
+  const toggleOpeningDay = (day: WeekdayKey) => {
+    setPointForm((current) => ({
+      ...current,
+      openingDays: current.openingDays.includes(day)
+        ? current.openingDays.filter((item) => item !== day)
+        : [...current.openingDays, day],
+    }));
+  };
 
   const renderListItem = ({
     itemKey,
@@ -645,6 +718,13 @@ export function CollectionPointsView() {
       editingPointPreview.maxCapacity.value
     );
   }, [editingPointPreview, parcels]);
+  const pointFormScheduleInvalid =
+    pointForm.openingDays.length === 0 || pointForm.opensAt >= pointForm.closesAt;
+  const pointFormCommissionInvalid =
+    pointForm.commissionRate.trim() !== '' &&
+    (!Number.isFinite(Number(pointForm.commissionRate)) ||
+      Number(pointForm.commissionRate) < 0 ||
+      Number(pointForm.commissionRate) > 100);
 
   return (
     <div className="space-y-6">
@@ -894,68 +974,64 @@ export function CollectionPointsView() {
                 Ajouter un point
               </Button>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent>
               {selectedZoneId ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">Point</TableHead>
-                      <TableHead className="text-muted-foreground">Adresse</TableHead>
-                      <TableHead className="text-muted-foreground">Capacite</TableHead>
-                      <TableHead className="text-muted-foreground">Responsable</TableHead>
-                      <TableHead className="text-right text-muted-foreground">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                zonePoints.length > 0 ? (
+                  <div className="grid gap-4 xl:grid-cols-2">
                     {zonePoints.map((point) => {
                       const responsible = getResponsible(point.responsibleId);
+                      const saturation = getCollectionPointSaturationRate(point, parcels);
 
                       return (
-                        <TableRow key={point.id} className="border-border">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20">
-                                <MapPin className="h-4 w-4 text-primary" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-foreground">{point.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {getCollectionPointLocationLabel(point, zones, cities, countries)}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {getCollectionPointFullAddress(point, zones, cities, countries)}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            <div>
-                              <p>{formatCollectionPointLoadRatio(point, parcels)}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {getCollectionPointSaturationRate(point, parcels)}% de saturation
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {responsible ? (
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                  {responsible.avatar}
+                        <div
+                          key={point.id}
+                          className="rounded-2xl border border-border bg-secondary/20 p-4 shadow-sm transition-colors hover:border-primary/40"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/20">
+                                  <MapPin className="h-5 w-5 text-primary" />
                                 </div>
-                                <span className="text-sm text-foreground">{responsible.name}</span>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="font-semibold text-foreground">{point.name}</h3>
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium',
+                                        getCollectionPointStatusClassName(point)
+                                      )}
+                                    >
+                                      {point.isOpen ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                                      {getCollectionPointStatusLabel(point)}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    {getCollectionPointLocationLabel(point, zones, cities, countries)}
+                                  </p>
+                                  <p className="mt-2 text-sm text-foreground">
+                                    {getCollectionPointFullAddress(point, zones, cities, countries)}
+                                  </p>
+                                </div>
                               </div>
-                            ) : (
-                              <span className="text-muted-foreground">Non assigne</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
+                            </div>
+                            <div className="flex gap-1 self-start rounded-xl border border-border bg-card p-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openPointDialog(point)}
+                                className={cn('h-8 w-8', point.isOpen ? 'text-warning' : 'text-success')}
+                                onClick={() =>
+                                  setCollectionPointOpenStatus(
+                                    point.id,
+                                    !point.isOpen,
+                                    point.isOpen ? 'Indisponible temporairement' : undefined
+                                  )
+                                }
+                                title={point.isOpen ? 'Fermer le point' : 'Rouvrir le point'}
                               >
+                                <Power className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openPointDialog(point)}>
                                 <Edit2 className="h-4 w-4" />
                               </Button>
                               <Button
@@ -967,19 +1043,57 @@ export function CollectionPointsView() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            <div className="rounded-xl border border-border bg-card p-3">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Horaires</p>
+                              <p className="mt-1 text-sm font-medium text-foreground">{formatOpeningHours(point)}</p>
+                              {point.closedReason && !point.isOpen && (
+                                <p className="mt-1 text-xs text-muted-foreground">{point.closedReason}</p>
+                              )}
+                            </div>
+                            <div className="rounded-xl border border-border bg-card p-3">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Responsable</p>
+                              {responsible ? (
+                                <div className="mt-2 flex items-center gap-2">
+                                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                    {responsible.avatar}
+                                  </div>
+                                  <span className="text-sm font-medium text-foreground">{responsible.name}</span>
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-sm text-muted-foreground">Non assigne</p>
+                              )}
+                            </div>
+                            <div className="rounded-xl border border-border bg-card p-3">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Capacite</p>
+                              <p className="mt-1 text-sm font-medium text-foreground">{formatCollectionPointLoadRatio(point, parcels)}</p>
+                              <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary">
+                                <div
+                                  className={cn('h-full', saturation > 80 ? 'bg-destructive' : saturation > 50 ? 'bg-warning' : 'bg-success')}
+                                  style={{ width: `${Math.min(saturation, 100)}%` }}
+                                />
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{saturation}% de saturation</p>
+                            </div>
+                            <div className="rounded-xl border border-border bg-card p-3">
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">Commission</p>
+                              <p className="mt-1 text-sm font-medium text-foreground">{formatCommissionRate(point)}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">Configurable par admin ou employe.</p>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
-                    {zonePoints.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                          Aucun point dans cette zone pour le moment
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                  </div>
+                ) : (
+                  <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
+                    <MapPin className="h-10 w-10 text-muted-foreground" />
+                    <p className="font-medium text-foreground">Aucun point dans cette zone</p>
+                    <p className="text-sm text-muted-foreground">Ajoutez un point pour demarrer la couverture locale.</p>
+                  </div>
+                )
               ) : (
                 <div className="flex min-h-72 flex-col items-center justify-center gap-3 p-8 text-center">
                   <MapIcon className="h-10 w-10 text-muted-foreground" />
@@ -1154,7 +1268,7 @@ export function CollectionPointsView() {
       </Dialog>
 
       <Dialog open={isPointDialogOpen} onOpenChange={setIsPointDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] overflow-x-hidden border-border bg-card sm:max-w-[720px]">
+        <DialogContent className="max-h-[88vh] max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden border-border bg-card sm:max-w-[860px]">
           <DialogHeader>
             <DialogTitle className="text-foreground">
               {editingPoint ? 'Modifier le point de collecte' : 'Ajouter un point de collecte'}
@@ -1163,7 +1277,9 @@ export function CollectionPointsView() {
               Un point est toujours rattache a une zone, elle-meme rattachee a une ville et a un pays.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-2">
+            <div className="rounded-2xl border border-border bg-secondary/10 p-4">
+              <p className="mb-4 text-sm font-semibold text-foreground">Informations principales</p>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">Nom</label>
@@ -1214,7 +1330,89 @@ export function CollectionPointsView() {
                 className="bg-secondary"
               />
             </div>
+            </div>
 
+            <div className="rounded-2xl border border-border bg-secondary/10 p-4">
+              <p className="mb-4 text-sm font-semibold text-foreground">Disponibilite et horaires</p>
+            <div className="rounded-xl border border-border bg-secondary/20 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Disponibilite mobile</p>
+                  <p className="text-xs text-muted-foreground">
+                    Un point ferme reste gere en interne mais disparait de l'application mobile client.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant={pointForm.isOpen ? 'default' : 'outline'}
+                  className="gap-2"
+                  onClick={() => setPointForm((current) => ({ ...current, isOpen: !current.isOpen }))}
+                >
+                  {pointForm.isOpen ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {pointForm.isOpen ? 'Visible mobile' : 'Masque mobile'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Heure d'ouverture</label>
+                <Input
+                  type="time"
+                  value={pointForm.opensAt}
+                  onChange={(event) =>
+                    setPointForm((current) => ({ ...current, opensAt: event.target.value }))
+                  }
+                  className="bg-secondary"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Heure de fermeture</label>
+                <Input
+                  type="time"
+                  value={pointForm.closesAt}
+                  onChange={(event) =>
+                    setPointForm((current) => ({ ...current, closesAt: event.target.value }))
+                  }
+                  className="bg-secondary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">Jours d'ouverture</label>
+              <div className="flex flex-wrap gap-2">
+                {ALL_WEEKDAYS.map((day) => {
+                  const isSelected = pointForm.openingDays.includes(day);
+
+                  return (
+                    <Button
+                      key={day}
+                      type="button"
+                      variant={isSelected ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => toggleOpeningDay(day)}
+                    >
+                      {WEEKDAY_LABELS[day]}
+                    </Button>
+                  );
+                })}
+              </div>
+              {pointForm.openingDays.length === 0 && (
+                <p className="mt-2 text-xs text-destructive">
+                  Selectionnez au moins un jour d'ouverture.
+                </p>
+              )}
+              {pointForm.opensAt >= pointForm.closesAt && (
+                <p className="mt-2 text-xs text-destructive">
+                  L'heure d'ouverture doit etre avant l'heure de fermeture.
+                </p>
+              )}
+            </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-secondary/10 p-4">
+              <p className="mb-4 text-sm font-semibold text-foreground">Capacite, responsable et commission</p>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">
@@ -1274,6 +1472,34 @@ export function CollectionPointsView() {
               </div>
             </div>
 
+            {canConfigureCommission && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Commission optionnelle du point (%)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={pointForm.commissionRate}
+                  onChange={(event) =>
+                    setPointForm((current) => ({ ...current, commissionRate: event.target.value }))
+                  }
+                  placeholder="Exemple: 7.5"
+                  className="bg-secondary"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Laissez vide si ce point ne percoit pas de commission specifique.
+                </p>
+                {pointFormCommissionInvalid && (
+                  <p className="mt-2 text-xs text-destructive">
+                    La commission doit etre comprise entre 0 et 100%.
+                  </p>
+                )}
+              </div>
+            )}
+
             {editingPointPreview && (
               <div className="rounded-xl border border-border bg-secondary/20 p-4">
                 <p className="text-sm font-medium text-foreground">Charge actuelle observee</p>
@@ -1299,12 +1525,17 @@ export function CollectionPointsView() {
                 </p>
               </div>
             )}
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sticky -bottom-6 border-t border-border bg-card/95 pt-4 backdrop-blur">
             <Button variant="outline" onClick={() => setIsPointDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSavePoint} className="gap-2" disabled={pointFormCapacityConflict}>
+            <Button
+              onClick={handleSavePoint}
+              className="gap-2"
+              disabled={pointFormCapacityConflict || pointFormScheduleInvalid || pointFormCommissionInvalid}
+            >
               <Save className="h-4 w-4" />
               Enregistrer
             </Button>

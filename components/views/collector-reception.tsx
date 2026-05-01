@@ -31,7 +31,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import {
   getKycDocumentLabel,
   getKycVerificationStatusColor,
@@ -138,8 +137,8 @@ export function CollectorReception() {
     referenceInput.trim().length === 0
       ? 'Saisissez le numero de reference figurant sur le colis ou le bordereau client.'
       : isReferenceValid
-      ? 'Numero de reference valide.'
-      : 'Le numero de reference saisi ne correspond pas au colis en cours de reception.';
+        ? 'Numero de reference valide.'
+        : 'Le numero de reference saisi ne correspond pas au colis en cours de reception.';
 
   return (
     <div className="space-y-6">
@@ -189,7 +188,6 @@ export function CollectorReception() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">N° Suivi</TableHead>
                 <TableHead className="text-muted-foreground">Client</TableHead>
                 <TableHead className="text-muted-foreground">Poids</TableHead>
                 <TableHead className="text-muted-foreground">Destination</TableHead>
@@ -200,15 +198,6 @@ export function CollectorReception() {
             <TableBody>
               {pendingParcels.map((parcel) => (
                 <TableRow key={parcel.id} className="border-border">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
-                        <Package className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
-                      <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
-                    </div>
-                  </TableCell>
                   <TableCell className="text-foreground">{parcel.senderName}</TableCell>
                   <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -249,7 +238,7 @@ export function CollectorReception() {
               ))}
               {pendingParcels.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Check className="h-8 w-8 text-success" />
                       <p className="font-medium text-foreground">Tous les colis sont traites</p>
@@ -319,12 +308,18 @@ export function CollectorReception() {
                       <span className="text-muted-foreground">Poids</span>
                       <span className="font-medium text-foreground">{selectedParcel.weight} kg</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Valeur</span>
-                      <span className="font-medium text-foreground">
-                        {selectedParcel.declaredValue.toLocaleString('fr-FR')} EUR
-                      </span>
-                    </div>
+                    {selectedParcel.estimatedPrice !== undefined && (
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Prix estime</span>
+                        <span className="font-medium text-foreground">
+                          {selectedParcel.estimatedPrice.toLocaleString('fr-FR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{' '}
+                          EUR
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-muted-foreground">Etat</span>
                       <span className="font-medium text-foreground">
@@ -420,7 +415,7 @@ export function CollectorReception() {
       </Dialog>
 
       <Dialog open={isRejectDialogOpen} onOpenChange={handleRejectDialogChange}>
-        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto bg-card border-border">
+        <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Rejeter le colis</DialogTitle>
             <DialogDescription>

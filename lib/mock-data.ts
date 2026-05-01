@@ -7,16 +7,33 @@ export type VehicleType = 'MOTO' | 'VAN' | 'CAMION' | 'AVION';
 export type VehicleStatus = 'AVAILABLE' | 'IN_TRANSIT' | 'MAINTENANCE';
 
 export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'COLLECTOR' | 'TRANSPORTER';
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 export type CollectionPointCapacityUnit = 'KG' | 'M3';
+export type WeekdayKey = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type ShipmentType = 'STANDARD' | 'EXPRESS' | 'ECONOMY';
+export type ParcelPickupReadiness = 'PENDING' | 'READY';
+export type ParcelNoteVisibility = 'INTERNAL' | 'CLIENT';
+export type ParcelGroupScope = 'COLLECTION_POINT' | 'TRANSPORTER_TOUR';
 
 export interface User {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  phone: string;
+  countryId: string;
+  cityId: string;
+  address?: string;
+  password: string;
   role: UserRole;
+  status: UserStatus;
   assignedPointId?: string;
   assignedVehicleId?: string;
+  transporterCommissionRate?: number;
   avatar?: string;
+  profilePhotoUrl?: string;
 }
 
 export interface CollectionPoint {
@@ -29,6 +46,16 @@ export interface CollectionPoint {
     unit: CollectionPointCapacityUnit;
   };
   responsibleId: string;
+  isOpen: boolean;
+  openingHours: CollectionPointOpeningHours;
+  closedReason?: string;
+  commissionRate?: number;
+}
+
+export interface CollectionPointOpeningHours {
+  days: WeekdayKey[];
+  opensAt: string;
+  closesAt: string;
 }
 
 export interface Country {
@@ -65,10 +92,15 @@ export interface Parcel {
   senderPhone: string;
   recipientName: string;
   recipientPhone?: string;
+  recipientFullAddress?: string;
   weight: number; // kg
   volume: number; // m3
   description: string;
-  declaredValue: number;
+  declaredValue?: number;
+  shipmentType?: ShipmentType;
+  pricingRuleId?: string;
+  estimatedDistanceKm?: number;
+  estimatedPrice?: number;
   packageCondition: 'GOOD' | 'FRAGILE';
   senderKyc: {
     documentType: KycDocumentType;
@@ -78,8 +110,13 @@ export interface Parcel {
   };
   status: ParcelStatus;
   originPointId: string;
+  destinationCountryId?: string;
+  destinationCityId?: string;
+  destinationZoneId?: string;
   destinationPointId: string;
   currentVehicleId?: string;
+  groupId?: string;
+  pickupReadiness: ParcelPickupReadiness;
   images?: ParcelImage[];
   collectedByUserId?: string;
   collectedAt?: Date;
@@ -108,16 +145,45 @@ export interface ParcelHistoryEntry {
 export interface TransferRequest {
   id: string;
   parcelIds: string[];
+  pickedParcelIds?: string[];
   transporterId: string;
   collectorId: string;
   collectionPointId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+  createdAt: Date;
+  respondedAt?: Date;
+  completedAt?: Date;
+}
+
+export interface ParcelGroup {
+  id: string;
+  reference: string;
+  scope: ParcelGroupScope;
+  collectionPointId?: string;
+  vehicleId?: string;
+  parcelIds: string[];
+  createdByUserId: string;
+  createdByName: string;
+  createdAt: Date;
+}
+
+export interface ParcelNote {
+  id: string;
+  targetType: 'PARCEL' | 'GROUP';
+  targetId: string;
+  parcelIds: string[];
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  message: string;
+  visibility: ParcelNoteVisibility;
   createdAt: Date;
 }
 
 export interface PricingRule {
   id: string;
   name: string;
+  shipmentType: ShipmentType;
   basePrice: number;
   pricePerKg: number;
   pricePerKm: number;
@@ -129,15 +195,22 @@ export interface CreateParcelInput {
   senderPhone: string;
   recipientName: string;
   recipientPhone?: string;
+  recipientFullAddress?: string;
   weight: number;
   volume: number;
   description: string;
-  declaredValue: number;
+  shipmentType: ShipmentType;
+  pricingRuleId: string;
+  estimatedDistanceKm: number;
+  estimatedPrice: number;
   packageCondition: 'GOOD' | 'FRAGILE';
   senderKyc: {
     documentType: KycDocumentType;
     documentNumber: string;
   };
+  destinationCountryId: string;
+  destinationCityId: string;
+  destinationZoneId: string;
   destinationPointId: string;
   originPointId: string;
   createdBy: Pick<User, 'id' | 'name'>;
@@ -150,21 +223,48 @@ export const DEMO_USERS: User[] = [
     id: 'admin-1',
     email: 'admin@express.com',
     name: 'Marie Dupont',
+    firstName: 'Marie',
+    lastName: 'Dupont',
+    username: 'marie.dupont',
+    phone: '+33 6 11 22 33 44',
+    countryId: 'country-1',
+    cityId: 'city-1',
+    address: '12 Rue du Siege',
+    password: 'Admin123!',
     role: 'ADMIN',
+    status: 'ACTIVE',
     avatar: 'MD',
   },
   {
     id: 'employee-1',
     email: 'employe@express.com',
     name: 'Claire Martin',
+    firstName: 'Claire',
+    lastName: 'Martin',
+    username: 'claire.martin',
+    phone: '+33 6 21 43 65 87',
+    countryId: 'country-1',
+    cityId: 'city-2',
+    address: '28 Avenue Operations',
+    password: 'Employe123!',
     role: 'EMPLOYEE',
+    status: 'ACTIVE',
     avatar: 'CM',
   },
   {
     id: 'collector-1',
     email: 'collecteur@bastos.com',
     name: 'Jean Bastos',
+    firstName: 'Jean',
+    lastName: 'Bastos',
+    username: 'jean.bastos',
+    phone: '+33 6 55 12 12 12',
+    countryId: 'country-1',
+    cityId: 'city-1',
+    address: '15 Rue de la Paix',
+    password: 'Collecteur123!',
     role: 'COLLECTOR',
+    status: 'ACTIVE',
     assignedPointId: 'point-1',
     avatar: 'JB',
   },
@@ -172,7 +272,16 @@ export const DEMO_USERS: User[] = [
     id: 'collector-2',
     email: 'collecteur@nord.com',
     name: 'Sophie Martin',
+    firstName: 'Sophie',
+    lastName: 'Martin',
+    username: 'sophie.martin',
+    phone: '+33 6 77 14 14 14',
+    countryId: 'country-1',
+    cityId: 'city-2',
+    address: '78 Avenue du Nord',
+    password: 'Collecteur456!',
     role: 'COLLECTOR',
+    status: 'ACTIVE',
     assignedPointId: 'point-2',
     avatar: 'SM',
   },
@@ -180,16 +289,36 @@ export const DEMO_USERS: User[] = [
     id: 'transporter-1',
     email: 'transporteur@van.com',
     name: 'Pierre Van',
+    firstName: 'Pierre',
+    lastName: 'Van',
+    username: 'pierre.van',
+    phone: '+33 6 88 16 16 16',
+    countryId: 'country-1',
+    cityId: 'city-1',
+    address: 'Depot Ouest',
+    password: 'Transport123!',
     role: 'TRANSPORTER',
+    status: 'ACTIVE',
     assignedVehicleId: 'vehicle-1',
+    transporterCommissionRate: 12,
     avatar: 'PV',
   },
   {
     id: 'transporter-2',
     email: 'transporteur@moto.com',
     name: 'Lucas Rapide',
+    firstName: 'Lucas',
+    lastName: 'Rapide',
+    username: 'lucas.rapide',
+    phone: '+33 6 99 18 18 18',
+    countryId: 'country-1',
+    cityId: 'city-3',
+    address: 'Zone Logistique Sud',
+    password: 'Transport456!',
     role: 'TRANSPORTER',
+    status: 'ACTIVE',
     assignedVehicleId: 'vehicle-2',
+    transporterCommissionRate: 9.5,
     avatar: 'LR',
   },
 ];
@@ -275,6 +404,13 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
       unit: 'KG',
     },
     responsibleId: 'collector-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:00',
+      closesAt: '18:00',
+    },
+    commissionRate: 7.5,
   },
   {
     id: 'point-2',
@@ -286,6 +422,12 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
       unit: 'M3',
     },
     responsibleId: 'collector-2',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '09:00',
+      closesAt: '19:00',
+    },
   },
   {
     id: 'point-3',
@@ -297,6 +439,14 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
       unit: 'KG',
     },
     responsibleId: 'collector-1',
+    isOpen: false,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:30',
+      closesAt: '17:30',
+    },
+    closedReason: 'Indisponible temporairement',
+    commissionRate: 5,
   },
 ];
 
@@ -358,6 +508,7 @@ export const PARCELS: Parcel[] = [
     status: 'DELIVERED',
     originPointId: 'point-1',
     destinationPointId: 'point-2',
+    pickupReadiness: 'READY',
     createdAt: new Date('2024-01-15T10:00:00'),
     updatedAt: new Date('2024-01-16T14:30:00'),
     history: [
@@ -389,6 +540,8 @@ export const PARCELS: Parcel[] = [
     originPointId: 'point-1',
     destinationPointId: 'point-3',
     currentVehicleId: 'vehicle-2',
+    groupId: 'group-2',
+    pickupReadiness: 'READY',
     createdAt: new Date('2024-01-16T09:00:00'),
     updatedAt: new Date('2024-01-16T15:00:00'),
     history: [
@@ -417,6 +570,7 @@ export const PARCELS: Parcel[] = [
     status: 'RECEIVED_AT_COLLECTION_POINT',
     originPointId: 'point-2',
     destinationPointId: 'point-1',
+    pickupReadiness: 'PENDING',
     createdAt: new Date('2024-01-17T08:00:00'),
     updatedAt: new Date('2024-01-17T09:30:00'),
     history: [
@@ -444,6 +598,7 @@ export const PARCELS: Parcel[] = [
     status: 'CREATED',
     originPointId: 'point-3',
     destinationPointId: 'point-2',
+    pickupReadiness: 'PENDING',
     createdAt: new Date('2024-01-17T10:00:00'),
     updatedAt: new Date('2024-01-17T10:00:00'),
     history: [
@@ -471,6 +626,8 @@ export const PARCELS: Parcel[] = [
     originPointId: 'point-1',
     destinationPointId: 'point-2',
     currentVehicleId: 'vehicle-2',
+    groupId: 'group-2',
+    pickupReadiness: 'READY',
     createdAt: new Date('2024-01-16T11:00:00'),
     updatedAt: new Date('2024-01-16T16:00:00'),
     history: [
@@ -499,6 +656,7 @@ export const PARCELS: Parcel[] = [
     status: 'ARRIVED_AT_DESTINATION',
     originPointId: 'point-2',
     destinationPointId: 'point-3',
+    pickupReadiness: 'READY',
     createdAt: new Date('2024-01-15T14:00:00'),
     updatedAt: new Date('2024-01-17T08:00:00'),
     history: [
@@ -528,6 +686,7 @@ export const PARCELS: Parcel[] = [
     status: 'RECEIVED_AT_COLLECTION_POINT',
     originPointId: 'point-1',
     destinationPointId: 'point-3',
+    pickupReadiness: 'PENDING',
     createdAt: new Date('2024-01-17T07:00:00'),
     updatedAt: new Date('2024-01-17T08:30:00'),
     history: [
@@ -555,6 +714,7 @@ export const PARCELS: Parcel[] = [
     status: 'REJECTED',
     originPointId: 'point-3',
     destinationPointId: 'point-1',
+    pickupReadiness: 'PENDING',
     createdAt: new Date('2024-01-16T13:00:00'),
     updatedAt: new Date('2024-01-16T14:00:00'),
     history: [
@@ -582,6 +742,7 @@ export const PARCELS: Parcel[] = [
     status: 'CREATED',
     originPointId: 'point-2',
     destinationPointId: 'point-3',
+    pickupReadiness: 'PENDING',
     createdAt: new Date('2024-01-17T11:00:00'),
     updatedAt: new Date('2024-01-17T11:00:00'),
     history: [
@@ -608,6 +769,7 @@ export const PARCELS: Parcel[] = [
     status: 'DELIVERED',
     originPointId: 'point-3',
     destinationPointId: 'point-2',
+    pickupReadiness: 'READY',
     createdAt: new Date('2024-01-14T09:00:00'),
     updatedAt: new Date('2024-01-15T16:00:00'),
     history: [
@@ -616,6 +778,60 @@ export const PARCELS: Parcel[] = [
       { status: 'IN_TRANSIT', timestamp: new Date('2024-01-14T14:00:00'), actorId: 'transporter-1', actorName: 'Pierre Van', location: 'En route', vehicleId: 'vehicle-1' },
       { status: 'ARRIVED_AT_DESTINATION', timestamp: new Date('2024-01-15T10:00:00'), actorId: 'transporter-1', actorName: 'Pierre Van', location: 'Boutique Nord' },
       { status: 'DELIVERED', timestamp: new Date('2024-01-15T16:00:00'), actorId: 'collector-2', actorName: 'Sophie Martin', location: 'Boutique Nord' },
+    ],
+  },
+  {
+    id: 'parcel-11',
+    trackingNumber: 'EXP-2024-011',
+    senderName: 'Nadia Sable',
+    senderPhone: '+33 6 32 54 76 98',
+    recipientName: 'Kevin Ivoire',
+    weight: 2.7,
+    volume: 0.04,
+    description: 'Boite textile',
+    packageCondition: 'GOOD',
+    senderKyc: {
+      documentType: 'CNI',
+      documentNumber: 'NS554433',
+      verificationStatus: 'VERIFIED',
+      verifiedAt: new Date('2024-01-17T07:20:00'),
+    },
+    status: 'RECEIVED_AT_COLLECTION_POINT',
+    originPointId: 'point-1',
+    destinationPointId: 'point-2',
+    pickupReadiness: 'PENDING',
+    createdAt: new Date('2024-01-17T07:30:00'),
+    updatedAt: new Date('2024-01-17T09:10:00'),
+    history: [
+      { status: 'CREATED', timestamp: new Date('2024-01-17T07:30:00'), actorId: 'client', actorName: 'Nadia Sable', location: 'En ligne' },
+      { status: 'RECEIVED_AT_COLLECTION_POINT', timestamp: new Date('2024-01-17T09:10:00'), actorId: 'collector-1', actorName: 'Jean Bastos', location: 'Pharmacie du Centre' },
+    ],
+  },
+  {
+    id: 'parcel-12',
+    trackingNumber: 'EXP-2024-012',
+    senderName: 'Boris Lin',
+    senderPhone: '+33 6 41 52 63 74',
+    recipientName: 'Helene Dor',
+    weight: 3.3,
+    volume: 0.05,
+    description: 'Equipement bureau',
+    packageCondition: 'FRAGILE',
+    senderKyc: {
+      documentType: 'PASSPORT',
+      documentNumber: 'BL440011',
+      verificationStatus: 'VERIFIED',
+      verifiedAt: new Date('2024-01-17T08:05:00'),
+    },
+    status: 'RECEIVED_AT_COLLECTION_POINT',
+    originPointId: 'point-1',
+    destinationPointId: 'point-3',
+    pickupReadiness: 'PENDING',
+    createdAt: new Date('2024-01-17T08:15:00'),
+    updatedAt: new Date('2024-01-17T09:40:00'),
+    history: [
+      { status: 'CREATED', timestamp: new Date('2024-01-17T08:15:00'), actorId: 'client', actorName: 'Boris Lin', location: 'En ligne' },
+      { status: 'RECEIVED_AT_COLLECTION_POINT', timestamp: new Date('2024-01-17T09:40:00'), actorId: 'collector-1', actorName: 'Jean Bastos', location: 'Pharmacie du Centre' },
     ],
   },
 ];
@@ -642,11 +858,53 @@ export const TRANSFER_REQUESTS: TransferRequest[] = [
   },
 ];
 
+export const PARCEL_GROUPS: ParcelGroup[] = [
+  {
+    id: 'group-2',
+    reference: 'LOT-2024-0002',
+    scope: 'TRANSPORTER_TOUR',
+    collectionPointId: 'point-1',
+    vehicleId: 'vehicle-2',
+    parcelIds: ['parcel-2', 'parcel-5'],
+    createdByUserId: 'transporter-2',
+    createdByName: 'Lucas Rapide',
+    createdAt: new Date('2024-01-16T14:20:00'),
+  },
+];
+
+export const PARCEL_NOTES: ParcelNote[] = [
+  {
+    id: 'note-1',
+    targetType: 'GROUP',
+    targetId: 'group-2',
+    parcelIds: ['parcel-2', 'parcel-5'],
+    authorId: 'transporter-2',
+    authorName: 'Lucas Rapide',
+    authorRole: 'TRANSPORTER',
+    message: 'Depart confirme. Les clients peuvent se preparer a une livraison au point relais.',
+    visibility: 'CLIENT',
+    createdAt: new Date('2024-01-16T15:05:00'),
+  },
+  {
+    id: 'note-2',
+    targetType: 'PARCEL',
+    targetId: 'parcel-3',
+    parcelIds: ['parcel-3'],
+    authorId: 'collector-2',
+    authorName: 'Sophie Martin',
+    authorRole: 'COLLECTOR',
+    message: 'Colis controle et mis de cote pour le prochain chargement.',
+    visibility: 'INTERNAL',
+    createdAt: new Date('2024-01-17T09:35:00'),
+  },
+];
+
 // Pricing Rules
 export const PRICING_RULES: PricingRule[] = [
   {
     id: 'price-1',
     name: 'Standard Local',
+    shipmentType: 'STANDARD',
     basePrice: 5.00,
     pricePerKg: 1.50,
     pricePerKm: 0.10,
@@ -655,6 +913,7 @@ export const PRICING_RULES: PricingRule[] = [
   {
     id: 'price-2',
     name: 'Express National',
+    shipmentType: 'EXPRESS',
     basePrice: 12.00,
     pricePerKg: 2.00,
     pricePerKm: 0.15,
@@ -662,6 +921,7 @@ export const PRICING_RULES: PricingRule[] = [
   },
   {
     id: 'price-3',
+    shipmentType: 'ECONOMY',
     name: 'Économique',
     basePrice: 3.50,
     pricePerKg: 1.00,

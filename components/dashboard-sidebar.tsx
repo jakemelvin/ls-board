@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/mock-data';
 import { ADMIN_LIKE_ROLES } from '@/lib/roles';
+import { SendamLogo } from '@/components/sendam-logo';
 
 interface SidebarItem {
   id: string;
@@ -39,7 +40,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'local-stock', label: 'Stock Local', icon: Warehouse, roles: ['COLLECTOR'] },
   // Transporter specific
   { id: 'my-tour', label: 'Ma Tournée', icon: Route, roles: ['TRANSPORTER'] },
-  { id: 'pickup-request', label: 'Demande de Prise', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
+  { id: 'pickup-request', label: 'Nouvelle Demande', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
 ];
 
 interface DashboardSidebarProps {
@@ -54,14 +55,8 @@ export function DashboardSidebar({ currentRole, activeSection, onSectionChange }
   return (
     <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <Package className="h-5 w-5 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold text-sidebar-foreground">Express</h1>
-          <p className="text-xs text-muted-foreground">Logistics</p>
-        </div>
+      <div className="flex h-20 items-center border-b border-sidebar-border px-5">
+        <SendamLogo />
       </div>
 
       {/* Navigation */}

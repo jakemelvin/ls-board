@@ -59,6 +59,14 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
     [transferRequests, transporter.id]
   );
 
+  const acceptedPickupRequests = useMemo(
+    () =>
+      transferRequests.filter(
+        (request) => request.transporterId === transporter.id && request.status === 'ACCEPTED'
+      ),
+    [transferRequests, transporter.id]
+  );
+
   const onboardParcels = useMemo(
     () =>
       assignedVehicle
@@ -96,7 +104,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
       ? Math.round((totalOnboardWeight / assignedVehicle.maxWeight) * 100)
       : 0;
 
-  const requestRows = pendingPickupRequests
+  const requestRows = acceptedPickupRequests
     .map((request) => {
       const point = collectionPoints.find((collectionPoint) => collectionPoint.id === request.collectionPointId);
       const relatedParcels = request.parcelIds
@@ -154,8 +162,8 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
               <ArrowRightLeft className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{pendingPickupRequests.length}</p>
-              <p className="text-xs text-muted-foreground">Demandes a faire valider</p>
+              <p className="text-2xl font-bold text-foreground">{acceptedPickupRequests.length}</p>
+              <p className="text-xs text-muted-foreground">Demandes acceptees a charger</p>
             </div>
           </CardContent>
         </Card>
@@ -256,8 +264,8 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Demandes en attente</CardTitle>
-            <CardDescription>Prises en charge soumises et pas encore validees</CardDescription>
+            <CardTitle className="text-foreground">Demandes a charger</CardTitle>
+            <CardDescription>Demandes acceptees par le collecteur en attente de choix reel</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {requestRows.length > 0 ? (
@@ -272,8 +280,8 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                           : 'Localisation indisponible'}
                       </p>
                     </div>
-                    <span className="rounded-lg bg-warning/20 px-2 py-1 text-xs font-medium text-warning">
-                      En attente
+                    <span className="rounded-lg bg-chart-2/20 px-2 py-1 text-xs font-medium text-chart-2">
+                      Acceptee
                     </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -285,7 +293,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
               ))
             ) : (
               <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Aucune demande en attente pour le moment.
+                Aucune demande acceptee a charger pour le moment.
               </div>
             )}
           </CardContent>

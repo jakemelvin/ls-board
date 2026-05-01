@@ -18,6 +18,7 @@ import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
+import { useStore } from '@/lib/store';
 
 // Map roles to their default users
 const ROLE_USERS: Record<UserRole, User> = {
@@ -36,10 +37,12 @@ const DEFAULT_SECTIONS: Record<UserRole, string> = {
 };
 
 export default function DashboardPage() {
+  const { users } = useStore();
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
 
-  const currentUser = ROLE_USERS[currentRole];
+  const currentUser =
+    users.find((user) => user.role === currentRole) ?? ROLE_USERS[currentRole];
 
   const handleRoleChange = (role: UserRole) => {
     setCurrentRole(role);
@@ -68,23 +71,23 @@ export default function DashboardPage() {
       case 'parcels':
         return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
       case 'collection-points':
-        return <CollectionPointsView />;
+        return <CollectionPointsView currentRole={currentRole} currentUser={currentUser} />;
       case 'tracking':
         return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
       case 'transfer-requests':
-        return <TransferRequests currentRole={currentRole} />;
+        return <TransferRequests currentRole={currentRole} currentUser={currentUser} />;
 
       // Collector sections
       case 'reception':
         return <CollectorReception />;
       case 'local-stock':
-        return <LocalStock />;
+        return <LocalStock currentUser={currentUser} />;
 
       // Transporter sections
       case 'my-tour':
-        return <TransporterTour />;
+        return <TransporterTour currentUser={currentUser} />;
       case 'pickup-request':
-        return <PickupRequest />;
+        return <PickupRequest currentUser={currentUser} />;
 
       default:
         return isAdminLikeRole(currentRole) ? (
