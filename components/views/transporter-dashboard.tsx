@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   Clock3,
+  Coins,
   MapPin,
   Package,
   Route,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
+import { formatMoney, getUserCommissionSummary } from '@/lib/commissions';
 import { getStatusColor, getStatusLabel, type User } from '@/lib/mock-data';
 import {
   getRecipientDisplayName,
@@ -39,6 +41,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
     users,
     vehicles,
     parcels,
+    commissions,
     transferRequests,
     collectionPoints,
     countries,
@@ -99,6 +102,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
   );
 
   const totalOnboardWeight = onboardParcels.reduce((sum, parcel) => sum + parcel.weight, 0);
+  const commissionSummary = getUserCommissionSummary(commissions, transporter.id);
   const weightUtilization =
     assignedVehicle && assignedVehicle.maxWeight > 0
       ? Math.round((totalOnboardWeight / assignedVehicle.maxWeight) * 100)
@@ -201,6 +205,52 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
           </CardContent>
         </Card>
       </div>
+
+      {transporter.transporterCommissionRate !== undefined && (
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Coins className="h-5 w-5 text-primary" />
+              Mes commissions
+            </CardTitle>
+            <CardDescription>
+              Montants generes par les colis livres sur vos trajets termines.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Taux configure</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {transporter.transporterCommissionRate}%
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-warning/10 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">A payer</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {formatMoney(commissionSummary.payableAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-success/10 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Deja paye</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {formatMoney(commissionSummary.paidAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Colis commissionnes</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{commissionSummary.parcelCount}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Derniere commission:{' '}
+              {commissionSummary.latestCommission
+                ? `${formatMoney(commissionSummary.latestCommission.commissionAmount)} le ${commissionSummary.latestCommission.earnedAt.toLocaleDateString('fr-FR')}`
+                : 'aucune commission generee pour le moment.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="border-border bg-card">

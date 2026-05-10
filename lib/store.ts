@@ -8,34 +8,46 @@ import {
   PARCELS,
   VEHICLES,
   COLLECTION_POINTS,
+  NETWORK_COLLECTION_POINTS,
   DEMO_USERS,
   TRANSFER_REQUESTS,
   PARCEL_GROUPS,
   PARCEL_NOTES,
   PRICING_RULES,
+  SUBSCRIPTION_PLANS,
+  COMPANY_SUBSCRIPTION,
+  SUBSCRIPTION_USAGE,
   type Parcel,
   type ParcelGroup,
   type ParcelNote,
   type Vehicle,
   type CollectionPoint,
+  type CollectionPointGeoLocation,
+  type NetworkCollectionPoint,
   type Country,
   type City,
   type Zone,
   type User,
   type TransferRequest,
   type PricingRule,
+  type SubscriptionPlan,
+  type CompanySubscription,
+  type SubscriptionUsage,
+  type CommissionEntry,
   type ParcelStatus,
   type ParcelPickupReadiness,
   type VehicleStatus,
   type UserRole,
   type CreateParcelInput,
 } from './mock-data';
+import { buildCommissionEntries } from './commissions';
 
 interface StoreState {
   // Data
   parcels: Parcel[];
   vehicles: Vehicle[];
   collectionPoints: CollectionPoint[];
+  networkCollectionPoints: NetworkCollectionPoint[];
   countries: Country[];
   cities: City[];
   zones: Zone[];
@@ -44,6 +56,10 @@ interface StoreState {
   parcelGroups: ParcelGroup[];
   parcelNotes: ParcelNote[];
   pricingRules: PricingRule[];
+  subscriptionPlans: SubscriptionPlan[];
+  companySubscription: CompanySubscription;
+  subscriptionUsage: SubscriptionUsage;
+  commissions: CommissionEntry[];
 
   // Parcel actions
   addParcel: (parcel: CreateParcelInput) => Parcel;
@@ -74,6 +90,10 @@ interface StoreState {
   // Collection Point actions
   addCollectionPoint: (point: Omit<CollectionPoint, 'id'>) => void;
   updateCollectionPoint: (pointId: string, updates: Partial<CollectionPoint>) => void;
+  setCollectionPointGeoLocation: (
+    pointId: string,
+    geoLocation: CollectionPointGeoLocation
+  ) => void;
   setCollectionPointOpenStatus: (pointId: string, isOpen: boolean, closedReason?: string) => void;
   deleteCollectionPoint: (pointId: string) => void;
 
@@ -97,6 +117,13 @@ interface StoreState {
   addPricingRule: (rule: Omit<PricingRule, 'id'>) => void;
   updatePricingRule: (ruleId: string, updates: Partial<PricingRule>) => void;
   deletePricingRule: (ruleId: string) => void;
+
+  // Subscription actions
+  changeSubscriptionPlan: (planId: string) => void;
+
+  // Commission actions
+  markCommissionAsPaid: (commissionId: string) => void;
+  markCommissionAsPayable: (commissionId: string) => void;
 }
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -117,6 +144,7 @@ export const useStore = create<StoreState>((set, get) => ({
   parcels: PARCELS,
   vehicles: VEHICLES,
   collectionPoints: COLLECTION_POINTS,
+  networkCollectionPoints: NETWORK_COLLECTION_POINTS,
   countries: COUNTRIES,
   cities: CITIES,
   zones: ZONES,
@@ -125,6 +153,10 @@ export const useStore = create<StoreState>((set, get) => ({
   parcelGroups: PARCEL_GROUPS,
   parcelNotes: PARCEL_NOTES,
   pricingRules: PRICING_RULES,
+  subscriptionPlans: SUBSCRIPTION_PLANS,
+  companySubscription: COMPANY_SUBSCRIPTION,
+  subscriptionUsage: SUBSCRIPTION_USAGE,
+  commissions: buildCommissionEntries(PARCELS, COLLECTION_POINTS, DEMO_USERS, VEHICLES),
 
   // Parcel actions
   addParcel: (parcel) => {
@@ -182,29 +214,51 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   updateParcelStatus: (parcelId, status, actorId, actorName, location, vehicleId) => {
-    set((state) => ({
-      parcels: state.parcels.map((parcel) =>
-        parcel.id === parcelId
-          ? {
-              ...parcel,
+    const now = new Date();
+
+    set((state) => {
+      let updatedParcel: Parcel | null = null;
+      const parcels = state.parcels.map((parcel) => {
+        if (parcel.id !== parcelId) {
+          return parcel;
+        }
+
+        updatedParcel = {
+          ...parcel,
+          status,
+          updatedAt: now,
+          currentVehicleId: vehicleId || parcel.currentVehicleId,
+          history: [
+            ...parcel.history,
+            {
               status,
-              updatedAt: new Date(),
-              currentVehicleId: vehicleId || parcel.currentVehicleId,
-              history: [
-                ...parcel.history,
-                {
-                  status,
-                  timestamp: new Date(),
-                  actorId,
-                  actorName,
-                  location,
-                  vehicleId,
-                },
-              ],
-            }
-          : parcel
-      ),
-    }));
+              timestamp: now,
+              actorId,
+              actorName,
+              location,
+              vehicleId,
+            },
+          ],
+        };
+
+        return updatedParcel;
+      });
+
+      if (status !== 'DELIVERED' || !updatedParcel) {
+        return { parcels };
+      }
+
+      const newCommissions = buildCommissionEntries(
+        [updatedParcel],
+        state.collectionPoints,
+        state.users,
+        state.vehicles
+      ).filter(
+        (commission) => !state.commissions.some((existing) => existing.id === commission.id)
+      );
+
+      return { parcels, commissions: [...newCommissions, ...state.commissions] };
+    });
   },
 
   assignParcelToVehicle: (parcelId, vehicleId) => {
@@ -498,6 +552,14 @@ export const useStore = create<StoreState>((set, get) => ({
     }));
   },
 
+  setCollectionPointGeoLocation: (pointId, geoLocation) => {
+    set((state) => ({
+      collectionPoints: state.collectionPoints.map((point) =>
+        point.id === pointId ? { ...point, geoLocation } : point
+      ),
+    }));
+  },
+
   setCollectionPointOpenStatus: (pointId, isOpen, closedReason) => {
     set((state) => ({
       collectionPoints: state.collectionPoints.map((point) =>
@@ -662,6 +724,54 @@ export const useStore = create<StoreState>((set, get) => ({
   deletePricingRule: (ruleId) => {
     set((state) => ({
       pricingRules: state.pricingRules.filter((rule) => rule.id !== ruleId),
+    }));
+  },
+
+  changeSubscriptionPlan: (planId) => {
+    const plan = get().subscriptionPlans.find((item) => item.id === planId);
+
+    if (!plan) {
+      return;
+    }
+
+    set((state) => ({
+      companySubscription: {
+        ...state.companySubscription,
+        planId,
+        status: plan.type === 'FREE_TRIAL' ? 'TRIALING' : 'ACTIVE',
+        autoRenew: plan.type !== 'FREE_TRIAL',
+        updatedAt: new Date(),
+      },
+    }));
+  },
+
+  markCommissionAsPaid: (commissionId) => {
+    set((state) => ({
+      commissions: state.commissions.map((commission) =>
+        commission.id === commissionId
+          ? {
+              ...commission,
+              status: 'PAID',
+              paidAt: new Date(),
+              updatedAt: new Date(),
+            }
+          : commission
+      ),
+    }));
+  },
+
+  markCommissionAsPayable: (commissionId) => {
+    set((state) => ({
+      commissions: state.commissions.map((commission) =>
+        commission.id === commissionId
+          ? {
+              ...commission,
+              status: 'PAYABLE',
+              paidAt: undefined,
+              updatedAt: new Date(),
+            }
+          : commission
+      ),
     }));
   },
 }));

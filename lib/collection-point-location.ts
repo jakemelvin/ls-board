@@ -1,4 +1,13 @@
-import type { City, CollectionPoint, Country, Zone } from '@/lib/mock-data';
+import type {
+  City,
+  CollectionPoint,
+  CollectionPointGeoLocation,
+  NetworkCollectionPoint,
+  Country,
+  Zone,
+} from '@/lib/mock-data';
+
+const EARTH_RADIUS_KM = 6371;
 
 export function getZoneById(zones: Zone[], zoneId?: string) {
   if (!zoneId) {
@@ -24,17 +33,21 @@ export function getCountryById(countries: Country[], countryId?: string) {
   return countries.find((country) => country.id === countryId);
 }
 
-export function getCollectionPointZone(point: CollectionPoint, zones: Zone[]) {
+export function getCollectionPointZone(point: Pick<CollectionPoint, 'zoneId'>, zones: Zone[]) {
   return getZoneById(zones, point.zoneId);
 }
 
-export function getCollectionPointCity(point: CollectionPoint, zones: Zone[], cities: City[]) {
+export function getCollectionPointCity(
+  point: Pick<CollectionPoint, 'zoneId'>,
+  zones: Zone[],
+  cities: City[]
+) {
   const zone = getCollectionPointZone(point, zones);
   return getCityById(cities, zone?.cityId);
 }
 
 export function getCollectionPointCountry(
-  point: CollectionPoint,
+  point: Pick<CollectionPoint, 'zoneId'>,
   zones: Zone[],
   cities: City[],
   countries: Country[]
@@ -44,7 +57,7 @@ export function getCollectionPointCountry(
 }
 
 export function getCollectionPointLocationLabel(
-  point: CollectionPoint,
+  point: Pick<CollectionPoint, 'zoneId'>,
   zones: Zone[],
   cities: City[],
   countries: Country[]
@@ -57,7 +70,7 @@ export function getCollectionPointLocationLabel(
 }
 
 export function getCollectionPointFullAddress(
-  point: CollectionPoint,
+  point: Pick<CollectionPoint, 'address' | 'zoneId'>,
   zones: Zone[],
   cities: City[],
   countries: Country[]
@@ -65,4 +78,96 @@ export function getCollectionPointFullAddress(
   const location = getCollectionPointLocationLabel(point, zones, cities, countries);
 
   return [point.address, location].filter(Boolean).join(', ');
+}
+
+export function hasCollectionPointGeoLocation(
+  point: Pick<CollectionPoint, 'geoLocation'>
+): point is { geoLocation: CollectionPointGeoLocation } {
+  return (
+    point.geoLocation !== undefined &&
+    Number.isFinite(point.geoLocation.latitude) &&
+    Number.isFinite(point.geoLocation.longitude)
+  );
+}
+
+export function formatGeoCoordinate(value: number) {
+  return value.toFixed(6);
+}
+
+export function formatCollectionPointGeoLocation(point: Pick<CollectionPoint, 'geoLocation'>) {
+  if (!hasCollectionPointGeoLocation(point)) {
+    return 'Position non renseignee';
+  }
+
+  return `${formatGeoCoordinate(point.geoLocation.latitude)}, ${formatGeoCoordinate(
+    point.geoLocation.longitude
+  )}`;
+}
+
+export function getCollectionPointGeoLocationSourceLabel(
+  point: Pick<CollectionPoint, 'geoLocation'>
+) {
+  if (!point.geoLocation) {
+    return 'Non renseignee';
+  }
+
+  return point.geoLocation.source === 'GPS_CAPTURE'
+    ? 'Capture GPS collecteur'
+    : 'Saisie manuelle';
+}
+
+export function getGoogleMapsUrl(point: Pick<CollectionPoint, 'geoLocation'>) {
+  if (!hasCollectionPointGeoLocation(point)) {
+    return undefined;
+  }
+
+  const { latitude, longitude } = point.geoLocation;
+  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+}
+
+export function calculateDistanceKm(
+  origin: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number }
+) {
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const deltaLatitude = toRadians(destination.latitude - origin.latitude);
+  const deltaLongitude = toRadians(destination.longitude - origin.longitude);
+  const originLatitude = toRadians(origin.latitude);
+  const destinationLatitude = toRadians(destination.latitude);
+
+  const haversine =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(originLatitude) *
+      Math.cos(destinationLatitude) *
+      Math.sin(deltaLongitude / 2) ** 2;
+
+  return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+export function getCollectionPointsSortedByDistance(
+  points: Array<CollectionPoint | NetworkCollectionPoint>,
+  userLocation: { latitude: number; longitude: number }
+) {
+  return points
+    .flatMap((point) => {
+      if (!hasCollectionPointGeoLocation(point)) {
+        return [];
+      }
+
+      return [
+        {
+          point,
+          distanceKm: calculateDistanceKm(userLocation, point.geoLocation),
+        },
+      ];
+    })
+    .sort((left, right) => left.distanceKm - right.distanceKm);
+}
+
+export function formatDistanceKm(distanceKm: number) {
+  if (distanceKm < 1) {
+    return `${Math.round(distanceKm * 1000)} m`;
+  }
+
+  return `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km`;
 }

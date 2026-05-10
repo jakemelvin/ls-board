@@ -1,13 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRightLeft,
   CheckCircle2,
   Clock3,
+  Coins,
+  ExternalLink,
   Eye,
   EyeOff,
+  LocateFixed,
   MapPin,
   Package,
   Power,
@@ -16,6 +19,14 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -34,7 +45,14 @@ import {
   getCollectionPointStatusClassName,
   getCollectionPointStatusLabel,
 } from '@/lib/collection-point-availability';
-import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
+import {
+  formatCollectionPointGeoLocation,
+  getCollectionPointGeoLocationSourceLabel,
+  getCollectionPointLocationLabel,
+  getGoogleMapsUrl,
+  hasCollectionPointGeoLocation,
+} from '@/lib/collection-point-location';
+import { formatMoney, getUserCommissionSummary } from '@/lib/commissions';
 import { getKycVerificationStatusLabel, getStatusColor, getStatusLabel, type User } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
@@ -52,8 +70,13 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
     cities,
     zones,
     transferRequests,
+    commissions,
     setCollectionPointOpenStatus,
+    setCollectionPointGeoLocation,
   } = useStore();
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
 
   const collector = users.find((user) => user.id === currentUser.id) ?? currentUser;
   const assignedPoint = collector.assignedPointId
@@ -113,6 +136,8 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
   const storedParcelsCount = assignedPoint
     ? getCollectionPointParcelCount(assignedPoint.id, parcels)
     : 0;
+  const assignedPointMapsUrl = assignedPoint ? getGoogleMapsUrl(assignedPoint) : undefined;
+  const commissionSummary = getUserCommissionSummary(commissions, collector.id);
 
   const recentOperations = useMemo(() => {
     if (!assignedPoint) {
@@ -134,6 +159,52 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
       .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
       .slice(0, 5);
   }, [assignedPoint, collector.id, parcels]);
+
+  const handleCapturePointLocation = () => {
+    if (!assignedPoint || isCapturingLocation) {
+      return;
+    }
+
+    if (!('geolocation' in navigator)) {
+      setLocationMessage("La geolocalisation n'est pas disponible sur ce navigateur.");
+      return;
+    }
+
+    setIsCapturingLocation(true);
+    setLocationMessage('Recherche de votre position GPS en cours...');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCollectionPointGeoLocation(assignedPoint.id, {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracyMeters: Math.round(position.coords.accuracy),
+          source: 'GPS_CAPTURE',
+          capturedByUserId: collector.id,
+          capturedByName: collector.name,
+          capturedAt: new Date(),
+        });
+        setIsCapturingLocation(false);
+        setLocationMessage('Position du point enregistree pour la carte mobile.');
+      },
+      (error) => {
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? 'Autorisez la localisation dans le navigateur pour enregistrer ce point.'
+            : error.code === error.TIMEOUT
+              ? 'La localisation a pris trop de temps. Restez dans le point et reessayez.'
+              : "Impossible de recuperer une position fiable pour l'instant.";
+
+        setIsCapturingLocation(false);
+        setLocationMessage(message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000,
+      }
+    );
+  };
 
   if (!assignedPoint) {
     return (
@@ -253,6 +324,107 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {assignedPoint.commissionRate !== undefined && (
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Coins className="h-5 w-5 text-primary" />
+              Mes commissions
+            </CardTitle>
+            <CardDescription>
+              Montants generes par les colis livres depuis votre point de collecte.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Taux configure</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{assignedPoint.commissionRate}%</p>
+              </div>
+              <div className="rounded-xl border border-border bg-warning/10 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">A payer</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {formatMoney(commissionSummary.payableAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-success/10 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Deja paye</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {formatMoney(commissionSummary.paidAmount)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Colis commissionnes</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{commissionSummary.parcelCount}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Derniere commission:{' '}
+              {commissionSummary.latestCommission
+                ? `${formatMoney(commissionSummary.latestCommission.commissionAmount)} le ${commissionSummary.latestCommission.earnedAt.toLocaleDateString('fr-FR')}`
+                : 'aucune commission generee pour le moment.'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-border bg-card">
+        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <CardTitle className="text-foreground">Position carte du point</CardTitle>
+            <CardDescription>
+              Coordonnees utilisees par l'application mobile pour afficher ce point et calculer les agences proches.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {assignedPointMapsUrl && (
+              <Button variant="outline" className="gap-2" asChild>
+                <a href={assignedPointMapsUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Ouvrir la carte
+                </a>
+              </Button>
+            )}
+            <Button className="gap-2" onClick={() => setIsLocationDialogOpen(true)}>
+              <LocateFixed className="h-4 w-4" />
+              Capturer ma position
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-secondary/20 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Coordonnees</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                {formatCollectionPointGeoLocation(assignedPoint)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/20 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Source</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                {getCollectionPointGeoLocationSourceLabel(assignedPoint)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/20 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Precision</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                {assignedPoint.geoLocation?.accuracyMeters
+                  ? `${assignedPoint.geoLocation.accuracyMeters} m`
+                  : hasCollectionPointGeoLocation(assignedPoint)
+                    ? 'Non communiquee'
+                    : 'En attente'}
+              </p>
+            </div>
+          </div>
+          {assignedPoint.geoLocation?.capturedAt && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Derniere mise a jour par {assignedPoint.geoLocation.capturedByName ?? 'un utilisateur'} le{' '}
+              {assignedPoint.geoLocation.capturedAt.toLocaleString('fr-FR')}.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-border bg-card">
@@ -390,6 +562,43 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+        <DialogContent className="border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Enregistrer la position du point</DialogTitle>
+            <DialogDescription>
+              Placez-vous physiquement a l'interieur du point de collecte avant d'activer la localisation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-warning/40 bg-warning/10 p-4">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Controle terrain obligatoire</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Cette capture sera utilisee sur la carte mobile. Elle doit donc etre faite depuis
+                  l'interieur de l'agence, pas depuis la rue, un parking ou un autre point.
+                </p>
+              </div>
+            </div>
+          </div>
+          {locationMessage && <p className="text-sm text-muted-foreground">{locationMessage}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLocationDialogOpen(false)}>
+              Fermer
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={handleCapturePointLocation}
+              disabled={isCapturingLocation}
+            >
+              <LocateFixed className="h-4 w-4" />
+              {isCapturingLocation ? 'Capture en cours...' : 'Activer la localisation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

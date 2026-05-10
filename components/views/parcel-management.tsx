@@ -6,6 +6,7 @@ import {
   Camera,
   Calculator,
   Clock3,
+  Coins,
   Eye,
   FileImage,
   MapPin,
@@ -47,6 +48,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import { TrackingStepper } from '@/components/tracking-stepper';
+import {
+  formatMoney,
+  getCommissionStatusClassName,
+  getCommissionStatusLabel,
+  getParcelCommissionForUser,
+} from '@/lib/commissions';
 import {
   getKycDocumentLabel,
   getStatusColor,
@@ -143,6 +150,67 @@ const initialCollectorParcelFormState: CollectorParcelFormState = {
   images: [],
 };
 
+type ParcelCommissionDetails = NonNullable<ReturnType<typeof getParcelCommissionForUser>>;
+
+function ParcelCommissionCard({
+  commission,
+  currentRole,
+}: {
+  commission: ParcelCommissionDetails;
+  currentRole: UserRole;
+}) {
+  const statusLabel =
+    commission.status === 'PENDING_DELIVERY'
+      ? 'Estimee, payable a la livraison'
+      : getCommissionStatusLabel(commission.status);
+  const statusClassName =
+    commission.status === 'PENDING_DELIVERY'
+      ? 'bg-muted text-muted-foreground'
+      : getCommissionStatusClassName(commission.status);
+
+  return (
+    <div className="rounded-xl border border-border bg-secondary/20 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
+            <Coins className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Ma commission</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {currentRole === 'COLLECTOR'
+                ? 'Part calculee sur le point de collecte d origine.'
+                : 'Part calculee sur votre trajet transporteur.'}
+            </p>
+          </div>
+        </div>
+        <span className={cn('w-fit rounded-lg px-2 py-1 text-xs font-medium', statusClassName)}>
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Montant</p>
+          <p className="mt-1 text-xl font-bold text-foreground">
+            {formatMoney(commission.commissionAmount)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Calcul</p>
+          <p className="mt-1 text-sm font-medium text-foreground">
+            {commission.rate}% de {formatMoney(commission.baseAmount)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Source</p>
+          <p className="mt-1 text-sm font-medium text-foreground">{commission.sourceLabel}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 async function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -162,7 +230,16 @@ async function fileToDataUrl(file: File) {
 }
 
 export function ParcelManagement({ currentRole, currentUser }: ParcelManagementProps) {
-  const { parcels, collectionPoints, countries, cities, zones, pricingRules, addParcel } = useStore();
+  const {
+    parcels,
+    collectionPoints,
+    countries,
+    cities,
+    zones,
+    pricingRules,
+    commissions,
+    addParcel,
+  } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ParcelStatus | 'ALL'>(
     currentRole === 'TRANSPORTER' ? 'IN_TRANSIT' : 'ALL'
@@ -349,6 +426,9 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
     cityId ? cities.find((city) => city.id === cityId)?.name : undefined;
   const getZoneName = (zoneId?: string) =>
     zoneId ? zones.find((zone) => zone.id === zoneId)?.name : undefined;
+  const selectedParcelCommission = selectedParcel
+    ? getParcelCommissionForUser(selectedParcel, currentUser, collectionPoints, commissions)
+    : null;
 
   const openDetailDialog = (parcel: Parcel) => {
     setSelectedParcel(parcel);
@@ -1314,6 +1394,13 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   </div>
                 </div>
 
+                {selectedParcelCommission && (
+                  <ParcelCommissionCard
+                    commission={selectedParcelCommission}
+                    currentRole={currentRole}
+                  />
+                )}
+
                 <div className="rounded-xl bg-secondary p-4">
                   <p className="text-sm font-medium text-foreground">Description</p>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -1689,6 +1776,13 @@ export function ParcelManagement({ currentRole, currentUser }: ParcelManagementP
                   </p>
                 </div>
               </div>
+
+              {selectedParcelCommission && (
+                <ParcelCommissionCard
+                  commission={selectedParcelCommission}
+                  currentRole={currentRole}
+                />
+              )}
 
               <div className="rounded-xl bg-secondary p-4">
                 <p className="text-sm font-medium text-foreground">Description</p>

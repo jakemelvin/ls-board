@@ -4,11 +4,13 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   Edit2,
+  ExternalLink,
   Eye,
   EyeOff,
   Globe2,
   Layers3,
   Map as MapIcon,
+  MessageCircle,
   MapPin,
   Power,
   Plus,
@@ -49,8 +51,12 @@ import {
   getCollectionPointStoredParcels,
 } from '@/lib/collection-point-capacity';
 import {
+  formatCollectionPointGeoLocation,
   getCollectionPointFullAddress,
+  getCollectionPointGeoLocationSourceLabel,
   getCollectionPointLocationLabel,
+  getGoogleMapsUrl,
+  hasCollectionPointGeoLocation,
 } from '@/lib/collection-point-location';
 import {
   formatCommissionRate,
@@ -63,6 +69,7 @@ import {
   type City,
   type CollectionPoint,
   type CollectionPointCapacityUnit,
+  type CollectionPointGeoLocation,
   type Country,
   type User,
   type UserRole,
@@ -81,6 +88,7 @@ type DeleteTarget =
 type PointFormState = {
   name: string;
   address: string;
+  whatsappPhone: string;
   zoneId: string;
   maxCapacityValue: string;
   maxCapacityUnit: CollectionPointCapacityUnit;
@@ -90,6 +98,8 @@ type PointFormState = {
   closesAt: string;
   openingDays: WeekdayKey[];
   commissionRate: string;
+  latitude: string;
+  longitude: string;
 };
 
 interface CollectionPointsViewProps {
@@ -99,8 +109,18 @@ interface CollectionPointsViewProps {
 
 const DEFAULT_OPENING_DAYS: WeekdayKey[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
 const ALL_WEEKDAYS = Object.keys(WEEKDAY_LABELS) as WeekdayKey[];
+const WHATSAPP_PHONE_PATTERN = /^\+?[0-9\s().-]{8,24}$/;
 
-export function CollectionPointsView({ currentRole }: CollectionPointsViewProps) {
+function isValidWhatsAppPhone(value: string) {
+  return WHATSAPP_PHONE_PATTERN.test(value.trim());
+}
+
+function getWhatsAppUrl(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  return digits ? `https://wa.me/${digits}` : undefined;
+}
+
+export function CollectionPointsView({ currentRole, currentUser }: CollectionPointsViewProps) {
   const {
     countries,
     cities,
@@ -148,6 +168,7 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
   const [pointForm, setPointForm] = useState<PointFormState>({
     name: '',
     address: '',
+    whatsappPhone: '',
     zoneId: '',
     maxCapacityValue: '',
     maxCapacityUnit: 'KG',
@@ -157,6 +178,8 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
     closesAt: '18:00',
     openingDays: DEFAULT_OPENING_DAYS,
     commissionRate: '',
+    latitude: '',
+    longitude: '',
   });
 
   const collectors = users.filter((user) => user.role === 'COLLECTOR');
@@ -271,11 +294,13 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
     }
 
     const location = getCollectionPointLocationLabel(point, zones, cities, countries).toLowerCase();
+    const geoLocation = formatCollectionPointGeoLocation(point).toLowerCase();
 
     return (
       point.name.toLowerCase().includes(normalizedSearchTerm) ||
       point.address.toLowerCase().includes(normalizedSearchTerm) ||
-      location.includes(normalizedSearchTerm)
+      location.includes(normalizedSearchTerm) ||
+      geoLocation.includes(normalizedSearchTerm)
     );
   });
 
@@ -393,6 +418,7 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
     setPointForm({
       name: '',
       address: '',
+      whatsappPhone: '',
       zoneId: selectedZoneId ?? '',
       maxCapacityValue: '',
       maxCapacityUnit: 'KG',
@@ -402,6 +428,8 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
       closesAt: '18:00',
       openingDays: DEFAULT_OPENING_DAYS,
       commissionRate: '',
+      latitude: '',
+      longitude: '',
     });
     setEditingPoint(null);
   };
@@ -445,6 +473,7 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
       setPointForm({
         name: point.name,
         address: point.address,
+        whatsappPhone: point.whatsappPhone ?? '',
         zoneId: point.zoneId,
         maxCapacityValue: point.maxCapacity.value.toString(),
         maxCapacityUnit: point.maxCapacity.unit,
@@ -454,6 +483,8 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
         closesAt: point.openingHours.closesAt,
         openingDays: point.openingHours.days,
         commissionRate: point.commissionRate?.toString() ?? '',
+        latitude: point.geoLocation?.latitude.toString() ?? '',
+        longitude: point.geoLocation?.longitude.toString() ?? '',
       });
     } else {
       resetPointForm();
@@ -515,6 +546,47 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
     resetZoneForm();
   };
 
+  const parseCoordinate = (value: string) => Number(value.trim().replace(',', '.'));
+
+  const getPointFormGeoLocation = (): CollectionPointGeoLocation | undefined => {
+    if (!pointForm.latitude.trim() && !pointForm.longitude.trim()) {
+      return undefined;
+    }
+
+    const latitude = parseCoordinate(pointForm.latitude);
+    const longitude = parseCoordinate(pointForm.longitude);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return undefined;
+    }
+
+    const existingGeoLocation = editingPoint?.geoLocation;
+    const isUnchanged =
+      existingGeoLocation &&
+      Math.abs(existingGeoLocation.latitude - latitude) < 0.000001 &&
+      Math.abs(existingGeoLocation.longitude - longitude) < 0.000001;
+
+    if (isUnchanged) {
+      return existingGeoLocation;
+    }
+
+    return {
+      latitude,
+      longitude,
+      source: 'MANUAL',
+      capturedByUserId: currentUser.id,
+      capturedByName: currentUser.name,
+      capturedAt: new Date(),
+    };
+  };
+
   const handleSavePoint = () => {
     if (
       !pointForm.name ||
@@ -547,9 +619,18 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
       return;
     }
 
+    if (pointFormGeoLocationInvalid) {
+      return;
+    }
+
+    if (pointFormWhatsappPhoneInvalid) {
+      return;
+    }
+
     const payload = {
-      name: pointForm.name,
-      address: pointForm.address,
+      name: pointForm.name.trim(),
+      address: pointForm.address.trim(),
+      whatsappPhone: pointForm.whatsappPhone.trim() || undefined,
       zoneId: pointForm.zoneId,
       maxCapacity: {
         value: maxCapacityValue,
@@ -564,6 +645,7 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
       },
       closedReason: pointForm.isOpen ? undefined : editingPoint?.closedReason ?? 'Indisponible temporairement',
       commissionRate,
+      geoLocation: getPointFormGeoLocation(),
     };
 
     if (editingPoint) {
@@ -725,6 +807,22 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
     (!Number.isFinite(Number(pointForm.commissionRate)) ||
       Number(pointForm.commissionRate) < 0 ||
       Number(pointForm.commissionRate) > 100);
+  const pointFormWhatsappPhoneInvalid =
+    pointForm.whatsappPhone.trim() !== '' && !isValidWhatsAppPhone(pointForm.whatsappPhone);
+  const pointFormLatitude = pointForm.latitude.trim() ? parseCoordinate(pointForm.latitude) : undefined;
+  const pointFormLongitude = pointForm.longitude.trim()
+    ? parseCoordinate(pointForm.longitude)
+    : undefined;
+  const pointFormGeoLocationInvalid =
+    Boolean(pointForm.latitude.trim() || pointForm.longitude.trim()) &&
+    (pointFormLatitude === undefined ||
+      pointFormLongitude === undefined ||
+      !Number.isFinite(pointFormLatitude) ||
+      !Number.isFinite(pointFormLongitude) ||
+      pointFormLatitude < -90 ||
+      pointFormLatitude > 90 ||
+      pointFormLongitude < -180 ||
+      pointFormLongitude > 180);
 
   return (
     <div className="space-y-6">
@@ -981,6 +1079,7 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
                     {zonePoints.map((point) => {
                       const responsible = getResponsible(point.responsibleId);
                       const saturation = getCollectionPointSaturationRate(point, parcels);
+                      const mapsUrl = getGoogleMapsUrl(point);
 
                       return (
                         <div
@@ -1081,6 +1180,54 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
                               <p className="text-xs uppercase tracking-wide text-muted-foreground">Commission</p>
                               <p className="mt-1 text-sm font-medium text-foreground">{formatCommissionRate(point)}</p>
                               <p className="mt-1 text-xs text-muted-foreground">Configurable par admin ou employe.</p>
+                            </div>
+                            <div className="rounded-xl border border-border bg-card p-3 md:col-span-2">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">WhatsApp</p>
+                                  <p className="mt-1 text-sm font-medium text-foreground">
+                                    {point.whatsappPhone ?? 'Non configure'}
+                                  </p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    Numero utilise pour contacter directement ce point de collecte.
+                                  </p>
+                                </div>
+                                {point.whatsappPhone && getWhatsAppUrl(point.whatsappPhone) && (
+                                  <Button variant="outline" size="sm" className="gap-2" asChild>
+                                    <a href={getWhatsAppUrl(point.whatsappPhone)} target="_blank" rel="noreferrer">
+                                      <MessageCircle className="h-4 w-4" />
+                                      WhatsApp
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="rounded-xl border border-border bg-card p-3 md:col-span-2">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Carte mobile</p>
+                                  <p className="mt-1 text-sm font-medium text-foreground">
+                                    {formatCollectionPointGeoLocation(point)}
+                                  </p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {hasCollectionPointGeoLocation(point)
+                                      ? `${getCollectionPointGeoLocationSourceLabel(point)}${
+                                          point.geoLocation?.accuracyMeters
+                                            ? ` - precision ${point.geoLocation.accuracyMeters} m`
+                                            : ''
+                                        }`
+                                      : 'A capturer par le collecteur ou a saisir manuellement.'}
+                                  </p>
+                                </div>
+                                {mapsUrl && (
+                                  <Button variant="outline" size="sm" className="gap-2" asChild>
+                                    <a href={mapsUrl} target="_blank" rel="noreferrer">
+                                      <ExternalLink className="h-4 w-4" />
+                                      Google Maps
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1330,6 +1477,76 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
                 className="bg-secondary"
               />
             </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                Numero WhatsApp <span className="text-muted-foreground">(optionnel)</span>
+              </label>
+              <Input
+                inputMode="tel"
+                value={pointForm.whatsappPhone}
+                onChange={(event) =>
+                  setPointForm((current) => ({ ...current, whatsappPhone: event.target.value }))
+                }
+                placeholder="+33 6 55 12 12 12"
+                className="bg-secondary"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Ce numero permet aux utilisateurs ou operations de contacter le point via WhatsApp.
+              </p>
+              {pointFormWhatsappPhoneInvalid && (
+                <p className="mt-2 text-xs text-destructive">
+                  Renseignez un numero WhatsApp valide, avec indicatif pays si possible.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="mb-3 flex flex-col gap-1">
+                <p className="text-sm font-semibold text-foreground">Position carte mobile</p>
+                <p className="text-xs text-muted-foreground">
+                  Le collecteur capture normalement la position GPS depuis l'interieur du point.
+                  Admin et employe peuvent corriger manuellement les coordonnees si necessaire.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">Latitude</label>
+                  <Input
+                    inputMode="decimal"
+                    value={pointForm.latitude}
+                    onChange={(event) =>
+                      setPointForm((current) => ({ ...current, latitude: event.target.value }))
+                    }
+                    placeholder="48.869800"
+                    className="bg-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">Longitude</label>
+                  <Input
+                    inputMode="decimal"
+                    value={pointForm.longitude}
+                    onChange={(event) =>
+                      setPointForm((current) => ({ ...current, longitude: event.target.value }))
+                    }
+                    placeholder="2.332200"
+                    className="bg-secondary"
+                  />
+                </div>
+              </div>
+              {editingPoint?.geoLocation && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Source actuelle: {getCollectionPointGeoLocationSourceLabel(editingPoint)}.
+                </p>
+              )}
+              {pointFormGeoLocationInvalid && (
+                <p className="mt-3 text-xs text-destructive">
+                  Renseignez une latitude entre -90 et 90 et une longitude entre -180 et 180,
+                  ou laissez les deux champs vides.
+                </p>
+              )}
+            </div>
             </div>
 
             <div className="rounded-2xl border border-border bg-secondary/10 p-4">
@@ -1534,7 +1751,13 @@ export function CollectionPointsView({ currentRole }: CollectionPointsViewProps)
             <Button
               onClick={handleSavePoint}
               className="gap-2"
-              disabled={pointFormCapacityConflict || pointFormScheduleInvalid || pointFormCommissionInvalid}
+              disabled={
+                pointFormCapacityConflict ||
+                pointFormScheduleInvalid ||
+                pointFormCommissionInvalid ||
+                pointFormWhatsappPhoneInvalid ||
+                pointFormGeoLocationInvalid
+              }
             >
               <Save className="h-4 w-4" />
               Enregistrer

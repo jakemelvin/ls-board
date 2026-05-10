@@ -1,10 +1,14 @@
 'use client';
 
+import type { ElementType } from 'react';
 import {
   LayoutDashboard,
   Package,
   Truck,
+  CreditCard,
+  HandCoins,
   MapPin,
+  Map,
   Users,
   Settings,
   DollarSign,
@@ -22,18 +26,21 @@ import { SendamLogo } from '@/components/sendam-logo';
 interface SidebarItem {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   roles: UserRole[];
 }
 
-const SIDEBAR_ITEMS: SidebarItem[] = [
+export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'points-map', label: 'Carte des Points', icon: Map, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
   { id: 'tracking', label: 'Gestion des Colis', icon: ClipboardList, roles: [...ADMIN_LIKE_ROLES, 'TRANSPORTER'] },
   { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
   { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },
   { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
+  { id: 'billing', label: 'Facturation', icon: CreditCard, roles: ADMIN_LIKE_ROLES },
+  { id: 'commissions', label: 'Commissions', icon: HandCoins, roles: ADMIN_LIKE_ROLES },
   { id: 'team', label: 'Gestion d\'Équipe', icon: Users, roles: ADMIN_LIKE_ROLES },
   // Collector specific
   { id: 'reception', label: 'Flux de Réception', icon: PackageCheck, roles: ['COLLECTOR'] },
@@ -47,13 +54,19 @@ interface DashboardSidebarProps {
   currentRole: UserRole;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  className?: string;
 }
 
-export function DashboardSidebar({ currentRole, activeSection, onSectionChange }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  currentRole,
+  activeSection,
+  onSectionChange,
+  className,
+}: DashboardSidebarProps) {
   const filteredItems = SIDEBAR_ITEMS.filter((item) => item.roles.includes(currentRole));
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className={cn('flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar', className)}>
       {/* Logo */}
       <div className="flex h-20 items-center border-b border-sidebar-border px-5">
         <SendamLogo />

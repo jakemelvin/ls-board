@@ -9,6 +9,17 @@ export type VehicleStatus = 'AVAILABLE' | 'IN_TRANSIT' | 'MAINTENANCE';
 export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'COLLECTOR' | 'TRANSPORTER';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 export type CollectionPointCapacityUnit = 'KG' | 'M3';
+export type CollectionPointGeoLocationSource = 'GPS_CAPTURE' | 'MANUAL';
+export type CollectionPointMapScope = 'COMPANY' | 'NETWORK';
+export type SubscriptionPlanType =
+  | 'FREE_TRIAL'
+  | 'NATIONAL_LIMITED'
+  | 'NATIONAL_UNLIMITED'
+  | 'INTERNATIONAL_LIMITED'
+  | 'INTERNATIONAL_UNLIMITED';
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+export type CommissionBeneficiaryRole = 'COLLECTOR' | 'TRANSPORTER';
+export type CommissionStatus = 'PAYABLE' | 'PAID' | 'CANCELED';
 export type WeekdayKey = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 export type ShipmentType = 'STANDARD' | 'EXPRESS' | 'ECONOMY';
 export type ParcelPickupReadiness = 'PENDING' | 'READY';
@@ -50,12 +61,40 @@ export interface CollectionPoint {
   openingHours: CollectionPointOpeningHours;
   closedReason?: string;
   commissionRate?: number;
+  whatsappPhone?: string;
+  geoLocation?: CollectionPointGeoLocation;
+  organizationId?: string;
+  organizationName?: string;
+}
+
+export interface CollectionPointGeoLocation {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  source: CollectionPointGeoLocationSource;
+  capturedByUserId?: string;
+  capturedByName?: string;
+  capturedAt: Date;
 }
 
 export interface CollectionPointOpeningHours {
   days: WeekdayKey[];
   opensAt: string;
   closesAt: string;
+}
+
+export interface NetworkCollectionPoint {
+  id: string;
+  name: string;
+  address: string;
+  zoneId: string;
+  isOpen: boolean;
+  openingHours: CollectionPointOpeningHours;
+  geoLocation: CollectionPointGeoLocation;
+  organizationId: string;
+  organizationName: string;
+  contactPhone?: string;
+  services: string[];
 }
 
 export interface Country {
@@ -188,6 +227,64 @@ export interface PricingRule {
   pricePerKg: number;
   pricePerKm: number;
   zoneMultiplier: number;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  type: SubscriptionPlanType;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  currency: 'EUR';
+  nationalShipmentLimit: number | null;
+  internationalShipmentLimit: number | null;
+  trialDays?: number;
+  features: string[];
+  isRecommended?: boolean;
+  upgradeRank: number;
+}
+
+export interface CompanySubscription {
+  id: string;
+  organizationId: string;
+  planId: string;
+  status: SubscriptionStatus;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  autoRenew: boolean;
+  updatedAt: Date;
+}
+
+export interface SubscriptionUsage {
+  id: string;
+  organizationId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  nationalUsed: number;
+  internationalUsed: number;
+  updatedAt: Date;
+}
+
+export interface CommissionEntry {
+  id: string;
+  parcelId: string;
+  trackingNumber: string;
+  beneficiaryRole: CommissionBeneficiaryRole;
+  beneficiaryUserId: string;
+  beneficiaryName: string;
+  sourceCollectionPointId?: string;
+  sourceCollectionPointName?: string;
+  sourceVehicleId?: string;
+  sourceVehicleLabel?: string;
+  rate: number;
+  baseAmount: number;
+  commissionAmount: number;
+  currency: 'EUR';
+  status: CommissionStatus;
+  earnedAt: Date;
+  paidAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CreateParcelInput {
@@ -411,6 +508,18 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
       closesAt: '18:00',
     },
     commissionRate: 7.5,
+    whatsappPhone: '+33 6 55 12 12 12',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 48.8698,
+      longitude: 2.3322,
+      accuracyMeters: 18,
+      source: 'GPS_CAPTURE',
+      capturedByUserId: 'collector-1',
+      capturedByName: 'Jean Bastos',
+      capturedAt: new Date('2024-01-12T09:30:00'),
+    },
   },
   {
     id: 'point-2',
@@ -427,6 +536,18 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
       days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
       opensAt: '09:00',
       closesAt: '19:00',
+    },
+    whatsappPhone: '+33 6 77 14 14 14',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 50.637,
+      longitude: 3.0633,
+      accuracyMeters: 24,
+      source: 'GPS_CAPTURE',
+      capturedByUserId: 'collector-2',
+      capturedByName: 'Sophie Martin',
+      capturedAt: new Date('2024-01-12T10:15:00'),
     },
   },
   {
@@ -447,6 +568,466 @@ export const COLLECTION_POINTS: CollectionPoint[] = [
     },
     closedReason: 'Indisponible temporairement',
     commissionRate: 5,
+    whatsappPhone: '+33 6 55 12 12 12',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 43.2965,
+      longitude: 5.3698,
+      source: 'MANUAL',
+      capturedByUserId: 'employee-1',
+      capturedByName: 'Claire Martin',
+      capturedAt: new Date('2024-01-13T14:20:00'),
+    },
+  },
+  {
+    id: 'point-4',
+    name: 'Agence Republique',
+    address: '24 Place de la Republique',
+    zoneId: 'zone-1',
+    maxCapacity: {
+      value: 130,
+      unit: 'KG',
+    },
+    responsibleId: 'collector-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '08:30',
+      closesAt: '19:00',
+    },
+    commissionRate: 6,
+    whatsappPhone: '+33 6 55 12 12 12',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 48.8674,
+      longitude: 2.3631,
+      accuracyMeters: 19,
+      source: 'GPS_CAPTURE',
+      capturedByUserId: 'collector-1',
+      capturedByName: 'Jean Bastos',
+      capturedAt: new Date('2024-01-15T09:00:00'),
+    },
+  },
+  {
+    id: 'point-5',
+    name: 'Sendam Lille Centre',
+    address: '31 Rue Faidherbe',
+    zoneId: 'zone-2',
+    maxCapacity: {
+      value: 160,
+      unit: 'KG',
+    },
+    responsibleId: 'collector-2',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:00',
+      closesAt: '18:30',
+    },
+    commissionRate: 6.5,
+    whatsappPhone: '+33 6 77 14 14 14',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 50.6364,
+      longitude: 3.0686,
+      accuracyMeters: 21,
+      source: 'GPS_CAPTURE',
+      capturedByUserId: 'collector-2',
+      capturedByName: 'Sophie Martin',
+      capturedAt: new Date('2024-01-15T09:20:00'),
+    },
+  },
+  {
+    id: 'point-6',
+    name: 'Depot Marseille Prado',
+    address: '109 Avenue du Prado',
+    zoneId: 'zone-3',
+    maxCapacity: {
+      value: 6,
+      unit: 'M3',
+    },
+    responsibleId: 'collector-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '09:00',
+      closesAt: '18:00',
+    },
+    whatsappPhone: '+33 6 55 12 12 12',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 43.2804,
+      longitude: 5.3874,
+      accuracyMeters: 26,
+      source: 'MANUAL',
+      capturedByUserId: 'employee-1',
+      capturedByName: 'Claire Martin',
+      capturedAt: new Date('2024-01-15T10:15:00'),
+    },
+  },
+  {
+    id: 'point-7',
+    name: 'Sendam Douala Akwa',
+    address: 'Boulevard de la Liberte',
+    zoneId: 'zone-4',
+    maxCapacity: {
+      value: 220,
+      unit: 'KG',
+    },
+    responsibleId: 'collector-2',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '08:00',
+      closesAt: '18:00',
+    },
+    commissionRate: 8,
+    whatsappPhone: '+237 6 77 14 14 14',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 4.0523,
+      longitude: 9.7049,
+      accuracyMeters: 30,
+      source: 'MANUAL',
+      capturedByUserId: 'employee-1',
+      capturedByName: 'Claire Martin',
+      capturedAt: new Date('2024-01-15T11:00:00'),
+    },
+  },
+  {
+    id: 'point-8',
+    name: 'Sendam Yaounde Kennedy',
+    address: '18 Avenue Kennedy',
+    zoneId: 'zone-5',
+    maxCapacity: {
+      value: 180,
+      unit: 'KG',
+    },
+    responsibleId: 'collector-1',
+    isOpen: false,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:30',
+      closesAt: '17:30',
+    },
+    closedReason: 'Audit inventaire en cours',
+    organizationId: 'company-sendam',
+    organizationName: 'Sendam Express',
+    geoLocation: {
+      latitude: 3.8678,
+      longitude: 11.5179,
+      accuracyMeters: 34,
+      source: 'MANUAL',
+      capturedByUserId: 'employee-1',
+      capturedByName: 'Claire Martin',
+      capturedAt: new Date('2024-01-15T11:30:00'),
+    },
+  },
+];
+
+export const NETWORK_COLLECTION_POINTS: NetworkCollectionPoint[] = [
+  {
+    id: 'network-point-1',
+    name: 'Relais Montmartre',
+    address: '8 Rue des Abbesses',
+    zoneId: 'zone-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '09:00',
+      closesAt: '20:00',
+    },
+    geoLocation: {
+      latitude: 48.8841,
+      longitude: 2.3379,
+      accuracyMeters: 20,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T08:00:00'),
+    },
+    organizationId: 'network-urban-drop',
+    organizationName: 'Urban Drop',
+    contactPhone: '+33 1 44 55 66 77',
+    services: ['Depot client', 'Retrait client', 'Transfert transporteur'],
+  },
+  {
+    id: 'network-point-2',
+    name: 'Point Gare Lille Europe',
+    address: '12 Avenue le Corbusier',
+    zoneId: 'zone-2',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '07:30',
+      closesAt: '19:30',
+    },
+    geoLocation: {
+      latitude: 50.6388,
+      longitude: 3.0758,
+      accuracyMeters: 16,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T08:10:00'),
+    },
+    organizationId: 'network-nord-link',
+    organizationName: 'Nord Link Logistics',
+    contactPhone: '+33 3 20 11 22 33',
+    services: ['Depot client', 'Retrait client'],
+  },
+  {
+    id: 'network-point-3',
+    name: 'Akwa Service Point',
+    address: 'Rue Joffre Akwa',
+    zoneId: 'zone-4',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '08:00',
+      closesAt: '18:30',
+    },
+    geoLocation: {
+      latitude: 4.0511,
+      longitude: 9.7043,
+      accuracyMeters: 28,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T08:20:00'),
+    },
+    organizationId: 'network-camship',
+    organizationName: 'CamShip Relay',
+    contactPhone: '+237 6 55 44 33 22',
+    services: ['Depot client', 'Retrait client', 'Stockage court'],
+  },
+  {
+    id: 'network-point-4',
+    name: 'Yaounde Centre Express',
+    address: 'Avenue Kennedy',
+    zoneId: 'zone-5',
+    isOpen: false,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:30',
+      closesAt: '17:30',
+    },
+    geoLocation: {
+      latitude: 3.8667,
+      longitude: 11.5167,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T08:30:00'),
+    },
+    organizationId: 'network-camship',
+    organizationName: 'CamShip Relay',
+    contactPhone: '+237 6 77 88 99 00',
+    services: ['Retrait client', 'Transfert transporteur'],
+  },
+  {
+    id: 'network-point-5',
+    name: 'Vieux-Port Relais',
+    address: '4 Quai du Port',
+    zoneId: 'zone-3',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '09:00',
+      closesAt: '19:00',
+    },
+    geoLocation: {
+      latitude: 43.296,
+      longitude: 5.37,
+      accuracyMeters: 22,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T08:40:00'),
+    },
+    organizationId: 'network-mediterranee',
+    organizationName: 'Mediterranee Relay',
+    contactPhone: '+33 4 91 22 33 44',
+    services: ['Depot client', 'Retrait client'],
+  },
+  {
+    id: 'network-point-6',
+    name: 'Saint-Lazare Pickup',
+    address: '20 Rue de Rome',
+    zoneId: 'zone-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '07:00',
+      closesAt: '20:30',
+    },
+    geoLocation: {
+      latitude: 48.8754,
+      longitude: 2.3258,
+      accuracyMeters: 17,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:00:00'),
+    },
+    organizationId: 'network-urban-drop',
+    organizationName: 'Urban Drop',
+    contactPhone: '+33 1 48 22 10 10',
+    services: ['Depot client', 'Retrait client', 'Casier partenaire'],
+  },
+  {
+    id: 'network-point-7',
+    name: 'Opera Colis Service',
+    address: '5 Rue Halevy',
+    zoneId: 'zone-1',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '10:00',
+      closesAt: '21:00',
+    },
+    geoLocation: {
+      latitude: 48.8719,
+      longitude: 2.3316,
+      accuracyMeters: 14,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:10:00'),
+    },
+    organizationId: 'network-parcel-hub',
+    organizationName: 'Parcel Hub',
+    contactPhone: '+33 1 47 88 12 45',
+    services: ['Retrait client', 'Retour marchand'],
+  },
+  {
+    id: 'network-point-8',
+    name: 'Wazemmes Relay',
+    address: '3 Place Nouvelle Aventure',
+    zoneId: 'zone-2',
+    isOpen: true,
+    openingHours: {
+      days: ['TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '09:30',
+      closesAt: '19:00',
+    },
+    geoLocation: {
+      latitude: 50.6261,
+      longitude: 3.0512,
+      accuracyMeters: 25,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:20:00'),
+    },
+    organizationId: 'network-nord-link',
+    organizationName: 'Nord Link Logistics',
+    contactPhone: '+33 3 20 55 66 77',
+    services: ['Depot client', 'Retrait client', 'Stockage court'],
+  },
+  {
+    id: 'network-point-9',
+    name: 'La Joliette Hub',
+    address: '10 Place de la Joliette',
+    zoneId: 'zone-3',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:00',
+      closesAt: '18:30',
+    },
+    geoLocation: {
+      latitude: 43.3043,
+      longitude: 5.3661,
+      accuracyMeters: 20,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:30:00'),
+    },
+    organizationId: 'network-mediterranee',
+    organizationName: 'Mediterranee Relay',
+    contactPhone: '+33 4 91 40 50 60',
+    services: ['Depot client', 'Retrait client', 'Transfert transporteur'],
+  },
+  {
+    id: 'network-point-10',
+    name: 'Bonapriso Express',
+    address: 'Avenue Charles de Gaulle',
+    zoneId: 'zone-4',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '08:00',
+      closesAt: '18:00',
+    },
+    geoLocation: {
+      latitude: 4.0309,
+      longitude: 9.6995,
+      accuracyMeters: 32,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:40:00'),
+    },
+    organizationId: 'network-camship',
+    organizationName: 'CamShip Relay',
+    contactPhone: '+237 6 90 11 22 33',
+    services: ['Depot client', 'Retrait client'],
+  },
+  {
+    id: 'network-point-11',
+    name: 'Bastos Point Relais',
+    address: 'Rue Joseph Mballa Eloumden',
+    zoneId: 'zone-5',
+    isOpen: true,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
+      opensAt: '08:30',
+      closesAt: '19:00',
+    },
+    geoLocation: {
+      latitude: 3.8892,
+      longitude: 11.5163,
+      accuracyMeters: 29,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T09:50:00'),
+    },
+    organizationId: 'network-camship',
+    organizationName: 'CamShip Relay',
+    contactPhone: '+237 6 70 44 55 66',
+    services: ['Retrait client', 'Retour marchand'],
+  },
+  {
+    id: 'network-point-12',
+    name: 'Melen Parcel Desk',
+    address: 'Carrefour Melen',
+    zoneId: 'zone-5',
+    isOpen: false,
+    openingHours: {
+      days: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+      opensAt: '09:00',
+      closesAt: '17:00',
+    },
+    geoLocation: {
+      latitude: 3.8614,
+      longitude: 11.5002,
+      source: 'MANUAL',
+      capturedByUserId: 'seed',
+      capturedByName: 'Import reseau',
+      capturedAt: new Date('2024-01-14T10:00:00'),
+    },
+    organizationId: 'network-central-africa-drop',
+    organizationName: 'Central Africa Drop',
+    contactPhone: '+237 6 88 10 20 30',
+    services: ['Depot client', 'Retrait client'],
   },
 ];
 
@@ -929,6 +1510,117 @@ export const PRICING_RULES: PricingRule[] = [
     zoneMultiplier: 0.8,
   },
 ];
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'plan-free-trial',
+    type: 'FREE_TRIAL',
+    name: 'Free Trial',
+    description: "Decouverte complete de l'application pendant 30 jours.",
+    monthlyPrice: 0,
+    currency: 'EUR',
+    nationalShipmentLimit: 50,
+    internationalShipmentLimit: 5,
+    trialDays: 30,
+    features: [
+      '50 envois nationaux inclus',
+      '5 envois internationaux inclus',
+      'Carte des points de collecte',
+      'Support email standard',
+    ],
+    upgradeRank: 1,
+  },
+  {
+    id: 'plan-national-limited',
+    type: 'NATIONAL_LIMITED',
+    name: 'National Limite',
+    description: 'Pour les operations locales avec un volume mensuel controle.',
+    monthlyPrice: 49,
+    currency: 'EUR',
+    nationalShipmentLimit: 500,
+    internationalShipmentLimit: 0,
+    features: [
+      '500 envois nationaux par mois',
+      'Gestion des points de collecte',
+      'Gestion equipe et roles',
+      'Alertes de quota',
+    ],
+    upgradeRank: 2,
+  },
+  {
+    id: 'plan-national-unlimited',
+    type: 'NATIONAL_UNLIMITED',
+    name: 'National Illimite',
+    description: 'Pour les entreprises qui expedient sans limite au niveau national.',
+    monthlyPrice: 99,
+    currency: 'EUR',
+    nationalShipmentLimit: null,
+    internationalShipmentLimit: 0,
+    features: [
+      'Envois nationaux illimites',
+      'Tableaux de bord operationnels',
+      'Gestion flotte et transporteurs',
+      'Support prioritaire',
+    ],
+    isRecommended: true,
+    upgradeRank: 3,
+  },
+  {
+    id: 'plan-international-limited',
+    type: 'INTERNATIONAL_LIMITED',
+    name: 'International Limite',
+    description: 'Pour developper les flux internationaux avec une limite maitrisee.',
+    monthlyPrice: 179,
+    currency: 'EUR',
+    nationalShipmentLimit: null,
+    internationalShipmentLimit: 300,
+    features: [
+      'Envois nationaux illimites',
+      '300 envois internationaux par mois',
+      'Suivi multi-pays',
+      'Support prioritaire',
+    ],
+    upgradeRank: 4,
+  },
+  {
+    id: 'plan-international-unlimited',
+    type: 'INTERNATIONAL_UNLIMITED',
+    name: 'International Illimite',
+    description: 'Pour les reseaux multi-pays sans limite operationnelle.',
+    monthlyPrice: 299,
+    currency: 'EUR',
+    nationalShipmentLimit: null,
+    internationalShipmentLimit: null,
+    features: [
+      'Envois nationaux illimites',
+      'Envois internationaux illimites',
+      'Support prioritaire et accompagnement',
+      'Scalabilite reseau avancee',
+    ],
+    upgradeRank: 5,
+  },
+];
+
+export const COMPANY_SUBSCRIPTION: CompanySubscription = {
+  id: 'subscription-company-sendam',
+  organizationId: 'company-sendam',
+  planId: 'plan-national-limited',
+  status: 'ACTIVE',
+  currentPeriodStart: new Date('2026-05-01T00:00:00'),
+  currentPeriodEnd: new Date('2026-05-31T23:59:59'),
+  autoRenew: true,
+  updatedAt: new Date('2026-05-09T10:00:00'),
+};
+
+export const SUBSCRIPTION_USAGE: SubscriptionUsage = {
+  id: 'usage-company-sendam-2026-05',
+  organizationId: 'company-sendam',
+  periodStart: new Date('2026-05-01T00:00:00'),
+  periodEnd: new Date('2026-05-31T23:59:59'),
+  nationalUsed: 500,
+  internationalUsed: 0,
+  updatedAt: new Date('2026-05-09T10:00:00'),
+};
 
 // Helper functions
 export function getStatusLabel(status: ParcelStatus): string {
