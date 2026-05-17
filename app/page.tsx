@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { useAuthStore } from '@/lib/auth/store';
 import { AdminDashboard } from '@/components/views/admin-dashboard';
 import { CollectorDashboard } from '@/components/views/collector-dashboard';
 import { FleetManagement } from '@/components/views/fleet-management';
@@ -20,6 +22,8 @@ import { TransporterTour } from '@/components/views/transporter-tour';
 import { TransporterDashboard } from '@/components/views/transporter-dashboard';
 import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
+import { SuperAdminManagement } from '@/components/views/super-admin-management';
+import { CompanyAnnouncements } from '@/components/views/announcements';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { useStore } from '@/lib/store';
@@ -41,8 +45,24 @@ const DEFAULT_SECTIONS: Record<UserRole, string> = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { token, isHydrated } = useAuthStore();
   const { users } = useStore();
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
+
+  useEffect(() => {
+    if (isHydrated && !token) {
+      router.replace('/login');
+    }
+  }, [isHydrated, token, router]);
+
+  if (!isHydrated || !token) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-background">
+        <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
   const [activeSection, setActiveSection] = useState<string>('dashboard');
 
   const currentUser =
@@ -98,6 +118,13 @@ export default function DashboardPage() {
         return <TransporterTour currentUser={currentUser} />;
       case 'pickup-request':
         return <PickupRequest currentUser={currentUser} />;
+
+      // Super Admin
+      case 'super-admin':
+        return <SuperAdminManagement />;
+
+      case 'announcements':
+        return <CompanyAnnouncements />;
 
       default:
         return isAdminLikeRole(currentRole) ? (

@@ -1,10 +1,13 @@
 'use client';
 
-import { Bell, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, ChevronDown, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { User, UserRole } from '@/lib/mock-data';
 import { ALL_ROLES, ROLE_CONFIG } from '@/lib/roles';
+import { useAuthStore } from '@/lib/auth/store';
+import { logout } from '@/lib/auth/api';
 
 interface DashboardHeaderProps {
   currentUser: User;
@@ -13,6 +16,17 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ currentUser, currentRole, onRoleChange }: DashboardHeaderProps) {
+  const router = useRouter();
+  const { token, clearAuth } = useAuthStore();
+
+  const handleLogout = async () => {
+    if (token) {
+      await logout(token).catch(() => {/* swallow – clear session regardless */});
+    }
+    clearAuth();
+    router.replace('/login');
+  };
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 pt-[env(safe-area-inset-top)] sm:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -65,6 +79,14 @@ export function DashboardHeader({ currentUser, currentRole, onRoleChange }: Dash
           </div>
           <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" />
         </div>
+
+        <button
+          onClick={handleLogout}
+          title="Se déconnecter"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </header>
   );

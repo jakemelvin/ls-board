@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const f = require\\('./api-docs.json'\\); const paths = Object.keys\\(f.paths\\); console.log\\(JSON.stringify\\(paths, null, 2\\)\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
