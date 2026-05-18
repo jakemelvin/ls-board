@@ -41,6 +41,10 @@ function LoginForm() {
     setServerError(null);
     try {
       const response = await login(values);
+      if (response.role === 'CLIENT') {
+        setServerError("Accès refusé. Cette application est réservée aux professionnels de la livraison.");
+        return;
+      }
       setAuth({
         token: response.token,
         userId: response.userId,
