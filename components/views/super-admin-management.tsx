@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Building2,
   Users,
@@ -37,16 +37,19 @@ import {
   updateUserPhone,
   changeUserPassword,
   updateUserCommission,
+  createUser,
   approveCompany,
   deleteCompany,
   getCompanyOperationalReadiness,
 } from '@/lib/admin/api';
+import { getCountries, registerCompany } from '@/lib/auth/api';
 import type {
   Page,
   CompanyOperationalReadiness,
   UserResponse,
   CompanyResponse,
 } from '@/lib/admin/types';
+import type { CountryResponse, ApiRole, Gender, PaymentCollectionMode, CreateCompanyRequest } from '@/lib/auth/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -452,6 +455,444 @@ function PaginationBar({
   );
 }
 
+// ─── Create company dialog ─────────────────────────────────────────────────
+
+type CompanyTab = 'company' | 'admin';
+
+interface CreateCompanyForm {
+  // Company
+  name: string;
+  email: string;
+  phone: string;
+  companyUrl: string;
+  countryId: string;
+  city: string;
+  address: string;
+  paymentCollectionMode: PaymentCollectionMode | '';
+  // Admin user
+  firstName: string;
+  lastName: string;
+  username: string;
+  adminEmail: string;
+  adminPhone: string;
+  password: string;
+  language: string;
+  gender: Gender | '';
+  idCardNumber: string;
+}
+
+const emptyCompanyForm = (): CreateCompanyForm => ({
+  name: '', email: '', phone: '', companyUrl: '', countryId: '', city: '', address: '',
+  paymentCollectionMode: '',
+  firstName: '', lastName: '', username: '', adminEmail: '', adminPhone: '',
+  password: '', language: 'fr', gender: '', idCardNumber: '',
+});
+
+interface CreateCompanyErrors {
+  name?: string; phone?: string; companyUrl?: string; countryId?: string; city?: string;
+  firstName?: string; lastName?: string; username?: string; adminPhone?: string; password?: string;
+}
+
+function validateCompanyForm(f: CreateCompanyForm): { errors: CreateCompanyErrors; tab: CompanyTab | null } {
+  const errors: CreateCompanyErrors = {};
+  if (!f.name.trim()) errors.name = 'Requis';
+  if (!f.phone.trim()) errors.phone = 'Requis';
+  if (!f.companyUrl.trim() || !/^https?:\/\/.+$/.test(f.companyUrl)) errors.companyUrl = 'URL valide requise (http/https)';
+  if (!f.countryId) errors.countryId = 'Requis';
+  if (!f.city.trim()) errors.city = 'Requis';
+  if (!f.firstName.trim()) errors.firstName = 'Requis';
+  if (!f.lastName.trim()) errors.lastName = 'Requis';
+  if (!f.username.trim() || !/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) errors.username = 'Lettres, chiffres, . _ - (3-20 car.)';
+  if (!f.adminPhone.trim()) errors.adminPhone = 'Requis';
+  if (!f.password || f.password.length < 8) errors.password = '8 caractères minimum';
+
+  const companyFields: (keyof CreateCompanyErrors)[] = ['name', 'phone', 'companyUrl', 'countryId', 'city'];
+  const hasCompanyErr = companyFields.some((k) => errors[k]);
+  const tab = hasCompanyErr ? 'company' : Object.keys(errors).length > 0 ? 'admin' : null;
+  return { errors, tab };
+}
+
+function CreateCompanyDialog({
+  open,
+  token,
+  onCreated,
+  onClose,
+}: {
+  open: boolean;
+  token: string;
+  onCreated: (company: CompanyResponse) => void;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<CompanyTab>('company');
+  const [form, setForm] = useState<CreateCompanyForm>(emptyCompanyForm());
+  const [errors, setErrors] = useState<CreateCompanyErrors>({});
+  const [countries, setCountries] = useState<CountryResponse[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(emptyCompanyForm());
+    setErrors({});
+    setServerError(null);
+    setLogo(null);
+    setTab('company');
+    if (countries.length > 0) return;
+    setCountriesLoading(true);
+    getCountries()
+      .then(setCountries)
+      .catch(() => {})
+      .finally(() => setCountriesLoading(false));
+  }, [open]);
+
+  const set = (field: keyof CreateCompanyForm) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleSubmit = async () => {
+    const { errors: errs, tab: errTab } = validateCompanyForm(form);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      if (errTab) setTab(errTab);
+      return;
+    }
+    setErrors({});
+    setServerError(null);
+    setSubmitting(true);
+    try {
+      const payload: CreateCompanyRequest = {
+        name: form.name.trim(),
+        email: form.email.trim() || undefined,
+        phone: form.phone.trim(),
+        companyUrl: form.companyUrl.trim(),
+        address: form.address.trim() || undefined,
+        countryId: Number(form.countryId),
+        city: form.city.trim(),
+        paymentCollectionMode: (form.paymentCollectionMode as PaymentCollectionMode) || undefined,
+        adminUser: {
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          username: form.username.trim(),
+          email: form.adminEmail.trim() || undefined,
+          phone: form.adminPhone.trim(),
+          password: form.password,
+          country: Number(form.countryId),
+          language: form.language,
+          city: form.city.trim(),
+          address: form.address.trim() || undefined,
+          idCardNumber: form.idCardNumber.trim() || undefined,
+          gender: (form.gender as Gender) || undefined,
+          role: 'ADMIN_COMPANY',
+        },
+      };
+      const created = await registerCompany(payload, logo ?? undefined, token);
+      onCreated(created);
+      onClose();
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Erreur lors de la création');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const inputCls = (err?: string) => cn(
+    'flex h-9 w-full rounded-xl border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary',
+    err ? 'border-destructive focus:ring-destructive' : 'border-border',
+  );
+  const selectCls = (err?: string) => cn(
+    'flex h-9 w-full appearance-none rounded-xl border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary',
+    err ? 'border-destructive focus:ring-destructive' : 'border-border',
+  );
+
+  const companyTabHasError = ['name', 'phone', 'companyUrl', 'countryId', 'city'].some(
+    (k) => errors[k as keyof CreateCompanyErrors],
+  );
+  const adminTabHasError = ['firstName', 'lastName', 'username', 'adminPhone', 'password'].some(
+    (k) => errors[k as keyof CreateCompanyErrors],
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm py-8 px-4">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Créer une entreprise</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-border px-6 pt-3">
+          {([
+            { id: 'company' as CompanyTab, label: 'Entreprise', hasError: companyTabHasError },
+            { id: 'admin' as CompanyTab, label: 'Administrateur', hasError: adminTabHasError },
+          ] as const).map(({ id, label, hasError }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-sm font-medium transition-colors',
+                tab === id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {label}
+              {hasError && (
+                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="space-y-4 px-6 py-5">
+          {serverError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {serverError}
+            </div>
+          )}
+
+          {/* ── Company tab ── */}
+          {tab === 'company' && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Nom de l'entreprise *</Label>
+                <input className={inputCls(errors.name)} placeholder="Sendam Express SARL" value={form.name} onChange={set('name')} />
+                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Email entreprise</Label>
+                  <input type="email" className={inputCls()} placeholder="contact@sendam.com" value={form.email} onChange={set('email')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Téléphone *</Label>
+                  <input className={inputCls(errors.phone)} placeholder="+221 77 000 00 00" value={form.phone} onChange={set('phone')} />
+                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Site web *</Label>
+                <input className={inputCls(errors.companyUrl)} placeholder="https://www.sendam.com" value={form.companyUrl} onChange={set('companyUrl')} />
+                {errors.companyUrl && <p className="text-xs text-destructive">{errors.companyUrl}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Pays *</Label>
+                  <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
+                    <option value="">{countriesLoading ? 'Chargement…' : 'Sélectionner…'}</option>
+                    {countries.map((c) => (
+                      <option key={c.countryId} value={c.countryId}>{c.countryName}</option>
+                    ))}
+                  </select>
+                  {errors.countryId && <p className="text-xs text-destructive">{errors.countryId}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Ville *</Label>
+                  <input className={inputCls(errors.city)} placeholder="Dakar" value={form.city} onChange={set('city')} />
+                  {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Adresse</Label>
+                <input className={inputCls()} placeholder="12 Rue de la Paix, Plateau" value={form.address} onChange={set('address')} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Mode de collecte des paiements</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'PLATFORM', label: 'Via la plateforme' },
+                    { value: 'COLLECTION_POINT', label: 'Aux points de collecte' },
+                  ] as { value: PaymentCollectionMode; label: string }[]).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors',
+                        form.paymentCollectionMode === opt.value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/50',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMode"
+                        value={opt.value}
+                        checked={form.paymentCollectionMode === opt.value}
+                        onChange={set('paymentCollectionMode')}
+                        className="hidden"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logo */}
+              <div className="space-y-1.5">
+                <Label>Logo <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
+                {logo ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-border bg-muted px-3 py-2.5">
+                    <img src={URL.createObjectURL(logo)} alt="Logo" className="h-9 w-9 rounded-lg object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{logo.name}</p>
+                      <p className="text-xs text-muted-foreground">{(logo.size / 1024).toFixed(0)} Ko</p>
+                    </div>
+                    <button type="button" onClick={() => { setLogo(null); if (fileRef.current) fileRef.current.value = ''; }}
+                      className="text-muted-foreground hover:text-destructive transition-colors text-lg leading-none">✕</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => fileRef.current?.click()}
+                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">
+                    <UserPlus className="h-4 w-4" />
+                    Importer un logo
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Admin tab ── */}
+          {tab === 'admin' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Prénom *</Label>
+                  <input className={inputCls(errors.firstName)} placeholder="Jean" value={form.firstName} onChange={set('firstName')} />
+                  {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Nom *</Label>
+                  <input className={inputCls(errors.lastName)} placeholder="Dupont" value={form.lastName} onChange={set('lastName')} />
+                  {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Nom d'utilisateur *</Label>
+                <input className={inputCls(errors.username)} placeholder="jean.dupont" value={form.username} onChange={set('username')} />
+                {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Email personnel</Label>
+                  <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.adminEmail} onChange={set('adminEmail')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Téléphone *</Label>
+                  <input className={inputCls(errors.adminPhone)} placeholder="+221 77 000 00 00" value={form.adminPhone} onChange={set('adminPhone')} />
+                  {errors.adminPhone && <p className="text-xs text-destructive">{errors.adminPhone}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Mot de passe *</Label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className={cn(inputCls(errors.password), 'pr-10')}
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={set('password')}
+                  />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
+                    <Eye className="h-4 w-4" />
+                  </button>
+                </div>
+                {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Langue</Label>
+                  <select className={selectCls()} value={form.language} onChange={set('language')}>
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Genre</Label>
+                  <select className={selectCls()} value={form.gender} onChange={set('gender')}>
+                    <option value="">Non précisé</option>
+                    <option value="MALE">Homme</option>
+                    <option value="FEMALE">Femme</option>
+                    <option value="OTHER">Autre</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>N° pièce d'identité</Label>
+                <input className={inputCls()} placeholder="AB123456789" value={form.idCardNumber} onChange={set('idCardNumber')} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-border px-6 py-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTab('company')}
+              disabled={tab === 'company'}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            >
+              ← Entreprise
+            </button>
+            <button
+              onClick={() => setTab('admin')}
+              disabled={tab === 'admin'}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
+            >
+              Administrateur →
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onClose} disabled={submitting}>Annuler</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Création…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Créer l'entreprise
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Companies tab ─────────────────────────────────────────────────────────
 
 function CompaniesTab({ token }: { token: string }) {
@@ -463,6 +904,7 @@ function CompaniesTab({ token }: { token: string }) {
   const [readiness, setReadiness] = useState<CompanyOperationalReadiness | null>(null);
   const [readinessLoading, setReadinessLoading] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CompanyResponse | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -529,6 +971,15 @@ function CompaniesTab({ token }: { token: string }) {
     }
   };
 
+  const handleCompanyCreated = (company: CompanyResponse) => {
+    setData((prev) =>
+      prev
+        ? { ...prev, content: [company, ...prev.content], totalElements: prev.totalElements + 1 }
+        : prev,
+    );
+    success(`${company.name} créée avec succès`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -539,6 +990,12 @@ function CompaniesTab({ token }: { token: string }) {
 
   return (
     <>
+      <CreateCompanyDialog
+        open={createOpen}
+        token={token}
+        onCreated={handleCompanyCreated}
+        onClose={() => setCreateOpen(false)}
+      />
       <ToastBar toast={toast} />
       <ReadinessDialog data={readiness} onClose={() => setReadiness(null)} />
       <ConfirmDialog
@@ -551,6 +1008,16 @@ function CompaniesTab({ token }: { token: string }) {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      <div className="flex items-center justify-between pb-2">
+        <p className="text-sm text-muted-foreground">
+          {data?.totalElements ?? 0} entreprise{(data?.totalElements ?? 0) !== 1 ? 's' : ''}
+        </p>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Building2 className="mr-2 h-4 w-4" />
+          Créer une entreprise
+        </Button>
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
@@ -674,7 +1141,7 @@ function CompaniesTab({ token }: { token: string }) {
         </table>
       </div>
 
-      {data && data.totalPages > 1 && (
+      {data && (
         <PaginationBar
           page={page}
           totalPages={data.totalPages}
@@ -683,6 +1150,343 @@ function CompaniesTab({ token }: { token: string }) {
         />
       )}
     </>
+  );
+}
+
+// ─── Create user dialog ────────────────────────────────────────────────────
+
+const CREATABLE_ROLES: { value: ApiRole; label: string }[] = [
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+  { value: 'ADMIN_COMPANY', label: 'Admin Entreprise' },
+  { value: 'EMPLOYEE_COMPANY', label: 'Employé Entreprise' },
+  { value: 'COLLECTOR', label: 'Collecteur' },
+  { value: 'TRANSPORTER', label: 'Transporteur' },
+  { value: 'CLIENT', label: 'Client' },
+];
+
+const COMMISSION_ROLES: ApiRole[] = ['COLLECTOR', 'TRANSPORTER', 'ADMIN_COMPANY'];
+
+interface CreateUserForm {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: ApiRole | '';
+  language: string;
+  countryId: string;
+  city: string;
+  address: string;
+  idCardNumber: string;
+  commissionPercentage: string;
+  gender: Gender | '';
+}
+
+const emptyCreateForm = (): CreateUserForm => ({
+  firstName: '',
+  lastName: '',
+  username: '',
+  email: '',
+  phone: '',
+  password: '',
+  role: '',
+  language: 'fr',
+  countryId: '',
+  city: '',
+  address: '',
+  idCardNumber: '',
+  commissionPercentage: '',
+  gender: '',
+});
+
+interface CreateUserErrors {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  phone?: string;
+  password?: string;
+  role?: string;
+  language?: string;
+  countryId?: string;
+  city?: string;
+}
+
+function validateCreateUser(f: CreateUserForm): CreateUserErrors {
+  const e: CreateUserErrors = {};
+  if (!f.firstName.trim()) e.firstName = 'Requis';
+  if (!f.lastName.trim()) e.lastName = 'Requis';
+  if (!f.username.trim() || f.username.length < 3) e.username = '3 caractères minimum';
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) e.username = 'Lettres, chiffres, . _ - (3-20 car.)';
+  if (!f.phone.trim()) e.phone = 'Requis';
+  if (!f.password || f.password.length < 8) e.password = '8 caractères minimum';
+  if (!f.role) e.role = 'Requis';
+  if (!f.language) e.language = 'Requis';
+  if (!f.countryId) e.countryId = 'Requis';
+  if (!f.city.trim()) e.city = 'Requis';
+  return e;
+}
+
+function CreateUserDialog({
+  open,
+  token,
+  onCreated,
+  onClose,
+}: {
+  open: boolean;
+  token: string;
+  onCreated: (user: UserResponse) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<CreateUserForm>(emptyCreateForm());
+  const [errors, setErrors] = useState<CreateUserErrors>({});
+  const [countries, setCountries] = useState<CountryResponse[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(emptyCreateForm());
+    setErrors({});
+    setServerError(null);
+    if (countries.length > 0) return;
+    setCountriesLoading(true);
+    getCountries()
+      .then(setCountries)
+      .catch(() => {/* non-blocking */})
+      .finally(() => setCountriesLoading(false));
+  }, [open]);
+
+  const set = (field: keyof CreateUserForm) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleSubmit = async () => {
+    const errs = validateCreateUser(form);
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
+    setServerError(null);
+    setSubmitting(true);
+    try {
+      const commission = parseFloat(form.commissionPercentage);
+      const created = await createUser(token, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+        email: form.email.trim() || undefined,
+        phone: form.phone.trim(),
+        password: form.password,
+        role: form.role as ApiRole,
+        language: form.language,
+        country: Number(form.countryId),
+        city: form.city.trim(),
+        address: form.address.trim() || undefined,
+        idCardNumber: form.idCardNumber.trim() || undefined,
+        commissionPercentage: !isNaN(commission) ? commission : undefined,
+        gender: (form.gender as Gender) || undefined,
+      });
+      onCreated(created);
+      onClose();
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Erreur lors de la création');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  const showCommission = COMMISSION_ROLES.includes(form.role as ApiRole);
+
+  const inputCls = (err?: string) =>
+    cn(
+      'flex h-9 w-full rounded-xl border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary',
+      err ? 'border-destructive focus:ring-destructive' : 'border-border',
+    );
+
+  const selectCls = (err?: string) =>
+    cn(
+      'flex h-9 w-full appearance-none rounded-xl border bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary',
+      err ? 'border-destructive focus:ring-destructive' : 'border-border',
+    );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm py-8 px-4">
+      <div className="w-full max-w-xl rounded-2xl border border-border bg-card shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <UserPlus className="h-4 w-4" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Créer un utilisateur</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="space-y-4 px-6 py-5">
+          {serverError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {serverError}
+            </div>
+          )}
+
+          {/* Name */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Prénom *</Label>
+              <input className={inputCls(errors.firstName)} placeholder="Jean" value={form.firstName} onChange={set('firstName')} />
+              {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Nom *</Label>
+              <input className={inputCls(errors.lastName)} placeholder="Dupont" value={form.lastName} onChange={set('lastName')} />
+              {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
+            </div>
+          </div>
+
+          {/* Username */}
+          <div className="space-y-1.5">
+            <Label>Nom d'utilisateur *</Label>
+            <input className={inputCls(errors.username)} placeholder="jean.dupont" value={form.username} onChange={set('username')} />
+            {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+          </div>
+
+          {/* Email + Phone */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.email} onChange={set('email')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Téléphone *</Label>
+              <input className={inputCls(errors.phone)} placeholder="+221 77 000 00 00" value={form.phone} onChange={set('phone')} />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-1.5">
+            <Label>Mot de passe *</Label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className={cn(inputCls(errors.password), 'pr-10')}
+                placeholder="••••••••"
+                value={form.password}
+                onChange={set('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            </div>
+            {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+          </div>
+
+          {/* Role + Language */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Rôle *</Label>
+              <select className={selectCls(errors.role)} value={form.role} onChange={set('role')}>
+                <option value="">Choisir…</option>
+                {CREATABLE_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              {errors.role && <p className="text-xs text-destructive">{errors.role}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Langue *</Label>
+              <select className={selectCls(errors.language)} value={form.language} onChange={set('language')}>
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Country + City */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Pays *</Label>
+              <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
+                <option value="">{countriesLoading ? 'Chargement…' : 'Sélectionner…'}</option>
+                {countries.map((c) => (
+                  <option key={c.countryId} value={c.countryId}>{c.countryName}</option>
+                ))}
+              </select>
+              {errors.countryId && <p className="text-xs text-destructive">{errors.countryId}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Ville *</Label>
+              <input className={inputCls(errors.city)} placeholder="Dakar" value={form.city} onChange={set('city')} />
+              {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
+            </div>
+          </div>
+
+          {/* Address + ID card */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Adresse</Label>
+              <input className={inputCls()} placeholder="12 Rue de la Paix" value={form.address} onChange={set('address')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>N° pièce d'identité</Label>
+              <input className={inputCls()} placeholder="AB123456" value={form.idCardNumber} onChange={set('idCardNumber')} />
+            </div>
+          </div>
+
+          {/* Commission + Gender */}
+          <div className="grid grid-cols-2 gap-3">
+            {showCommission && (
+              <div className="space-y-1.5">
+                <Label>Commission (%)</Label>
+                <input type="number" min="0" max="100" step="0.1" className={inputCls()} placeholder="10.5" value={form.commissionPercentage} onChange={set('commissionPercentage')} />
+              </div>
+            )}
+            <div className={cn('space-y-1.5', !showCommission && 'col-span-2')}>
+              <Label>Genre</Label>
+              <select className={selectCls()} value={form.gender} onChange={set('gender')}>
+                <option value="">Non précisé</option>
+                <option value="MALE">Homme</option>
+                <option value="FEMALE">Femme</option>
+                <option value="OTHER">Autre</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+          <Button variant="outline" onClick={onClose} disabled={submitting}>Annuler</Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? (
+              <span className="flex items-center gap-2">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Création…
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Créer l'utilisateur
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -699,6 +1503,7 @@ function UsersTab({ token }: { token: string }) {
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [action, setAction] = useState<UserAction>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -840,6 +1645,15 @@ function UsersTab({ token }: { token: string }) {
     }
   };
 
+  const handleUserCreated = (user: UserResponse) => {
+    setData((prev) =>
+      prev
+        ? { ...prev, content: [user, ...prev.content], totalElements: prev.totalElements + 1 }
+        : prev,
+    );
+    success(`${user.username} créé avec succès`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -852,6 +1666,12 @@ function UsersTab({ token }: { token: string }) {
 
   return (
     <>
+      <CreateUserDialog
+        open={createOpen}
+        token={token}
+        onCreated={handleUserCreated}
+        onClose={() => setCreateOpen(false)}
+      />
       <ToastBar toast={toast} />
 
       {/* Phone dialog */}
@@ -901,6 +1721,16 @@ function UsersTab({ token }: { token: string }) {
         onConfirm={handleDelete}
         onCancel={closeAction}
       />
+
+      <div className="flex items-center justify-between pb-2">
+        <p className="text-sm text-muted-foreground">
+          {data?.totalElements ?? 0} utilisateur{(data?.totalElements ?? 0) !== 1 ? 's' : ''}
+        </p>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Créer un utilisateur
+        </Button>
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
@@ -1036,7 +1866,7 @@ function UsersTab({ token }: { token: string }) {
         </table>
       </div>
 
-      {data && data.totalPages > 1 && (
+      {data && (
         <PaginationBar
           page={page}
           totalPages={data.totalPages}

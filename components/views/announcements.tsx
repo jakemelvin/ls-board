@@ -711,7 +711,7 @@ export function CompanyAnnouncements() {
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementResponse | null>(null);
   const [toggleTarget, setToggleTarget] = useState<AnnouncementResponse | null>(null);
 
-  const isAdmin = role === 'ADMIN_COMPANY';
+  const isAdmin = role === 'ADMIN_COMPANY' || role === 'EMPLOYEE_COMPANY';
 
   // ── Resolve companyId if not yet in store ──
   useEffect(() => {

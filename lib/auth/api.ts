@@ -18,6 +18,7 @@ export async function logout(token: string): Promise<void> {
 export async function registerCompany(
   data: CreateCompanyRequest,
   logo?: File,
+  token?: string,
 ): Promise<CompanyResponse> {
   const formData = new FormData();
   formData.append(
@@ -27,7 +28,7 @@ export async function registerCompany(
   if (logo) {
     formData.append('logo', logo);
   }
-  return apiClient.postForm<CompanyResponse>('/api/delivery/companies', formData);
+  return apiClient.postForm<CompanyResponse>('/api/delivery/companies', formData, token);
 }
 
 export async function getCountries(): Promise<CountryResponse[]> {
