@@ -104,7 +104,7 @@ export function DashboardSidebar({
 
       {/* Settings + Super Admin */}
       <div className="border-t border-sidebar-border p-4 space-y-1">
-        {authRole === 'SUPER_ADMIN' && (
+        {(authRole === 'SUPER_ADMIN' || currentRole === 'SUPER_ADMIN') && (
           <button
             onClick={() => onSectionChange('super-admin')}
             className={cn(

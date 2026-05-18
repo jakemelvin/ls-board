@@ -30,6 +30,7 @@ import { useStore } from '@/lib/store';
 
 // Map roles to their default users
 const ROLE_USERS: Record<UserRole, User> = {
+  SUPER_ADMIN: DEMO_USERS.find((u) => u.role === 'SUPER_ADMIN')!,
   ADMIN: DEMO_USERS.find((u) => u.role === 'ADMIN')!,
   EMPLOYEE: DEMO_USERS.find((u) => u.role === 'EMPLOYEE')!,
   COLLECTOR: DEMO_USERS.find((u) => u.role === 'COLLECTOR')!,
@@ -38,6 +39,7 @@ const ROLE_USERS: Record<UserRole, User> = {
 
 // Default section for each role
 const DEFAULT_SECTIONS: Record<UserRole, string> = {
+  SUPER_ADMIN: 'super-admin',
   ADMIN: 'dashboard',
   EMPLOYEE: 'dashboard',
   COLLECTOR: 'dashboard',
@@ -49,6 +51,7 @@ export default function DashboardPage() {
   const { token, isHydrated } = useAuthStore();
   const { users } = useStore();
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
+  const [activeSection, setActiveSection] = useState<string>('dashboard');
 
   useEffect(() => {
     if (isHydrated && !token) {
@@ -63,7 +66,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-  const [activeSection, setActiveSection] = useState<string>('dashboard');
 
   const currentUser =
     users.find((user) => user.role === currentRole) ?? ROLE_USERS[currentRole];

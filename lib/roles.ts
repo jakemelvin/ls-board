@@ -1,8 +1,8 @@
-import { Briefcase, MapPin, Shield, Truck } from 'lucide-react';
+import { Briefcase, MapPin, Shield, ShieldCheck, Truck } from 'lucide-react';
 import type { UserRole } from '@/lib/mock-data';
 
 export const ADMIN_LIKE_ROLES: UserRole[] = ['ADMIN', 'EMPLOYEE'];
-export const ALL_ROLES: UserRole[] = ['ADMIN', 'EMPLOYEE', 'COLLECTOR', 'TRANSPORTER'];
+export const ALL_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'COLLECTOR', 'TRANSPORTER'];
 
 export const ROLE_CONFIG: Record<
   UserRole,
@@ -14,6 +14,13 @@ export const ROLE_CONFIG: Record<
     surfaceColor: string;
   }
 > = {
+  SUPER_ADMIN: {
+    label: 'Super Admin',
+    icon: ShieldCheck,
+    color: 'bg-violet-600 text-white',
+    badgeColor: 'bg-violet-600/20 text-violet-400',
+    surfaceColor: 'bg-violet-600/20 text-violet-400',
+  },
   ADMIN: {
     label: 'Admin Entreprise',
     icon: Shield,

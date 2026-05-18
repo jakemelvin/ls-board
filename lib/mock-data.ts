@@ -6,7 +6,7 @@ export type KycVerificationStatus = 'VERIFIED' | 'PENDING_REVIEW';
 export type VehicleType = 'MOTO' | 'VAN' | 'CAMION' | 'AVION';
 export type VehicleStatus = 'AVAILABLE' | 'IN_TRANSIT' | 'MAINTENANCE';
 
-export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'COLLECTOR' | 'TRANSPORTER';
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'COLLECTOR' | 'TRANSPORTER' | 'SUPER_ADMIN';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 export type CollectionPointCapacityUnit = 'KG' | 'M3';
 export type CollectionPointGeoLocationSource = 'GPS_CAPTURE' | 'MANUAL';
@@ -316,6 +316,21 @@ export interface CreateParcelInput {
 
 // Demo accounts
 export const DEMO_USERS: User[] = [
+  {
+    id: 'super-admin-1',
+    email: 'superadmin@sendam.com',
+    name: 'Super Admin',
+    firstName: 'Super',
+    lastName: 'Admin',
+    username: 'super.admin',
+    phone: '+221 77 000 00 00',
+    countryId: 'country-1',
+    cityId: 'city-1',
+    password: 'SuperAdmin123!',
+    role: 'SUPER_ADMIN',
+    status: 'ACTIVE',
+    avatar: 'SA',
+  },
   {
     id: 'admin-1',
     email: 'admin@express.com',
