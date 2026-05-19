@@ -11,14 +11,22 @@ import {
   PowerOff,
   Power,
   Calendar,
+  CalendarCheck,
   MapPin,
   Truck,
+  Plane,
+  Ship,
+  Bike,
+  Train,
   Package,
+  // Truck est utilisé comme valeur par défaut dans getTransportIcon
   AlertCircle,
   CheckCircle2,
   X,
   ChevronDown,
+  type LucideProps,
 } from 'lucide-react';
+import type { ElementType } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth/store';
 import { getCompanies } from '@/lib/admin/api';
@@ -42,6 +50,17 @@ import type {
   TransportModeOption,
   ParcelTypeOption,
 } from '@/lib/announcements/types';
+
+// ─── Transport icon ───────────────────────────────────────────────────────────
+
+function getTransportIcon(name: string): ElementType<LucideProps> {
+  const n = name.toLowerCase();
+  if (/avion|air|aérien|aerien|plane|vol/.test(n)) return Plane;
+  if (/bateau|ship|maritime|mer|marin|naval|boat/.test(n)) return Ship;
+  if (/moto|bike|vélo|velo|deux.roue/.test(n)) return Bike;
+  if (/train|rail|ferroviaire/.test(n)) return Train;
+  return Truck; // camion, van, voiture — défaut
+}
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
 
@@ -241,7 +260,7 @@ function validate(form: FormState): FormErrors {
   if (!form.startDate) errors.startDate = 'Champ requis';
   if (!form.endDate) errors.endDate = 'Champ requis';
   if (form.startDate && form.endDate && form.endDate <= form.startDate) {
-    errors.endDate = 'Doit être après la date de début';
+    errors.endDate = 'Doit être après la date limite de dépôt';
   }
   return errors;
 }
@@ -399,7 +418,7 @@ function AnnouncementFormDialog({
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Date de début</label>
+                  <label className="text-xs font-medium text-muted-foreground">Date limite de dépôt de colis</label>
                   <input
                     type="date"
                     value={form.startDate}
@@ -412,7 +431,7 @@ function AnnouncementFormDialog({
                   {errors.startDate && <p className="text-xs text-red-500">{errors.startDate}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Date de fin</label>
+                  <label className="text-xs font-medium text-muted-foreground">Date du prochain départ</label>
                   <input
                     type="date"
                     value={form.endDate}
@@ -496,7 +515,7 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
 
   const handleSubmit = async () => {
     if (!startDate || !endDate) { setError('Les deux dates sont requises'); return; }
-    if (endDate <= startDate) { setError('La date de fin doit être après la date de début'); return; }
+    if (endDate <= startDate) { setError('La date de départ doit être après la date limite de dépôt'); return; }
     setSubmitting(true);
     try {
       await onRenew({ startDate, endDate });
@@ -515,7 +534,7 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
         <p className="mt-1 text-sm text-muted-foreground">Définissez les nouvelles dates de validité.</p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Début</label>
+            <label className="text-xs font-medium text-muted-foreground">Limite dépôt</label>
             <input
               type="date"
               value={startDate}
@@ -524,7 +543,7 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Fin</label>
+            <label className="text-xs font-medium text-muted-foreground">Date de départ</label>
             <input
               type="date"
               value={endDate}
@@ -592,6 +611,7 @@ interface AnnouncementCardProps {
 
 function AnnouncementCard({ announcement: a, isAdmin, onEdit, onRenew, onToggle, onDelete }: AnnouncementCardProps) {
   const isExpired = new Date(a.endDate) < new Date();
+  const TransportIcon = getTransportIcon(a.transportModeName);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">
@@ -667,7 +687,7 @@ function AnnouncementCard({ announcement: a, isAdmin, onEdit, onRenew, onToggle,
           {a.collectionPointName}
         </span>
         <span className="flex items-center gap-1.5">
-          <Truck className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+          <TransportIcon className="h-3.5 w-3.5 shrink-0 text-primary/70" />
           {a.transportModeName}
         </span>
         <span className="flex items-center gap-1.5">
@@ -676,11 +696,15 @@ function AnnouncementCard({ announcement: a, isAdmin, onEdit, onRenew, onToggle,
         </span>
       </div>
 
-      {/* Date range */}
-      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Calendar className="h-3.5 w-3.5 shrink-0" />
-        <span>
-          {formatDate(a.startDate)} — {formatDate(a.endDate)}
+      {/* Dates */}
+      <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-amber-500/70" />
+          <span>Limite dépôt : <span className="font-medium text-foreground">{formatDate(a.startDate)}</span></span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-green-500/70" />
+          <span>Départ : <span className="font-medium text-foreground">{formatDate(a.endDate)}</span></span>
         </span>
       </div>
     </div>
