@@ -479,6 +479,9 @@ interface CreateCompanyForm {
   language: string;
   gender: Gender | '';
   idCardNumber: string;
+  adminCountryId: string;
+  adminCity: string;
+  adminAddress: string;
 }
 
 const emptyCompanyForm = (): CreateCompanyForm => ({
@@ -486,11 +489,13 @@ const emptyCompanyForm = (): CreateCompanyForm => ({
   paymentCollectionMode: '',
   firstName: '', lastName: '', username: '', adminEmail: '', adminPhone: '',
   password: '', language: 'fr', gender: '', idCardNumber: '',
+  adminCountryId: '', adminCity: '', adminAddress: '',
 });
 
 interface CreateCompanyErrors {
   name?: string; phone?: string; companyUrl?: string; countryId?: string; city?: string;
   firstName?: string; lastName?: string; username?: string; adminPhone?: string; password?: string;
+  adminCountryId?: string; adminCity?: string;
 }
 
 function validateCompanyForm(f: CreateCompanyForm): { errors: CreateCompanyErrors; tab: CompanyTab | null } {
@@ -505,6 +510,8 @@ function validateCompanyForm(f: CreateCompanyForm): { errors: CreateCompanyError
   if (!f.username.trim() || !/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) errors.username = 'Lettres, chiffres, . _ - (3-20 car.)';
   if (!f.adminPhone.trim()) errors.adminPhone = 'Requis';
   if (!f.password || f.password.length < 8) errors.password = '8 caractères minimum';
+  if (!f.adminCountryId) errors.adminCountryId = 'Requis';
+  if (!f.adminCity.trim()) errors.adminCity = 'Requis';
 
   const companyFields: (keyof CreateCompanyErrors)[] = ['name', 'phone', 'companyUrl', 'countryId', 'city'];
   const hasCompanyErr = companyFields.some((k) => errors[k]);
@@ -554,7 +561,14 @@ function CreateCompanyDialog({
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async () => {
-    const { errors: errs, tab: errTab } = validateCompanyForm(form);
+    const filled: CreateCompanyForm = {
+      ...form,
+      adminCountryId: form.adminCountryId || form.countryId,
+      adminCity: form.adminCity || form.city,
+      adminAddress: form.adminAddress || form.address,
+    };
+    if (filled !== form) setForm(filled);
+    const { errors: errs, tab: errTab } = validateCompanyForm(filled);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       if (errTab) setTab(errTab);
@@ -565,27 +579,27 @@ function CreateCompanyDialog({
     setSubmitting(true);
     try {
       const payload: CreateCompanyRequest = {
-        name: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim(),
-        companyUrl: form.companyUrl.trim(),
-        address: form.address.trim() || undefined,
-        countryId: Number(form.countryId),
-        city: form.city.trim(),
-        paymentCollectionMode: (form.paymentCollectionMode as PaymentCollectionMode) || undefined,
+        name: filled.name.trim(),
+        email: filled.email.trim() || undefined,
+        phone: filled.phone.trim(),
+        companyUrl: filled.companyUrl.trim(),
+        address: filled.address.trim() || undefined,
+        countryId: Number(filled.countryId),
+        city: filled.city.trim(),
+        paymentCollectionMode: (filled.paymentCollectionMode as PaymentCollectionMode) || undefined,
         adminUser: {
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          username: form.username.trim(),
-          email: form.adminEmail.trim() || undefined,
-          phone: form.adminPhone.trim(),
-          password: form.password,
-          country: Number(form.countryId),
-          language: form.language,
-          city: form.city.trim(),
-          address: form.address.trim() || undefined,
-          idCardNumber: form.idCardNumber.trim() || undefined,
-          gender: (form.gender as Gender) || undefined,
+          firstName: filled.firstName.trim(),
+          lastName: filled.lastName.trim(),
+          username: filled.username.trim(),
+          email: filled.adminEmail.trim() || undefined,
+          phone: filled.adminPhone.trim(),
+          password: filled.password,
+          country: Number(filled.adminCountryId),
+          language: filled.language,
+          city: filled.adminCity.trim(),
+          address: filled.adminAddress.trim() || undefined,
+          idCardNumber: filled.idCardNumber.trim() || undefined,
+          gender: (filled.gender as Gender) || undefined,
           role: 'ADMIN_COMPANY',
         },
       };
@@ -613,9 +627,19 @@ function CreateCompanyDialog({
   const companyTabHasError = ['name', 'phone', 'companyUrl', 'countryId', 'city'].some(
     (k) => errors[k as keyof CreateCompanyErrors],
   );
-  const adminTabHasError = ['firstName', 'lastName', 'username', 'adminPhone', 'password'].some(
+  const adminTabHasError = ['firstName', 'lastName', 'username', 'adminPhone', 'password', 'adminCountryId', 'adminCity'].some(
     (k) => errors[k as keyof CreateCompanyErrors],
   );
+
+  const goToAdminTab = () => {
+    setForm((prev) => ({
+      ...prev,
+      adminCountryId: prev.adminCountryId || prev.countryId,
+      adminCity: prev.adminCity || prev.city,
+      adminAddress: prev.adminAddress || prev.address,
+    }));
+    setTab('admin');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm py-8 px-4">
@@ -644,7 +668,7 @@ function CreateCompanyDialog({
           ] as const).map(({ id, label, hasError }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => (id === 'admin' ? goToAdminTab() : setTab(id))}
               className={cn(
                 'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-sm font-medium transition-colors',
                 tab === id
@@ -848,6 +872,35 @@ function CreateCompanyDialog({
               <div className="space-y-1.5">
                 <Label>N° pièce d'identité</Label>
                 <input className={inputCls()} placeholder="AB123456789" value={form.idCardNumber} onChange={set('idCardNumber')} />
+              </div>
+
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Lieu de résidence de l'administrateur — pré-rempli depuis l'entreprise, modifiable s'il réside ailleurs.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Pays *</Label>
+                    <select className={selectCls(errors.adminCountryId)} value={form.adminCountryId} onChange={set('adminCountryId')} disabled={countriesLoading}>
+                      <option value="">{countriesLoading ? 'Chargement…' : 'Sélectionner…'}</option>
+                      {countries.map((c) => (
+                        <option key={c.countryId} value={c.countryId}>{c.countryName}</option>
+                      ))}
+                    </select>
+                    {errors.adminCountryId && <p className="text-xs text-destructive">{errors.adminCountryId}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Ville *</Label>
+                    <input className={inputCls(errors.adminCity)} placeholder="Dakar" value={form.adminCity} onChange={set('adminCity')} />
+                    {errors.adminCity && <p className="text-xs text-destructive">{errors.adminCity}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Adresse</Label>
+                  <input className={inputCls()} placeholder="12 Rue de la Paix, Plateau" value={form.adminAddress} onChange={set('adminAddress')} />
+                </div>
               </div>
             </>
           )}

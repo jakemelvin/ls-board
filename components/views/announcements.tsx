@@ -86,7 +86,7 @@ function useToast() {
 
 function ToastBar({ toasts }: { toasts: Toast[] }) {
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 flex flex-col gap-2 md:bottom-6 md:right-6">
       {toasts.map((t) => (
         <div
           key={t.id}
@@ -132,28 +132,33 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={() => { onConfirm(); onClose(); }}
-            className={cn(
-              'rounded-xl px-4 py-2 text-sm font-medium transition-colors',
-              variant === 'danger'
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90',
-            )}
-          >
-            {confirmLabel}
-          </button>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-sm rounded-t-2xl border-t border-border bg-card shadow-xl sm:rounded-2xl sm:border">
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
+        <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => { onConfirm(); onClose(); }}
+              className={cn(
+                'rounded-xl px-4 py-2 text-sm font-medium transition-colors',
+                variant === 'danger'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90',
+              )}
+            >
+              {confirmLabel}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -327,10 +332,15 @@ function AnnouncementFormDialog({
   const isEdit = Boolean(announcement);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm py-8">
-      <div className="w-full max-w-xl rounded-2xl border border-border bg-card shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm sm:items-start sm:justify-center sm:overflow-y-auto sm:py-8">
+      <div className="w-full max-h-[90dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-card shadow-xl sm:max-w-xl sm:rounded-2xl sm:border">
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-foreground">
             {isEdit ? 'Modifier l\'annonce' : 'Nouvelle annonce de départ'}
           </h2>
@@ -343,7 +353,7 @@ function AnnouncementFormDialog({
         </div>
 
         {/* Body */}
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-4 px-4 py-5 sm:px-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -396,7 +406,7 @@ function AnnouncementFormDialog({
               />
 
               {/* Transport mode + Parcel type side by side */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <SelectField
                   label="Mode de transport"
                   value={form.transportModeId}
@@ -416,7 +426,7 @@ function AnnouncementFormDialog({
               </div>
 
               {/* Dates */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Date limite de dépôt de colis</label>
                   <input
@@ -471,7 +481,7 @@ function AnnouncementFormDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-border px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-4">
           <button
             onClick={onClose}
             className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
@@ -528,48 +538,53 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
-        <h3 className="text-base font-semibold text-foreground">Renouveler l'annonce</h3>
-        <p className="mt-1 text-sm text-muted-foreground">Définissez les nouvelles dates de validité.</p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Limite dépôt</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Date de départ</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-sm rounded-t-2xl border-t border-border bg-card shadow-xl sm:rounded-2xl sm:border">
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-border" />
         </div>
-        {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {submitting && (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
-            Renouveler
-          </button>
+        <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+          <h3 className="text-base font-semibold text-foreground">Renouveler l'annonce</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Définissez les nouvelles dates de validité.</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Limite dépôt</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Date de départ</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {submitting && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              )}
+              Renouveler
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -883,7 +898,7 @@ export function CompanyAnnouncements() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2.5 text-xl font-bold text-foreground">
             <Megaphone className="h-6 w-6 text-primary" />
@@ -897,7 +912,7 @@ export function CompanyAnnouncements() {
           <button
             onClick={() => fetchAnnouncements(companyId)}
             disabled={loading}
-            className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 sm:flex-none sm:py-2"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
             Actualiser
@@ -905,7 +920,7 @@ export function CompanyAnnouncements() {
           {isAdmin && (
             <button
               onClick={() => openForm(null)}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:flex-none sm:py-2"
             >
               <Plus className="h-4 w-4" />
               Nouvelle annonce
