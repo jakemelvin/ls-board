@@ -1,7 +1,7 @@
 {
-  "name": "SENDAM Dashboard",
-  "short_name": "SENDAM",
-  "description": "Plateforme SENDAM de gestion logistique de colis",
+  "name": "SENDAMhub Dashboard",
+  "short_name": "SAH",
+  "description": "Plateforme SENDAMhub de gestion logistique de colis",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

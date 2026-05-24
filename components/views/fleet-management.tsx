@@ -1,580 +1,765 @@
 'use client';
 
-import { useState } from 'react';
-import { Truck, Bike, Plane, Plus, Edit2, Trash2, X, Save, UserPlus } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Bike,
+  Car,
+  Edit2,
+  Package,
+  Pickaxe,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+  Truck,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { useAuthStore } from '@/lib/auth/store';
+import { ApiError } from '@/lib/api-client';
+import { getCompanyEmployees } from '@/lib/admin/api';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  assignFlotteTransporters,
+  createFlotte,
+  deleteFlotte,
+  getFlottes,
+  unassignFlotteTransporter,
+  updateFlotte,
+  updateFlotteStatus,
+} from '@/lib/company/api';
+import type { UserResponse } from '@/lib/auth/types';
+import type { FlotteRequest, FlotteResponse, FlotteStatus, FlotteType } from '@/lib/company/types';
 import {
-  getVehicleTypeLabel,
-  getVehicleStatusLabel,
-  getVehicleStatusColor,
-  type Vehicle,
-  type VehicleType,
-  type VehicleStatus,
-} from '@/lib/mock-data';
-import { useStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
+  CompanyGuard,
+  ConfirmDialog,
+  SectionHeader,
+  StatusState,
+  ToastBar,
+  useToastSimple,
+} from '@/components/company/company-shared';
 
-const VEHICLE_ICONS: Record<VehicleType, React.ElementType> = {
-  MOTO: Bike,
-  VAN: Truck,
-  CAMION: Truck,
-  AVION: Plane,
+const FLOTTE_TYPES: FlotteType[] = ['VAN', 'MOTO', 'CAMION', 'VOITURE', 'PICKUP', 'TRICYCLE', 'AUTRE'];
+const FLOTTE_STATUSES: FlotteStatus[] = ['DISPONIBLE', 'EN_TRANSIT', 'MAINTENANCE'];
+
+const FLOTTE_TYPE_LABELS: Record<FlotteType, string> = {
+  VAN: 'Van',
+  MOTO: 'Moto',
+  CAMION: 'Camion',
+  VOITURE: 'Voiture',
+  PICKUP: 'Pickup',
+  TRICYCLE: 'Tricycle',
+  AUTRE: 'Autre',
 };
 
-const VEHICLE_TYPES: VehicleType[] = ['MOTO', 'VAN', 'CAMION', 'AVION'];
-const VEHICLE_STATUSES: VehicleStatus[] = ['AVAILABLE', 'IN_TRANSIT', 'MAINTENANCE'];
+const FLOTTE_STATUS_LABELS: Record<FlotteStatus, string> = {
+  DISPONIBLE: 'Disponible',
+  EN_TRANSIT: 'En transit',
+  MAINTENANCE: 'Maintenance',
+};
 
-export function FleetManagement() {
-  const { vehicles, users, addVehicle, updateVehicle, deleteVehicle, assignVehicleToTransporters } = useStore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [selectedTransporterIds, setSelectedTransporterIds] = useState<string[]>([]);
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    type: 'VAN' as VehicleType,
-    plate: '',
-    maxVolume: '',
-    maxWeight: '',
-    status: 'AVAILABLE' as VehicleStatus,
-  });
+const FLOTTE_STATUS_STYLES: Record<FlotteStatus, string> = {
+  DISPONIBLE: 'bg-success/15 text-success',
+  EN_TRANSIT: 'bg-primary/15 text-primary',
+  MAINTENANCE: 'bg-warning/15 text-warning',
+};
 
-  const transporters = users.filter((u) => u.role === 'TRANSPORTER');
+const FLOTTE_TYPE_ICONS: Record<FlotteType, React.ElementType> = {
+  VAN: Truck,
+  MOTO: Bike,
+  CAMION: Truck,
+  VOITURE: Car,
+  PICKUP: Truck,
+  TRICYCLE: Pickaxe,
+  AUTRE: Package,
+};
 
-  const filteredVehicles = vehicles.filter(
-    (v) =>
-      v.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getVehicleTypeLabel(v.type).toLowerCase().includes(searchTerm.toLowerCase())
+type FleetFormState = {
+  type: FlotteType;
+  immatriculation: string;
+  maxVolumeM3: string;
+  maxWeightKg: string;
+  status: FlotteStatus;
+};
+
+function createDefaultForm(): FleetFormState {
+  return {
+    type: 'VAN',
+    immatriculation: '',
+    maxVolumeM3: '',
+    maxWeightKg: '',
+    status: 'DISPONIBLE',
+  };
+}
+
+function buildFormFromFlotte(flotte: FlotteResponse): FleetFormState {
+  return {
+    type: flotte.type,
+    immatriculation: flotte.immatriculation,
+    maxVolumeM3: String(flotte.maxVolumeM3),
+    maxWeightKg: String(flotte.maxWeightKg),
+    status: flotte.status,
+  };
+}
+
+function buildFlottePayload(
+  form: FleetFormState,
+  transporterIds: number[] = [],
+): FlotteRequest {
+  return {
+    type: form.type,
+    immatriculation: form.immatriculation.trim(),
+    maxVolumeM3: Number(form.maxVolumeM3),
+    maxWeightKg: Number(form.maxWeightKg),
+    status: form.status,
+    transporterIds: transporterIds.length > 0 ? transporterIds : undefined,
+  };
+}
+
+function FleetDialog({
+  open,
+  value,
+  loading,
+  editing,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  value: FleetFormState;
+  loading: boolean;
+  editing: boolean;
+  onChange: (value: FleetFormState) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="border-border bg-card sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{editing ? 'Modifier le véhicule' : 'Ajouter un véhicule'}</DialogTitle>
+          <DialogDescription>
+            Renseignez les capacités, le type et le statut opérationnel du véhicule.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={value.type}
+                onValueChange={(type: FlotteType) => onChange({ ...value, type })}
+              >
+                <SelectTrigger className="bg-secondary">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FLOTTE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {FLOTTE_TYPE_LABELS[type]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Immatriculation</Label>
+              <Input
+                value={value.immatriculation}
+                onChange={(event) => onChange({ ...value, immatriculation: event.target.value })}
+                className="bg-secondary"
+                placeholder="LT-245-AA"
+              />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Volume max (m3)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={value.maxVolumeM3}
+                onChange={(event) => onChange({ ...value, maxVolumeM3: event.target.value })}
+                className="bg-secondary"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Poids max (kg)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={value.maxWeightKg}
+                onChange={(event) => onChange({ ...value, maxWeightKg: event.target.value })}
+                className="bg-secondary"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Statut</Label>
+            <Select
+              value={value.status}
+              onValueChange={(status: FlotteStatus) => onChange({ ...value, status })}
+            >
+              <SelectTrigger className="bg-secondary">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FLOTTE_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {FLOTTE_STATUS_LABELS[status]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Annuler
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={
+              loading ||
+              !value.immatriculation.trim() ||
+              value.maxVolumeM3.trim() === '' ||
+              value.maxWeightKg.trim() === ''
+            }
+          >
+            {loading ? 'Enregistrement...' : editing ? 'Mettre à jour' : 'Créer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AssignTransportersDialog({
+  open,
+  transporters,
+  selectedIds,
+  loading,
+  flotteLabel,
+  onToggle,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  transporters: UserResponse[];
+  selectedIds: number[];
+  loading: boolean;
+  flotteLabel: string;
+  onToggle: (id: number, checked: boolean) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="border-border bg-card sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Assigner des transporteurs</DialogTitle>
+          <DialogDescription>
+            Sélectionnez les transporteurs autorisés à opérer le véhicule {flotteLabel}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <p className="text-sm font-medium text-foreground">
+              {selectedIds.length} transporteur(s) sélectionné(s)
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Les affectations existantes seront remplacées par cette sélection.
+            </p>
+          </div>
+          <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
+            {transporters.map((transporter) => {
+              const fullName = `${transporter.firstName} ${transporter.lastName}`.trim() || transporter.username;
+              const checked = selectedIds.includes(transporter.id);
+              return (
+                <label
+                  key={transporter.id}
+                  className="flex items-start gap-3 rounded-2xl border border-border bg-secondary/10 p-4"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(next) => onToggle(transporter.id, next === true)}
+                    className="mt-0.5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">{fullName}</p>
+                    <p className="text-sm text-muted-foreground">@{transporter.username}</p>
+                    {transporter.phone && (
+                      <p className="mt-1 text-xs text-muted-foreground">{transporter.phone}</p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Annuler
+          </Button>
+          <Button onClick={onSubmit} disabled={loading}>
+            {loading ? 'Enregistrement...' : 'Enregistrer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FleetManagementInner({ companyId, companyName }: { companyId: number; companyName: string }) {
+  const token = useAuthStore((state) => state.token);
+  const { toast, success, error: showError } = useToastSimple();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | FlotteStatus>('ALL');
+  const [flottes, setFlottes] = useState<FlotteResponse[]>([]);
+  const [transporters, setTransporters] = useState<UserResponse[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FlotteResponse | null>(null);
+  const [editingFlotte, setEditingFlotte] = useState<FlotteResponse | null>(null);
+  const [assigningFlotte, setAssigningFlotte] = useState<FlotteResponse | null>(null);
+  const [selectedTransporterIds, setSelectedTransporterIds] = useState<number[]>([]);
+  const [actionFlotteId, setActionFlotteId] = useState<number | null>(null);
+  const [form, setForm] = useState<FleetFormState>(createDefaultForm());
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [flottesData, employees] = await Promise.all([
+        getFlottes(token, companyId),
+        getCompanyEmployees(token, companyId),
+      ]);
+      setFlottes(flottesData);
+      setTransporters(employees.filter((user) => user.role === 'TRANSPORTER'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, companyId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filteredFlottes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return flottes.filter((flotte) => {
+      const matchesStatus = statusFilter === 'ALL' || flotte.status === statusFilter;
+      if (!matchesStatus) return false;
+      if (!query) return true;
+      return (
+        flotte.immatriculation.toLowerCase().includes(query) ||
+        FLOTTE_TYPE_LABELS[flotte.type].toLowerCase().includes(query) ||
+        flotte.transporters.some((transporter) =>
+          `${transporter.firstName} ${transporter.lastName}`.trim().toLowerCase().includes(query),
+        )
+      );
+    });
+  }, [flottes, search, statusFilter]);
+
+  const stats = useMemo(
+    () => ({
+      total: flottes.length,
+      available: flottes.filter((flotte) => flotte.status === 'DISPONIBLE').length,
+      transit: flottes.filter((flotte) => flotte.status === 'EN_TRANSIT').length,
+      maintenance: flottes.filter((flotte) => flotte.status === 'MAINTENANCE').length,
+    }),
+    [flottes],
   );
 
-  const getAssignedTransporters = (vehicleId: string) =>
-    transporters.filter((transporter) => transporter.assignedVehicleId === vehicleId);
+  const openCreateDialog = () => {
+    setEditingFlotte(null);
+    setForm(createDefaultForm());
+    setDialogOpen(true);
+  };
 
-  const handleAdd = () => {
-    if (formData.plate && formData.maxVolume && formData.maxWeight) {
-      addVehicle({
-        type: formData.type,
-        plate: formData.plate,
-        maxVolume: parseFloat(formData.maxVolume),
-        maxWeight: parseFloat(formData.maxWeight),
-        status: formData.status,
-      });
-      setFormData({ type: 'VAN', plate: '', maxVolume: '', maxWeight: '', status: 'AVAILABLE' });
-      setIsAddDialogOpen(false);
+  const openEditDialog = (flotte: FlotteResponse) => {
+    setEditingFlotte(flotte);
+    setForm(buildFormFromFlotte(flotte));
+    setDialogOpen(true);
+  };
+
+  const openAssignDialog = (flotte: FlotteResponse) => {
+    setAssigningFlotte(flotte);
+    setSelectedTransporterIds(flotte.transporters.map((transporter) => transporter.id));
+    setAssignDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      const payload = buildFlottePayload(form);
+      const saved = editingFlotte
+        ? await updateFlotte(token, companyId, editingFlotte.id, payload)
+        : await createFlotte(token, companyId, payload);
+      setFlottes((current) =>
+        editingFlotte
+          ? current.map((item) => (item.id === saved.id ? saved : item))
+          : [saved, ...current],
+      );
+      success(editingFlotte ? 'Véhicule mis à jour' : 'Véhicule créé');
+      setDialogOpen(false);
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Enregistrement impossible');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = () => {
-    if (selectedVehicle && formData.plate && formData.maxVolume && formData.maxWeight) {
-      updateVehicle(selectedVehicle.id, {
-        type: formData.type,
-        plate: formData.plate,
-        maxVolume: parseFloat(formData.maxVolume),
-        maxWeight: parseFloat(formData.maxWeight),
-        status: formData.status,
-      });
-      setSelectedVehicle(null);
-      setIsEditDialogOpen(false);
+  const handleDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setSaving(true);
+    try {
+      await deleteFlotte(token, companyId, deleteTarget.id);
+      setFlottes((current) => current.filter((item) => item.id !== deleteTarget.id));
+      success('Véhicule supprimé');
+      setDeleteTarget(null);
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Suppression impossible');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = () => {
-    if (selectedVehicle) {
-      deleteVehicle(selectedVehicle.id);
-      setSelectedVehicle(null);
-      setIsDeleteDialogOpen(false);
+  const handleAssign = async () => {
+    if (!token || !assigningFlotte) return;
+    setSaving(true);
+    try {
+      let saved: FlotteResponse;
+      if (selectedTransporterIds.length === 0) {
+        saved = assigningFlotte;
+        for (const transporter of assigningFlotte.transporters) {
+          saved = await unassignFlotteTransporter(token, companyId, assigningFlotte.id, transporter.id);
+        }
+      } else {
+        saved = await assignFlotteTransporters(
+          token,
+          companyId,
+          assigningFlotte.id,
+          selectedTransporterIds,
+        );
+      }
+      setFlottes((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      success(selectedTransporterIds.length === 0 ? 'Transporteurs retirés' : 'Transporteurs assignés');
+      setAssignDialogOpen(false);
+      setAssigningFlotte(null);
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Assignation impossible');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleAssign = () => {
-    if (selectedVehicle) {
-      assignVehicleToTransporters(selectedVehicle.id, selectedTransporterIds);
-      setSelectedVehicle(null);
-      setSelectedTransporterIds([]);
-      setIsAssignDialogOpen(false);
+  const cycleStatus = async (flotte: FlotteResponse) => {
+    if (!token) return;
+    const nextStatus: FlotteStatus =
+      flotte.status === 'DISPONIBLE'
+        ? 'EN_TRANSIT'
+        : flotte.status === 'EN_TRANSIT'
+          ? 'MAINTENANCE'
+          : 'DISPONIBLE';
+
+    setActionFlotteId(flotte.id);
+    try {
+      const saved = await updateFlotteStatus(token, companyId, flotte.id, nextStatus);
+      setFlottes((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      success(`Statut mis à jour: ${FLOTTE_STATUS_LABELS[nextStatus]}`);
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Mise à jour du statut impossible');
+    } finally {
+      setActionFlotteId(null);
     }
   };
 
-  const openEditDialog = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setFormData({
-      type: vehicle.type,
-      plate: vehicle.plate,
-      maxVolume: vehicle.maxVolume.toString(),
-      maxWeight: vehicle.maxWeight.toString(),
-      status: vehicle.status,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const openDeleteDialog = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const openAssignDialog = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setSelectedTransporterIds(
-      getAssignedTransporters(vehicle.id).map((transporter) => transporter.id)
+  const toggleTransporter = (id: number, checked: boolean) => {
+    setSelectedTransporterIds((current) =>
+      checked ? [...current, id] : current.filter((item) => item !== id),
     );
-    setIsAssignDialogOpen(true);
   };
 
-  const toggleTransporterSelection = (transporterId: string, checked: boolean) => {
-    setSelectedTransporterIds((currentIds) =>
-      checked
-        ? [...currentIds, transporterId]
-        : currentIds.filter((currentId) => currentId !== transporterId)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Spinner className="h-8 w-8 text-primary" />
+      </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <StatusState
+        icon={Truck}
+        tone="destructive"
+        title="Erreur de chargement"
+        description={error}
+        action={
+          <Button variant="outline" onClick={load} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Réessayer
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Gestion de la Flotte</h2>
-          <p className="text-muted-foreground">Gerez vos vehicules et leurs assignations</p>
-        </div>
-        <Button className="gap-2" onClick={() => {
-          setFormData({ type: 'VAN', plate: '', maxVolume: '', maxWeight: '', status: 'AVAILABLE' });
-          setIsAddDialogOpen(true);
-        }}>
-          <Plus className="h-4 w-4" />
-          Ajouter un vehicule
-        </Button>
+      <ToastBar toast={toast} />
+
+      <FleetDialog
+        open={dialogOpen}
+        value={form}
+        loading={saving}
+        editing={!!editingFlotte}
+        onChange={setForm}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleSave}
+      />
+
+      <AssignTransportersDialog
+        open={assignDialogOpen}
+        transporters={transporters}
+        selectedIds={selectedTransporterIds}
+        loading={saving}
+        flotteLabel={assigningFlotte?.immatriculation ?? ''}
+        onToggle={toggleTransporter}
+        onClose={() => {
+          setAssignDialogOpen(false);
+          setAssigningFlotte(null);
+          setSelectedTransporterIds([]);
+        }}
+        onSubmit={handleAssign}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Supprimer le véhicule"
+        description={`Le véhicule ${deleteTarget?.immatriculation ?? ''} sera supprimé définitivement.`}
+        confirmLabel="Supprimer"
+        destructive
+        loading={saving}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <SectionHeader
+        title="Gestion de flotte"
+        subtitle={`Pilotage mobile-friendly des véhicules de ${companyName}.`}
+        action={
+          <Button onClick={openCreateDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Ajouter un véhicule
+          </Button>
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="rounded-xl bg-primary/15 p-3 text-primary">
+              <Truck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+              <p className="text-sm text-muted-foreground">Véhicules</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="rounded-xl bg-success/15 p-3 text-success">
+              <Truck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{stats.available}</p>
+              <p className="text-sm text-muted-foreground">Disponibles</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="rounded-xl bg-primary/15 p-3 text-primary">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{stats.transit}</p>
+              <p className="text-sm text-muted-foreground">En transit</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="rounded-xl bg-warning/15 p-3 text-warning">
+              <Pickaxe className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{stats.maintenance}</p>
+              <p className="text-sm text-muted-foreground">Maintenance</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Search and Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border bg-card md:col-span-1">
-          <CardContent className="p-4">
+      <Card className="border-border bg-card">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-col gap-3 md:flex-row">
             <Input
-              placeholder="Rechercher..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Rechercher une immatriculation, un type ou un transporteur..."
               className="bg-secondary"
             />
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center justify-between p-4">
-            <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-2xl font-bold text-foreground">{vehicles.length}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center justify-between p-4">
-            <span className="text-sm text-muted-foreground">Disponibles</span>
-            <span className="text-2xl font-bold text-success">
-              {vehicles.filter((v) => v.status === 'AVAILABLE').length}
-            </span>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center justify-between p-4">
-            <span className="text-sm text-muted-foreground">En maintenance</span>
-            <span className="text-2xl font-bold text-destructive">
-              {vehicles.filter((v) => v.status === 'MAINTENANCE').length}
-            </span>
-          </CardContent>
-        </Card>
-      </div>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as 'ALL' | FlotteStatus)}
+            >
+              <SelectTrigger className="w-full bg-secondary md:w-64">
+                <SelectValue placeholder="Tous les statuts" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tous les statuts</SelectItem>
+                {FLOTTE_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {FLOTTE_STATUS_LABELS[status]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Vehicles Table */}
-      <Card className="border-border bg-card">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Type</TableHead>
-                <TableHead className="text-muted-foreground">Immatriculation</TableHead>
-                <TableHead className="text-muted-foreground">Volume Max</TableHead>
-                <TableHead className="text-muted-foreground">Poids Max</TableHead>
-                <TableHead className="text-muted-foreground">Statut</TableHead>
-                <TableHead className="text-muted-foreground">Assigne a</TableHead>
-                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredVehicles.map((vehicle) => {
-                const Icon = VEHICLE_ICONS[vehicle.type];
-                const assignedTransporters = getAssignedTransporters(vehicle.id);
-
+          {filteredFlottes.length === 0 ? (
+            <StatusState
+              icon={Truck}
+              title={flottes.length === 0 ? 'Aucun véhicule' : 'Aucun résultat'}
+              description={
+                flottes.length === 0
+                  ? 'Ajoutez votre premier véhicule pour commencer la gestion de flotte.'
+                  : 'Aucun véhicule ne correspond à votre recherche.'
+              }
+              action={
+                flottes.length === 0 ? (
+                  <Button onClick={openCreateDialog} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Ajouter un véhicule
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filteredFlottes.map((flotte) => {
+                const Icon = FLOTTE_TYPE_ICONS[flotte.type];
                 return (
-                  <TableRow key={vehicle.id} className="border-border">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20">
-                          <Icon className="h-4 w-4 text-primary" />
+                  <div key={flotte.id} className="rounded-2xl border border-border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 gap-3">
+                        <div className="rounded-xl bg-primary/15 p-3 text-primary">
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <span className="font-medium text-foreground">
-                          {getVehicleTypeLabel(vehicle.type)}
-                        </span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-foreground">{flotte.immatriculation}</p>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FLOTTE_STATUS_STYLES[flotte.status]}`}>
+                              {FLOTTE_STATUS_LABELS[flotte.status]}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{FLOTTE_TYPE_LABELS[flotte.type]}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {flotte.maxVolumeM3} m3 • {flotte.maxWeightKg} kg
+                          </p>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-foreground">{vehicle.plate}</TableCell>
-                    <TableCell className="text-foreground">{vehicle.maxVolume} m3</TableCell>
-                    <TableCell className="text-foreground">{vehicle.maxWeight} kg</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'rounded-lg px-2 py-1 text-xs font-medium',
-                          getVehicleStatusColor(vehicle.status)
-                        )}
-                      >
-                        {getVehicleStatusLabel(vehicle.status)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {assignedTransporters.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {assignedTransporters.map((transporter) => (
-                            <div
-                              key={transporter.id}
-                              className="flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-1"
-                            >
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                {transporter.avatar}
-                              </div>
-                              <span className="text-sm text-foreground">{transporter.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Non assigne</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openAssignDialog(vehicle)}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEditDialog(vehicle)}
-                        >
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(flotte)}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => openDeleteDialog(vehicle)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(flotte)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {filteredVehicles.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    Aucun vehicule trouve
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </div>
 
-      {/* Add Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Ajouter un vehicule</DialogTitle>
-            <DialogDescription>Remplissez les informations du nouveau vehicule</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Type</label>
-                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as VehicleType })}>
-                  <SelectTrigger className="bg-secondary">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VEHICLE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {getVehicleTypeLabel(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Immatriculation</label>
-                <Input
-                  value={formData.plate}
-                  onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
-                  placeholder="AB-123-CD"
-                  className="bg-secondary"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Volume Max (m3)</label>
-                <Input
-                  type="number"
-                  value={formData.maxVolume}
-                  onChange={(e) => setFormData({ ...formData, maxVolume: e.target.value })}
-                  placeholder="12"
-                  className="bg-secondary"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Poids Max (kg)</label>
-                <Input
-                  type="number"
-                  value={formData.maxWeight}
-                  onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
-                  placeholder="1500"
-                  className="bg-secondary"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Statut</label>
-              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as VehicleStatus })}>
-                <SelectTrigger className="bg-secondary">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VEHICLE_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {getVehicleStatusLabel(status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleAdd} className="gap-2">
-              <Save className="h-4 w-4" />
-              Ajouter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Modifier le vehicule</DialogTitle>
-            <DialogDescription>Modifiez les informations du vehicule</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Type</label>
-                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as VehicleType })}>
-                  <SelectTrigger className="bg-secondary">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VEHICLE_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {getVehicleTypeLabel(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Immatriculation</label>
-                <Input
-                  value={formData.plate}
-                  onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
-                  className="bg-secondary"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Volume Max (m3)</label>
-                <Input
-                  type="number"
-                  value={formData.maxVolume}
-                  onChange={(e) => setFormData({ ...formData, maxVolume: e.target.value })}
-                  className="bg-secondary"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Poids Max (kg)</label>
-                <Input
-                  type="number"
-                  value={formData.maxWeight}
-                  onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
-                  className="bg-secondary"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Statut</label>
-              <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as VehicleStatus })}>
-                <SelectTrigger className="bg-secondary">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VEHICLE_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {getVehicleStatusLabel(status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleEdit} className="gap-2">
-              <Save className="h-4 w-4" />
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Supprimer le vehicule</DialogTitle>
-            <DialogDescription>
-              Etes-vous sur de vouloir supprimer le vehicule {selectedVehicle?.plate} ? Cette action est irreversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete} className="gap-2">
-              <Trash2 className="h-4 w-4" />
-              Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="border-border bg-card sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Assigner des transporteurs</DialogTitle>
-            <DialogDescription>
-              Selectionnez une ou plusieurs personnes pour le vehicule {selectedVehicle?.plate}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="rounded-xl border border-border bg-secondary/30 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Equipe assignee</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTransporterIds.length} personne{selectedTransporterIds.length > 1 ? 's' : ''} selectionnee{selectedTransporterIds.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTransporterIds([])}
-                >
-                  Tout retirer
-                </Button>
-              </div>
-            </div>
-
-            <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-              {transporters.map((transporter) => {
-                const isChecked = selectedTransporterIds.includes(transporter.id);
-
-                return (
-                  <label
-                    key={transporter.id}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary/20 p-3 transition-colors hover:bg-secondary/40"
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={(checked) =>
-                        toggleTransporterSelection(transporter.id, checked === true)
-                      }
-                      className="mt-0.5"
-                    />
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{transporter.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {transporter.email}
-                        </p>
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-xl bg-secondary/20 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <Users className="h-4 w-4" />
+                            Transporteurs assignés
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {flotte.transporterCount}
+                          </span>
+                        </div>
+                        {flotte.transporters.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {flotte.transporters.map((transporter) => (
+                              <span
+                                key={transporter.id}
+                                className="rounded-full border border-border bg-card px-3 py-1 text-xs text-foreground"
+                              >
+                                {`${transporter.firstName} ${transporter.lastName}`.trim() || transporter.username}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-sm text-muted-foreground">Aucun transporteur affecté.</p>
+                        )}
                       </div>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                        {transporter.avatar}
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" onClick={() => openAssignDialog(flotte)} className="gap-2">
+                          <UserPlus className="h-4 w-4" />
+                          Affecter
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => cycleStatus(flotte)}
+                          className="gap-2"
+                          disabled={actionFlotteId === flotte.id}
+                        >
+                          <RefreshCw className={`h-4 w-4 ${actionFlotteId === flotte.id ? 'animate-spin' : ''}`} />
+                          Changer le statut
+                        </Button>
                       </div>
                     </div>
-                  </label>
+                  </div>
                 );
               })}
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsAssignDialogOpen(false);
-                setSelectedVehicle(null);
-                setSelectedTransporterIds([]);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button onClick={handleAssign} className="gap-2">
-              <Save className="h-4 w-4" />
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+export function FleetManagement() {
+  return (
+    <CompanyGuard>
+      {({ companyId, company }) => (
+        <FleetManagementInner companyId={companyId} companyName={company.name} />
+      )}
+    </CompanyGuard>
   );
 }

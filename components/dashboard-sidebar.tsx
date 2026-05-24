@@ -19,6 +19,8 @@ import {
   PackageCheck,
   ShieldCheck,
   Megaphone,
+  Boxes,
+  Waypoints,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/mock-data';
@@ -41,6 +43,8 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
   { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },
+  { id: 'parcel-types', label: 'Types de Colis', icon: Boxes, roles: ADMIN_LIKE_ROLES },
+  { id: 'transport-modes', label: 'Modes de Transport', icon: Waypoints, roles: ADMIN_LIKE_ROLES },
   { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
   { id: 'billing', label: 'Facturation', icon: CreditCard, roles: ADMIN_LIKE_ROLES },
   { id: 'commissions', label: 'Commissions', icon: HandCoins, roles: ADMIN_LIKE_ROLES },
@@ -105,18 +109,32 @@ export function DashboardSidebar({
       {/* Settings + Super Admin */}
       <div className="border-t border-sidebar-border p-4 space-y-1">
         {(authRole === 'SUPER_ADMIN' || currentRole === 'SUPER_ADMIN') && (
-          <button
-            onClick={() => onSectionChange('super-admin')}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
-              activeSection === 'super-admin'
-                ? 'bg-sidebar-accent text-sidebar-primary'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-            )}
-          >
-            <ShieldCheck className="h-5 w-5" />
-            Administration
-          </button>
+          <>
+            <button
+              onClick={() => onSectionChange('super-admin')}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
+                activeSection === 'super-admin'
+                  ? 'bg-sidebar-accent text-sidebar-primary'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+              )}
+            >
+              <ShieldCheck className="h-5 w-5" />
+              Administration
+            </button>
+            <button
+              onClick={() => onSectionChange('catalog')}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
+                activeSection === 'catalog'
+                  ? 'bg-sidebar-accent text-sidebar-primary'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+              )}
+            >
+              <Boxes className="h-5 w-5" />
+              Catalogue
+            </button>
+          </>
         )}
         <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
           <Settings className="h-5 w-5" />

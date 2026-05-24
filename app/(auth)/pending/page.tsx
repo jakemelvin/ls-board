@@ -53,7 +53,7 @@ export default function PendingPage() {
             </h1>
             <p className="text-muted-foreground leading-relaxed">
               Votre entreprise a été enregistrée avec succès. Un super administrateur
-              SENDAM doit approuver votre compte avant que vous puissiez accéder à la
+              SENDAMhub doit approuver votre compte avant que vous puissiez accéder à la
               plateforme.
             </p>
           </div>

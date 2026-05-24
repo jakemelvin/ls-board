@@ -5,15 +5,15 @@ import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-regist
 import './globals.css'
 
 export const metadata: Metadata = {
-  applicationName: 'SENDAM',
-  title: 'SENDAM - Dashboard',
-  description: 'Fast. Secure. Delivered. Plateforme SENDAM de gestion logistique de colis',
-  generator: 'SENDAM',
+  applicationName: 'SENDAMhub',
+  title: 'SENDAMhub - Dashboard',
+  description: 'Fast. Secure. Delivered. Plateforme SENDAMhub de gestion logistique de colis',
+  generator: 'SENDAMhub',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SENDAM',
+    title: 'SENDAMhub',
   },
   formatDetection: {
     telephone: false,

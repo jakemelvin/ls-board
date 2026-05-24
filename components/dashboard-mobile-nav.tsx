@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Map, Menu } from 'lucide-react';
+import { Boxes, LayoutDashboard, Map, Menu, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,6 +13,7 @@ import { SIDEBAR_ITEMS } from '@/components/dashboard-sidebar';
 import type { UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useAuthStore } from '@/lib/auth/store';
 
 interface DashboardMobileNavProps {
   currentRole: UserRole;
@@ -25,12 +26,19 @@ const primaryItems = [
   { id: 'points-map', label: 'Carte', icon: Map },
 ];
 
+const SUPER_ADMIN_ITEMS = [
+  { id: 'super-admin', label: 'Administration', icon: ShieldCheck },
+  { id: 'catalog', label: 'Catalogue', icon: Boxes },
+];
+
 export function DashboardMobileNav({
   currentRole,
   activeSection,
   onSectionChange,
 }: DashboardMobileNavProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const authRole = useAuthStore((s) => s.role);
+  const isSuperAdmin = authRole === 'SUPER_ADMIN' || currentRole === 'SUPER_ADMIN';
   const availableItems = SIDEBAR_ITEMS.filter((item) => item.roles.includes(currentRole));
   const isMenuActive = !primaryItems.some((item) => item.id === activeSection);
 
@@ -105,6 +113,28 @@ export function DashboardMobileNav({
                 </Button>
               );
             })}
+
+            {isSuperAdmin && (
+              <>
+                <div className="my-1 border-t border-border" />
+                {SUPER_ADMIN_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSection === item.id;
+
+                  return (
+                    <Button
+                      key={item.id}
+                      variant={isActive ? 'default' : 'outline'}
+                      className="h-12 justify-start gap-3"
+                      onClick={() => handleSectionChange(item.id)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  );
+                })}
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>

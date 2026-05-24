@@ -13,6 +13,8 @@ import { PricingEngine } from '@/components/views/pricing-engine';
 import { BillingSubscriptionView } from '@/components/views/billing-subscription';
 import { CommissionManagement } from '@/components/views/commission-management';
 import { TeamManagement } from '@/components/views/team-management';
+import { ParcelTypesManagement } from '@/components/views/parcel-types-management';
+import { TransportModesManagement } from '@/components/views/transport-modes-management';
 import { ParcelManagement } from '@/components/views/parcel-management';
 import { CollectionPointsView } from '@/components/views/collection-points';
 import { CollectionPointsMap } from '@/components/views/collection-points-map';
@@ -23,6 +25,7 @@ import { TransporterDashboard } from '@/components/views/transporter-dashboard';
 import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
 import { SuperAdminManagement } from '@/components/views/super-admin-management';
+import { CatalogManagement } from '@/components/views/catalog-management';
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
@@ -98,6 +101,10 @@ export default function DashboardPage() {
         return isAdminLikeRole(currentRole) ? <CommissionManagement /> : <AdminDashboard />;
       case 'team':
         return <TeamManagement />;
+      case 'parcel-types':
+        return isAdminLikeRole(currentRole) ? <ParcelTypesManagement /> : <AdminDashboard />;
+      case 'transport-modes':
+        return isAdminLikeRole(currentRole) ? <TransportModesManagement /> : <AdminDashboard />;
       case 'parcels':
         return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
       case 'collection-points':
@@ -124,6 +131,8 @@ export default function DashboardPage() {
       // Super Admin
       case 'super-admin':
         return <SuperAdminManagement />;
+      case 'catalog':
+        return <CatalogManagement />;
 
       case 'announcements':
         return <CompanyAnnouncements />;

@@ -48,7 +48,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Bottom: Legal */}
         <p className="relative text-xs text-muted-foreground">
-          © {new Date().getFullYear()} SENDAM. Tous droits réservés.
+          © {new Date().getFullYear()} SENDAMhub. Tous droits réservés.
         </p>
       </div>
 

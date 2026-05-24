@@ -73,7 +73,7 @@ function LoginForm() {
           Connexion
         </h2>
         <p className="text-sm text-muted-foreground">
-          Accédez à votre tableau de bord SENDAM
+          Accédez à votre tableau de bord SENDAMhub
         </p>
       </div>
 

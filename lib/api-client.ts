@@ -54,6 +54,9 @@ export const apiClient = {
   postForm: <T>(path: string, formData: FormData, token?: string | null) =>
     request<T>(path, { method: 'POST', body: formData }, token),
 
+  putForm: <T>(path: string, formData: FormData, token?: string | null) =>
+    request<T>(path, { method: 'PUT', body: formData }, token),
+
   put: <T>(path: string, body?: unknown, token?: string | null) =>
     request<T>(
       path,
