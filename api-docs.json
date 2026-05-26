@@ -212,6 +212,120 @@
         ]
       }
     },
+    "/api/delivery/users/me/secondary-addresses/{addressId}": {
+      "get": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "getMySecondaryAddress",
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSecondaryAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "updateMySecondaryAddress",
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSecondaryAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSecondaryAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "deleteMySecondaryAddress",
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/delivery/users/me/fcm-token": {
       "put": {
         "tags": [
@@ -1990,6 +2104,67 @@
               "*/*": {
                 "schema": {
                   "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/delivery/users/me/secondary-addresses": {
+      "get": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "getMySecondaryAddresses",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserSecondaryAddressResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "createMySecondaryAddress",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSecondaryAddressRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSecondaryAddressResponse"
                 }
               }
             }
@@ -4552,6 +4727,31 @@
         ]
       }
     },
+    "/api/delivery/users/me/company": {
+      "get": {
+        "tags": [
+          "user-controller"
+        ],
+        "operationId": "getCurrentUserCompany",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/delivery/transactions": {
       "get": {
         "tags": [
@@ -5058,6 +5258,72 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/PageShipmentTransportGroupSummaryResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/delivery/shipments/creation/transport-modes": {
+      "get": {
+        "tags": [
+          "shipment-controller"
+        ],
+        "operationId": "searchAvailableTransportModes",
+        "parameters": [
+          {
+            "name": "originCountryId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "originCityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "destinationCountryId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "destinationCityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShipmentAvailableTransportModeResponse"
+                  }
                 }
               }
             }
@@ -5699,6 +5965,54 @@
           }
         }
       },
+      "UserSecondaryAddressRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "whatsappNumber": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "whatsappNumber"
+        ]
+      },
+      "UserSecondaryAddressResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "whatsappNumber": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "TransportModeRequest": {
         "type": "object",
         "properties": {
@@ -6139,6 +6453,9 @@
             "type": "string"
           },
           "companyUrl": {
+            "type": "string"
+          },
+          "logoUrl": {
             "type": "string"
           },
           "country": {
@@ -6656,10 +6973,6 @@
             "type": "string",
             "minLength": 1
           },
-          "cityId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "zoneId": {
             "type": "integer",
             "format": "int64"
@@ -6719,7 +7032,6 @@
         "required": [
           "address",
           "capacityUnit",
-          "cityId",
           "maxCapacity",
           "name",
           "openingHours",
@@ -8455,13 +8767,13 @@
       "PageUserResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -8541,13 +8853,13 @@
       "PageShipmentTransactionResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -8716,13 +9028,13 @@
       "PageShipmentResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -8762,13 +9074,13 @@
       "PageShipmentTransportGroupSummaryResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -8849,13 +9161,13 @@
       "PageShipmentTransmissionRequestSummaryResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -8962,13 +9274,13 @@
       "PageTransporterReadyShipmentResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -9157,13 +9469,13 @@
       "PageCollectorIncomingShipmentResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -9231,13 +9543,13 @@
       "PageCollectorPickupShipmentResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -9277,13 +9589,13 @@
       "PageShipmentDestinationDepositRequestSummaryResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -9382,13 +9694,13 @@
       "PageShipmentDestinationIncomingShipmentResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"
@@ -9459,6 +9771,22 @@
           }
         }
       },
+      "ShipmentAvailableTransportModeResponse": {
+        "type": "object",
+        "properties": {
+          "transportModeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "transportModeName": {
+            "type": "string"
+          },
+          "companyCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "ShipmentAvailableCompanyResponse": {
         "type": "object",
         "properties": {
@@ -9509,13 +9837,13 @@
       "PageCompanyResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "first": {
             "type": "boolean"

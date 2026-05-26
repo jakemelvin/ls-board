@@ -154,11 +154,6 @@ function areDistanceRulesEquivalent(
   });
 }
 
-function buildDistancePairKey(originCollectionPointId: number, destinationCollectionPointId: number) {
-  const [minId, maxId] = [originCollectionPointId, destinationCollectionPointId].sort((a, b) => a - b);
-  return `${minId}-${maxId}`;
-}
-
 function RangeRulesEditor({
   title,
   unit,
@@ -482,45 +477,8 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         amount: Number(rule.amount),
       }));
 
-  const distancePairConflictMessage = useMemo(() => {
-    if (!form.selectedCriteria.includes('DISTANCE')) {
-      return null;
-    }
-
-    const seenPairs = new Map<string, { origin: string; destination: string }>();
-
-    for (const rule of buildDistanceRules(form.distanceRules)) {
-      const pairKey = buildDistancePairKey(
-        rule.originCollectionPointId,
-        rule.destinationCollectionPointId,
-      );
-
-      if (seenPairs.has(pairKey)) {
-        const currentOrigin = collectionPoints.find(
-          (point) => point.id === rule.originCollectionPointId,
-        )?.name ?? String(rule.originCollectionPointId);
-        const currentDestination = collectionPoints.find(
-          (point) => point.id === rule.destinationCollectionPointId,
-        )?.name ?? String(rule.destinationCollectionPointId);
-
-        return `La liaison ${currentOrigin} / ${currentDestination} est dupliquée. Le backend considère A->B et B->A comme une seule paire.`;
-      }
-
-      seenPairs.set(pairKey, {
-        origin: String(rule.originCollectionPointId),
-        destination: String(rule.destinationCollectionPointId),
-      });
-    }
-
-    return null;
-  }, [form.selectedCriteria, form.distanceRules, collectionPoints]);
-
   const handleSave = async () => {
     if (!token || !selectedTransportModeId) return;
-    if (distancePairConflictMessage) {
-      showError(distancePairConflictMessage);
-      return;
-    }
     setSaving(true);
     try {
       const payload = {
@@ -746,11 +704,6 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                     requirements={requirements}
                     onChange={(distanceRules) => setForm((current) => ({ ...current, distanceRules }))}
                   />
-                  {distancePairConflictMessage && (
-                    <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                      {distancePairConflictMessage}
-                    </div>
-                  )}
                 </div>
               )}
 

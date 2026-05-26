@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import type { CompanyResponse } from '@/lib/auth/types';
 import type { UserResponse, CreateUserRequest } from '@/lib/admin/types';
 import type {
   ParcelTypeResponse,
@@ -22,6 +23,7 @@ import type {
   CompanyPricingResponse,
   CompanyPricingRequirementsRequest,
   CompanyPricingRequirementsResponse,
+  MessageResponse,
 } from './types';
 
 function buildMultipartPayload(data: unknown, file?: File) {
@@ -31,6 +33,10 @@ function buildMultipartPayload(data: unknown, file?: File) {
     formData.append('photo', file);
   }
   return formData;
+}
+
+export function getCurrentUserCompany(token: string): Promise<CompanyResponse> {
+  return apiClient.get<CompanyResponse>('/api/delivery/users/me/company', token);
 }
 
 // Parcel types - global catalog
@@ -283,8 +289,8 @@ export function deleteCollectionPoint(
   token: string,
   companyId: number,
   pointId: number,
-): Promise<void> {
-  return apiClient.delete<void>(
+): Promise<MessageResponse> {
+  return apiClient.delete<MessageResponse>(
     `/api/delivery/companies/${companyId}/collection-points/${pointId}`,
     token,
   );
@@ -318,8 +324,8 @@ export function deactivateCollectionPoint(
   token: string,
   companyId: number,
   pointId: number,
-): Promise<{ message: string }> {
-  return apiClient.patch<{ message: string }>(
+): Promise<MessageResponse> {
+  return apiClient.patch<MessageResponse>(
     `/api/delivery/companies/${companyId}/collection-points/${pointId}/deactivate`,
     undefined,
     token,

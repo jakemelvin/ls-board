@@ -3,7 +3,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
-  Building2,
   CheckCircle2,
   Info,
   ShieldAlert,
@@ -11,18 +10,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useCompanyContext } from '@/lib/company/use-company';
 import type { CompanyResponse } from '@/lib/admin/types';
-
-// ─── Badge ───────────────────────────────────────────────────────────────────
 
 export function Badge({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -36,8 +26,6 @@ export function Badge({ children, className }: { children: ReactNode; className?
     </span>
   );
 }
-
-// ─── Lightweight toast ─────────────────────────────────────────────────────────
 
 export interface ToastState {
   msg: string;
@@ -80,8 +68,6 @@ export function ToastBar({ toast }: { toast: ToastState | null }) {
     </div>
   );
 }
-
-// ─── Confirm dialog ─────────────────────────────────────────────────────────
 
 export function ConfirmDialog({
   open,
@@ -141,8 +127,6 @@ export function ConfirmDialog({
   );
 }
 
-// ─── Empty / status state ─────────────────────────────────────────────────────
-
 export function StatusState({
   icon: Icon,
   title,
@@ -176,8 +160,6 @@ export function StatusState({
   );
 }
 
-// ─── Section header ────────────────────────────────────────────────────────────
-
 export function SectionHeader({
   title,
   subtitle,
@@ -198,51 +180,21 @@ export function SectionHeader({
   );
 }
 
-// ─── Company guard ─────────────────────────────────────────────────────────────
-
 /**
  * Resolves the active company and only renders `children` once a single company
- * is known. Handles loading, super-admin selection, forbidden and empty states.
+ * is known. Handles loading, forbidden and empty states.
  */
 export function CompanyGuard({
   children,
 }: {
   children: (ctx: { companyId: number; company: CompanyResponse }) => ReactNode;
 }) {
-  const { status, company, companies, error, selectCompany, retry } = useCompanyContext();
+  const { status, company, error, retry } = useCompanyContext();
 
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center py-24">
         <Spinner className="h-8 w-8 text-primary" />
-      </div>
-    );
-  }
-
-  if (status === 'needs-selection') {
-    return (
-      <div className="mx-auto max-w-md py-12">
-        <StatusState
-          icon={Building2}
-          title="Sélectionnez une entreprise"
-          description="Plusieurs entreprises sont accessibles avec ce compte. Choisissez celle à administrer."
-          action={
-            <div className="w-full max-w-xs">
-              <Select onValueChange={(v) => selectCompany(Number(v))}>
-                <SelectTrigger className="bg-secondary">
-                  <SelectValue placeholder="Choisir une entreprise…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          }
-        />
       </div>
     );
   }

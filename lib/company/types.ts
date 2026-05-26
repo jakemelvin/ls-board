@@ -75,6 +75,10 @@ export interface ZoneResponse {
   createdByUsername?: string;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
 // Collection points
 
 export type CollectionPointDayOfWeek =
@@ -109,7 +113,7 @@ export interface CollectionPointOpeningHourResponse {
 
 export interface CollectionPointRequest {
   name: string;
-  cityId: number;
+  cityId?: number;
   zoneId: number;
   address: string;
   phone: string;

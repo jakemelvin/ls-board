@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://5.196.4.47:8081';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export class ApiError extends Error {
   constructor(

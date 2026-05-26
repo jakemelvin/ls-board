@@ -27,9 +27,9 @@ import {
   type LucideProps,
 } from 'lucide-react';
 import type { ElementType } from 'react';
+import { CompanyGuard } from '@/components/company/company-shared';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth/store';
-import { getCompanies } from '@/lib/admin/api';
 import {
   getAnnouncements,
   createAnnouncement,
@@ -42,6 +42,7 @@ import {
   getCompanyTransportModes,
   getCompanyParcelTypes,
 } from '@/lib/announcements/api';
+import { getCurrentUserCompany } from '@/lib/company/api';
 import type {
   AnnouncementResponse,
   AnnouncementRequest,
@@ -728,12 +729,13 @@ function AnnouncementCard({ announcement: a, isAdmin, onEdit, onRenew, onToggle,
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 
-export function CompanyAnnouncements() {
-  const { token, role, companyId: storedCompanyId, setCompanyId } = useAuthStore();
+function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: number; companyName: string }) {
+  const { token, role } = useAuthStore();
+  const storedCompanyId = useAuthStore((s) => s.companyId);
+  const setCompanyId = useAuthStore((s) => s.setCompanyId);
   const { toasts, show } = useToast();
-
-  const [companyId, setLocalCompanyId] = useState<number>(storedCompanyId ?? 0);
-  const [resolvingCompany, setResolvingCompany] = useState(storedCompanyId === undefined || storedCompanyId === 0);
+  const [, setLocalCompanyId] = useState<number>(storedCompanyId ?? companyId);
+  const [resolvingCompany, setResolvingCompany] = useState(false);
 
   const [announcements, setAnnouncements] = useState<AnnouncementResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -758,10 +760,10 @@ export function CompanyAnnouncements() {
     if (!token) return;
 
     setResolvingCompany(true);
-    getCompanies(token, { page: 0, size: 1 })
-      .then((page) => {
-        if (page.content.length > 0) {
-          const id = page.content[0].id;
+    getCurrentUserCompany(token)
+      .then((company) => {
+        if (company.id > 0) {
+          const id = company.id;
           setLocalCompanyId(id);
           setCompanyId(id);
         } else {
@@ -905,7 +907,7 @@ export function CompanyAnnouncements() {
             Annonces de départ
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gérez les annonces de départ pour informer vos équipes et clients.
+            Gérez les annonces de départ de {companyName} pour informer vos équipes et clients.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1015,5 +1017,15 @@ export function CompanyAnnouncements() {
 
       <ToastBar toasts={toasts} />
     </div>
+  );
+}
+
+export function CompanyAnnouncements() {
+  return (
+    <CompanyGuard>
+      {({ companyId, company }) => (
+        <CompanyAnnouncementsInner companyId={companyId} companyName={company.name} />
+      )}
+    </CompanyGuard>
   );
 }
