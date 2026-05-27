@@ -39,7 +39,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'points-map', label: 'Carte des Points', icon: Map, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
-  { id: 'tracking', label: 'Gestion des Colis', icon: ClipboardList, roles: [...ADMIN_LIKE_ROLES, 'TRANSPORTER'] },
+  { id: 'tracking', label: 'Gestion des Colis', icon: ClipboardList, roles: ['TRANSPORTER'] },
   { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
   { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },

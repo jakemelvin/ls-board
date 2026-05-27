@@ -28,6 +28,12 @@ export function TransportModesManagement() {
           }
           add={addCompanyTransportMode}
           remove={removeCompanyTransportMode}
+          getRemovalConfirmation={(item) => ({
+            title: 'Confirmer la desactivation',
+            description: `La desactivation de « ${item.name} » supprimera egalement les tarifications qui lui sont liees. Voulez-vous continuer ?`,
+            confirmLabel: 'Desactiver',
+            destructive: true,
+          })}
         />
       )}
     </CompanyGuard>

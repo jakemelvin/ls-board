@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
@@ -35,10 +41,10 @@ import {
 } from '@/components/company/company-shared';
 
 const CRITERIA: { id: PricingCriterion; label: string; hint: string }[] = [
-  { id: 'FIXED', label: 'Prix fixe', hint: 'Un montant unique par expédition.' },
-  { id: 'DISTANCE', label: 'Distance', hint: 'Un prix par paire origine/destination.' },
-  { id: 'WEIGHT', label: 'Poids', hint: 'Des tranches basées sur le poids.' },
-  { id: 'VOLUME', label: 'Volume', hint: 'Des tranches basées sur le volume.' },
+  { id: 'FIXED', label: 'Prix fixe', hint: 'Un montant unique par expedition.' },
+  { id: 'DISTANCE', label: 'Trajet', hint: 'Un prix par paire origine/destination.' },
+  { id: 'WEIGHT', label: 'Poids', hint: 'Des tranches basees sur le poids.' },
+  { id: 'VOLUME', label: 'Volume', hint: 'Des tranches basees sur le volume.' },
 ];
 
 type RangeRuleDraft = {
@@ -135,10 +141,7 @@ function buildCriteriaKey(criteria: PricingCriterion[]) {
   return [...criteria].sort().join('|');
 }
 
-function areDistanceRulesEquivalent(
-  left: DistanceRuleDraft[],
-  right: DistanceRuleDraft[],
-) {
+function areDistanceRulesEquivalent(left: DistanceRuleDraft[], right: DistanceRuleDraft[]) {
   if (left.length !== right.length) {
     return false;
   }
@@ -169,14 +172,18 @@ function RangeRulesEditor({
     onChange(value.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
 
   const removeRule = (id: string) =>
-    onChange(value.length === 1 ? [createEmptyRangeRule()] : value.filter((rule) => rule.id !== id));
+    onChange(
+      value.length === 1 ? [createEmptyRangeRule()] : value.filter((rule) => rule.id !== id),
+    );
 
   return (
     <div className="space-y-3 rounded-2xl border border-border p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="font-medium text-foreground">{title}</p>
-          <p className="text-sm text-muted-foreground">Définissez les tranches de {unit} et leur montant.</p>
+          <p className="text-sm text-muted-foreground">
+            Definissez les tranches de {unit} et leur montant.
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => onChange([...value, createEmptyRangeRule()])}>
           <Plus className="h-4 w-4" />
@@ -243,26 +250,38 @@ function DistanceRulesEditor({
     onChange(value.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
 
   const removeRule = (id: string) =>
-    onChange(value.length === 1 ? [createEmptyDistanceRule()] : value.filter((rule) => rule.id !== id));
+    onChange(
+      value.length === 1
+        ? [createEmptyDistanceRule()]
+        : value.filter((rule) => rule.id !== id),
+    );
 
   return (
     <div className="space-y-3 rounded-2xl border border-border p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-medium text-foreground">Règles par distance</p>
+          <p className="font-medium text-foreground">Regles par trajet</p>
           <p className="text-sm text-muted-foreground">
-            Associez un montant à chaque trajet entre points de collecte.
+            Associez un montant a chaque trajet entre points de collecte.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onChange([...value, createEmptyDistanceRule()])}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...value, createEmptyDistanceRule()])}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
 
       {requirements && requirements.requiredDistancePairs.length > 0 && (
         <div className="rounded-xl bg-secondary/60 p-3 text-sm text-muted-foreground">
-          Paires attendues: {requirements.requiredDistancePairs
-            .map((pair) => `${pair.originCollectionPointName} -> ${pair.destinationCollectionPointName}`)
+          Paires attendues:{' '}
+          {requirements.requiredDistancePairs
+            .map(
+              (pair) =>
+                `${pair.originCollectionPointName} -> ${pair.destinationCollectionPointName}`,
+            )
             .join(' • ')}
         </div>
       )}
@@ -272,7 +291,9 @@ function DistanceRulesEditor({
           <div key={rule.id} className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
             <Select
               value={rule.originCollectionPointId}
-              onValueChange={(originCollectionPointId) => updateRule(rule.id, { originCollectionPointId })}
+              onValueChange={(originCollectionPointId) =>
+                updateRule(rule.id, { originCollectionPointId })
+              }
             >
               <SelectTrigger className="bg-secondary">
                 <SelectValue placeholder="Point origine" />
@@ -320,7 +341,8 @@ function DistanceRulesEditor({
 
             {rule.originCollectionPointId && rule.destinationCollectionPointId && (
               <p className="text-xs text-muted-foreground md:col-span-4">
-                {pointMap.get(rule.originCollectionPointId)} {'->'} {pointMap.get(rule.destinationCollectionPointId)}
+                {pointMap.get(rule.originCollectionPointId)} {'->'}{' '}
+                {pointMap.get(rule.destinationCollectionPointId)}
               </p>
             )}
           </div>
@@ -330,7 +352,13 @@ function DistanceRulesEditor({
   );
 }
 
-function CompanyPricingInner({ companyId, companyName }: { companyId: number; companyName: string }) {
+function CompanyPricingInner({
+  companyId,
+  companyName,
+}: {
+  companyId: number;
+  companyName: string;
+}) {
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
 
@@ -342,23 +370,30 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
   const [pricingList, setPricingList] = useState<CompanyPricingResponse[]>([]);
   const [selectedTransportModeId, setSelectedTransportModeId] = useState<string>('');
   const [form, setForm] = useState<PricingFormState>(createDefaultForm());
-  const [requirements, setRequirements] = useState<CompanyPricingRequirementsResponse | null>(null);
+  const [requirements, setRequirements] =
+    useState<CompanyPricingRequirementsResponse | null>(null);
   const [requirementsLoading, setRequirementsLoading] = useState(false);
+
   const criteriaKey = useMemo(
     () => buildCriteriaKey(form.selectedCriteria),
     [form.selectedCriteria],
   );
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
     try {
       const [modeResponse, pointsResponse, pricingResponse] = await Promise.all([
         getCompanyTransportModes(token, companyId),
         getCollectionPoints(token, companyId),
         getCompanyPricing(token, companyId),
       ]);
+
       setTransportModes(modeResponse.transportModes);
       setCollectionPoints(pointsResponse);
       setPricingList(pricingResponse);
@@ -367,22 +402,25 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         selectedTransportModeId ||
         String(pricingResponse[0]?.transportModeId ?? modeResponse.transportModes[0]?.id ?? '');
       setSelectedTransportModeId(firstModeId);
+
       const currentPricing =
         pricingResponse.find((item) => String(item.transportModeId) === firstModeId) ?? null;
       setForm(buildFormFromPricing(currentPricing));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur lors du chargement');
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
-  }, [token, companyId, selectedTransportModeId]);
+  }, [companyId, selectedTransportModeId, token]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const selectedPricing = useMemo(
-    () => pricingList.find((item) => String(item.transportModeId) === selectedTransportModeId) ?? null,
+    () =>
+      pricingList.find((item) => String(item.transportModeId) === selectedTransportModeId) ??
+      null,
     [pricingList, selectedTransportModeId],
   );
 
@@ -399,13 +437,20 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
 
     let cancelled = false;
     setRequirementsLoading(true);
+
     getPricingRequirements(token, companyId, transportModeId, {
       selectedCriteria: form.selectedCriteria,
     })
       .then((response) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
+
         setRequirements(response);
-        if (response.requiredDistancePairs.length > 0 && form.selectedCriteria.includes('DISTANCE')) {
+        if (
+          response.requiredDistancePairs.length > 0 &&
+          form.selectedCriteria.includes('DISTANCE')
+        ) {
           setForm((current) => {
             const nextRules = response.requiredDistancePairs.map((pair) => {
               const existing = current.distanceRules.find(
@@ -413,6 +458,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                   Number(rule.originCollectionPointId) === pair.originCollectionPointId &&
                   Number(rule.destinationCollectionPointId) === pair.destinationCollectionPointId,
               );
+
               return {
                 id: existing?.id ?? createId(),
                 originCollectionPointId: String(pair.originCollectionPointId),
@@ -420,20 +466,26 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                 amount: existing?.amount ?? '',
               };
             });
+
             if (areDistanceRulesEquivalent(current.distanceRules, nextRules)) {
               return current;
             }
+
             return { ...current, distanceRules: nextRules };
           });
         }
       })
-      .catch((err) => {
+      .catch((cause) => {
         if (!cancelled) {
-          showError(err instanceof ApiError ? err.message : 'Impossible de charger les exigences');
+          showError(
+            cause instanceof ApiError ? cause.message : 'Impossible de charger les exigences',
+          );
         }
       })
       .finally(() => {
-        if (!cancelled) setRequirementsLoading(false);
+        if (!cancelled) {
+          setRequirementsLoading(false);
+        }
       });
 
     return () => {
@@ -447,6 +499,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
       const next = exists
         ? current.selectedCriteria.filter((item) => item !== criterion)
         : [...current.selectedCriteria, criterion];
+
       return {
         ...current,
         selectedCriteria: next.length > 0 ? next : [criterion],
@@ -463,7 +516,9 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         amount: Number(rule.amount),
       }));
 
-  const buildDistanceRules = (value: DistanceRuleDraft[]): CompanyPricingDistanceRuleRequest[] =>
+  const buildDistanceRules = (
+    value: DistanceRuleDraft[],
+  ): CompanyPricingDistanceRuleRequest[] =>
     value
       .filter(
         (rule) =>
@@ -478,27 +533,49 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
       }));
 
   const handleSave = async () => {
-    if (!token || !selectedTransportModeId) return;
+    if (!token || !selectedTransportModeId) {
+      return;
+    }
+
     setSaving(true);
+
     try {
       const payload = {
         selectedCriteria: form.selectedCriteria,
-        fixedPrice: form.selectedCriteria.includes('FIXED') && form.fixedPrice !== '' ? Number(form.fixedPrice) : undefined,
-        distanceRules: form.selectedCriteria.includes('DISTANCE') ? buildDistanceRules(form.distanceRules) : undefined,
-        weightRules: form.selectedCriteria.includes('WEIGHT') ? buildRangeRules(form.weightRules) : undefined,
-        volumeRules: form.selectedCriteria.includes('VOLUME') ? buildRangeRules(form.volumeRules) : undefined,
+        fixedPrice:
+          form.selectedCriteria.includes('FIXED') && form.fixedPrice !== ''
+            ? Number(form.fixedPrice)
+            : undefined,
+        distanceRules: form.selectedCriteria.includes('DISTANCE')
+          ? buildDistanceRules(form.distanceRules)
+          : undefined,
+        weightRules: form.selectedCriteria.includes('WEIGHT')
+          ? buildRangeRules(form.weightRules)
+          : undefined,
+        volumeRules: form.selectedCriteria.includes('VOLUME')
+          ? buildRangeRules(form.volumeRules)
+          : undefined,
       };
 
-      const saved = await upsertCompanyPricing(token, companyId, Number(selectedTransportModeId), payload);
+      const saved = await upsertCompanyPricing(
+        token,
+        companyId,
+        Number(selectedTransportModeId),
+        payload,
+      );
+
       setPricingList((current) => {
         const exists = current.some((item) => item.transportModeId === saved.transportModeId);
         return exists
-          ? current.map((item) => (item.transportModeId === saved.transportModeId ? saved : item))
+          ? current.map((item) =>
+              item.transportModeId === saved.transportModeId ? saved : item,
+            )
           : [saved, ...current];
       });
-      success('Tarification enregistrée');
-    } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Enregistrement impossible');
+
+      success('Tarification enregistree');
+    } catch (cause) {
+      showError(cause instanceof ApiError ? cause.message : 'Enregistrement impossible');
     } finally {
       setSaving(false);
     }
@@ -522,7 +599,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         action={
           <Button variant="outline" onClick={load} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Réessayer
+            Reessayer
           </Button>
         }
       />
@@ -534,7 +611,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
       <StatusState
         icon={Waypoints}
         title="Aucun mode de transport actif"
-        description="Activez d’abord un ou plusieurs modes de transport pour pouvoir définir les tarifs."
+        description="Activez d'abord un ou plusieurs modes de transport pour pouvoir definir les tarifs."
       />
     );
   }
@@ -547,7 +624,11 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         title="Tarification"
         subtitle={`Configuration des grilles tarifaires de ${companyName} par mode de transport.`}
         action={
-          <Button onClick={handleSave} disabled={saving || !selectedTransportModeId} className="gap-2">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !selectedTransportModeId}
+            className="gap-2"
+          >
             <Save className="h-4 w-4" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
@@ -557,7 +638,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-border bg-card">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Modes configurés</p>
+            <p className="text-sm text-muted-foreground">Modes configures</p>
             <p className="mt-1 text-2xl font-bold text-foreground">{pricingList.length}</p>
           </CardContent>
         </Card>
@@ -569,7 +650,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
         </Card>
         <Card className="border-border bg-card">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Critères actifs</p>
+            <p className="text-sm text-muted-foreground">Criteres actifs</p>
             <p className="mt-1 text-sm font-semibold text-foreground">
               {formatCriterionList(form.selectedCriteria)}
             </p>
@@ -586,6 +667,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
             {transportModes.map((mode) => {
               const configured = pricingList.some((item) => item.transportModeId === mode.id);
               const active = String(mode.id) === selectedTransportModeId;
+
               return (
                 <button
                   key={mode.id}
@@ -598,14 +680,12 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                     <div>
                       <p className="font-medium text-foreground">{mode.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {configured ? 'Tarification enregistrée' : 'À configurer'}
+                        {configured ? 'Tarification enregistree' : 'A configurer'}
                       </p>
                     </div>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        configured
-                          ? 'bg-success/15 text-success'
-                          : 'bg-warning/15 text-warning'
+                        configured ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
                       }`}
                     >
                       {configured ? 'OK' : 'Brouillon'}
@@ -627,7 +707,7 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                 <Label>Mode de transport</Label>
                 <Select value={selectedTransportModeId} onValueChange={setSelectedTransportModeId}>
                   <SelectTrigger className="bg-secondary">
-                    <SelectValue placeholder="Sélectionnez un mode" />
+                    <SelectValue placeholder="Selectionnez un mode" />
                   </SelectTrigger>
                   <SelectContent>
                     {transportModes.map((mode) => (
@@ -640,10 +720,11 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
               </div>
 
               <div className="space-y-3">
-                <Label>Critères de calcul</Label>
+                <Label>Criteres de calcul</Label>
                 <div className="grid gap-3 md:grid-cols-2">
                   {CRITERIA.map((criterion) => {
                     const active = form.selectedCriteria.includes(criterion.id);
+
                     return (
                       <button
                         key={criterion.id}
@@ -663,18 +744,18 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
               {requirementsLoading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Spinner className="h-4 w-4" />
-                  Vérification des exigences tarifaires...
+                  Verification des exigences tarifaires...
                 </div>
               )}
 
               {requirements && (
                 <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-sm">
-                  <p className="font-medium text-foreground">Exigences de l’API</p>
+                  <p className="font-medium text-foreground">Exigences de l'API</p>
                   <div className="mt-2 space-y-1 text-muted-foreground">
                     <p>Prix fixe requis: {requirements.fixedPriceRequired ? 'Oui' : 'Non'}</p>
-                    <p>Règles distance requises: {requirements.distanceRulesRequired ? 'Oui' : 'Non'}</p>
-                    <p>Règles poids requises: {requirements.weightRulesRequired ? 'Oui' : 'Non'}</p>
-                    <p>Règles volume requises: {requirements.volumeRulesRequired ? 'Oui' : 'Non'}</p>
+                    <p>Regles trajet requises: {requirements.distanceRulesRequired ? 'Oui' : 'Non'}</p>
+                    <p>Regles poids requises: {requirements.weightRulesRequired ? 'Oui' : 'Non'}</p>
+                    <p>Regles volume requises: {requirements.volumeRulesRequired ? 'Oui' : 'Non'}</p>
                     {requirements.weightRulesInstruction && <p>{requirements.weightRulesInstruction}</p>}
                     {requirements.volumeRulesInstruction && <p>{requirements.volumeRulesInstruction}</p>}
                   </div>
@@ -689,7 +770,9 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                     min="0"
                     step="0.01"
                     value={form.fixedPrice}
-                    onChange={(event) => setForm((current) => ({ ...current, fixedPrice: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, fixedPrice: event.target.value }))
+                    }
                     className="max-w-xs bg-secondary"
                     placeholder="0.00"
                   />
@@ -702,7 +785,9 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
                     points={collectionPoints}
                     value={form.distanceRules}
                     requirements={requirements}
-                    onChange={(distanceRules) => setForm((current) => ({ ...current, distanceRules }))}
+                    onChange={(distanceRules) =>
+                      setForm((current) => ({ ...current, distanceRules }))
+                    }
                   />
                 </div>
               )}
@@ -730,27 +815,42 @@ function CompanyPricingInner({ companyId, companyName }: { companyId: number; co
           {selectedPricing && (
             <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-base">Dernière configuration enregistrée</CardTitle>
+                <CardTitle className="text-base">Derniere configuration enregistree</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  Mode: <span className="font-medium text-foreground">{selectedPricing.transportModeName}</span>
+                  Mode:{' '}
+                  <span className="font-medium text-foreground">
+                    {selectedPricing.transportModeName}
+                  </span>
                 </p>
                 <p>
-                  Critères: <span className="font-medium text-foreground">{formatCriterionList(selectedPricing.selectedCriteria)}</span>
+                  Criteres:{' '}
+                  <span className="font-medium text-foreground">
+                    {formatCriterionList(selectedPricing.selectedCriteria)}
+                  </span>
                 </p>
                 <p>
-                  Distance: <span className="font-medium text-foreground">{selectedPricing.distanceRules.length} règle(s)</span>
+                  Trajet:{' '}
+                  <span className="font-medium text-foreground">
+                    {selectedPricing.distanceRules.length} regle(s)
+                  </span>
                 </p>
                 <p>
-                  Poids: <span className="font-medium text-foreground">{selectedPricing.weightRules.length} tranche(s)</span>
+                  Poids:{' '}
+                  <span className="font-medium text-foreground">
+                    {selectedPricing.weightRules.length} tranche(s)
+                  </span>
                 </p>
                 <p>
-                  Volume: <span className="font-medium text-foreground">{selectedPricing.volumeRules.length} tranche(s)</span>
+                  Volume:{' '}
+                  <span className="font-medium text-foreground">
+                    {selectedPricing.volumeRules.length} tranche(s)
+                  </span>
                 </p>
                 {selectedPricing.updatedAt && (
                   <p>
-                    Mis à jour le{' '}
+                    Mis a jour le{' '}
                     <span className="font-medium text-foreground">
                       {new Date(selectedPricing.updatedAt).toLocaleString()}
                     </span>

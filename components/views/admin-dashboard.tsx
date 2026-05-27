@@ -1,8 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
-import { AlertTriangle, DollarSign, MapPin, Package, TrendingUp, Truck, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  DollarSign,
+  Eye,
+  MapPin,
+  Package,
+  RefreshCw,
+  ShieldCheck,
+  TrendingUp,
+  Truck,
+  Users,
+} from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -17,12 +28,19 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { OperationalReadinessDialog } from '@/components/company/operational-readiness';
 import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getCompanyOperationalReadiness } from '@/lib/admin/api';
+import type { CompanyOperationalReadiness } from '@/lib/admin/types';
+import { ApiError } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/auth/store';
 import {
   formatCollectionPointLoadRatio,
   getCollectionPointSaturationRate,
 } from '@/lib/collection-point-capacity';
+import { useCompanyContext } from '@/lib/company/use-company';
 import { formatMoney } from '@/lib/commissions';
 import {
   buildParcelVolumeSeries,
@@ -104,12 +122,17 @@ export function AdminDashboard() {
             Analyse operationnelle filtree par periode pour suivre l'activite de l'entreprise.
           </p>
         </div>
-        <DashboardPeriodFilter
-          preset={periodPreset}
-          range={periodRange}
-          referenceDate={referenceDate}
-          onChange={handlePeriodChange}
-        />
+        <div className="flex flex-col gap-3 sm:items-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <OperationalReadinessButton />
+            <DashboardPeriodFilter
+              preset={periodPreset}
+              range={periodRange}
+              referenceDate={referenceDate}
+              onChange={handlePeriodChange}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -375,6 +398,77 @@ function QuickStat({
       </div>
       <span className="text-2xl font-bold text-foreground">{value}</span>
     </div>
+  );
+}
+
+function OperationalReadinessButton() {
+  const token = useAuthStore((state) => state.token);
+  const { status, company, error: companyError, retry } = useCompanyContext();
+  const [loading, setLoading] = useState(false);
+  const [dialogData, setDialogData] = useState<CompanyOperationalReadiness | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleOpen = useCallback(async () => {
+    if (!token) {
+      setError('Session expiree.');
+      return;
+    }
+
+    if (status === 'error') {
+      retry();
+      setError(companyError ?? "Impossible de resoudre l'entreprise pour lancer le controle.");
+      return;
+    }
+
+    if (status !== 'resolved' || !company) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const readiness = await getCompanyOperationalReadiness(token, company.id);
+      setDialogData(readiness);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Impossible de charger le diagnostic readiness.');
+    } finally {
+      setLoading(false);
+    }
+  }, [company, companyError, retry, status, token]);
+
+  const disabled = loading || status === 'loading' || status === 'empty' || status === 'forbidden';
+
+  return (
+    <>
+      <OperationalReadinessDialog data={dialogData} onClose={() => setDialogData(null)} />
+
+      <div className="flex flex-col gap-1 sm:items-end">
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={handleOpen}
+          disabled={disabled}
+          title={
+            status === 'forbidden'
+              ? 'Votre compte ne permet pas de resoudre une entreprise.'
+              : status === 'empty'
+                ? "Aucune entreprise n'est associee a ce compte."
+                : undefined
+          }
+        >
+          {loading || status === 'loading' ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <ShieldCheck className="h-4 w-4" />
+          )}
+          <span>Operational readiness</span>
+          {!loading && status === 'resolved' && <Eye className="h-4 w-4" />}
+        </Button>
+
+        {error && <p className="text-xs text-destructive sm:text-right">{error}</p>}
+      </div>
+    </>
   );
 }
 

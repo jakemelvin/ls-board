@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
@@ -30,6 +30,7 @@ import { CompanyAnnouncements } from '@/components/views/announcements';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { useStore } from '@/lib/store';
+import type { ApiRole } from '@/lib/auth/types';
 
 // Map roles to their default users
 const ROLE_USERS: Record<UserRole, User> = {
@@ -49,10 +50,27 @@ const DEFAULT_SECTIONS: Record<UserRole, string> = {
   TRANSPORTER: 'dashboard',
 };
 
+function mapApiRoleToUserRole(role: ApiRole | undefined): UserRole {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return 'SUPER_ADMIN';
+    case 'EMPLOYEE_COMPANY':
+      return 'EMPLOYEE';
+    case 'COLLECTOR':
+      return 'COLLECTOR';
+    case 'TRANSPORTER':
+      return 'TRANSPORTER';
+    case 'ADMIN_COMPANY':
+    default:
+      return 'ADMIN';
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const { token, isHydrated } = useAuthStore();
+  const { token, role: authRole, isHydrated } = useAuthStore();
   const { users } = useStore();
+  const didSyncRoleFromAuth = useRef(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
 
@@ -61,6 +79,17 @@ export default function DashboardPage() {
       router.replace('/login');
     }
   }, [isHydrated, token, router]);
+
+  useEffect(() => {
+    if (!isHydrated || didSyncRoleFromAuth.current) {
+      return;
+    }
+
+    const mappedRole = mapApiRoleToUserRole(authRole);
+    setCurrentRole(mappedRole);
+    setActiveSection(DEFAULT_SECTIONS[mappedRole]);
+    didSyncRoleFromAuth.current = true;
+  }, [authRole, isHydrated]);
 
   if (!isHydrated || !token) {
     return (
