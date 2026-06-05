@@ -201,6 +201,34 @@ function buildPricingKey(pricing: Pick<CompanyPricingResponse, 'originCollection
   return `${pricing.originCollectionPointId}->${pricing.destinationCollectionPointId}|${pricing.parcelTypeId}`;
 }
 
+type PricingSelection = {
+  transportModeId: string;
+  originCollectionPointId: string;
+  destinationCollectionPointId: string;
+  parcelTypeId: string;
+};
+
+function hasCompletePricingSelection(selection: PricingSelection) {
+  return (
+    Boolean(selection.transportModeId) &&
+    Boolean(selection.originCollectionPointId) &&
+    Boolean(selection.destinationCollectionPointId) &&
+    Boolean(selection.parcelTypeId)
+  );
+}
+
+function pricingMatchesSelection(
+  pricing: CompanyPricingResponse,
+  selection: PricingSelection,
+) {
+  return (
+    String(pricing.transportModeId) === selection.transportModeId &&
+    String(pricing.originCollectionPointId) === selection.originCollectionPointId &&
+    String(pricing.destinationCollectionPointId) === selection.destinationCollectionPointId &&
+    String(pricing.parcelTypeId) === selection.parcelTypeId
+  );
+}
+
 function isEnvelopeParcel(parcel?: ParcelTypeResponse | null) {
   const normalized = parcel?.name.trim().toLowerCase() ?? '';
   return normalized.includes('envelope') || normalized.includes('enveloppe');
@@ -681,14 +709,14 @@ function CompanyPricingInner({
     [selectedModePricing],
   );
 
-  const selectedCriteriaForRequirements = useMemo(
-    () => normalizeCriteria(form.selectedCriteria),
+  const criteriaKey = useMemo(
+    () => normalizeCriteria(form.selectedCriteria).join('|'),
     [form.selectedCriteria],
   );
 
-  const criteriaKey = useMemo(
-    () => selectedCriteriaForRequirements.join('|'),
-    [selectedCriteriaForRequirements],
+  const selectedCriteriaForRequirements = useMemo(
+    () => criteriaKey.split('|').filter(Boolean) as PricingCriterion[],
+    [criteriaKey],
   );
 
   const configuredModeCount = useMemo(
@@ -768,22 +796,45 @@ function CompanyPricingInner({
 
           const firstRoute = response.availableRoutes[0];
           const firstParcel = response.availableParcelTypes[0];
-          const nextParcelId = current.parcelTypeId || (firstParcel ? String(firstParcel.id) : '');
+          const currentParcel =
+            response.availableParcelTypes.find((parcel) => String(parcel.id) === current.parcelTypeId) ??
+            null;
+          const nextParcelId = currentParcel
+            ? current.parcelTypeId
+            : firstParcel
+              ? String(firstParcel.id)
+              : '';
           const nextParcel =
             response.availableParcelTypes.find((parcel) => String(parcel.id) === nextParcelId) ??
             null;
           const envelope = isEnvelopeParcel(nextParcel);
+          const nextOriginCollectionPointId =
+            current.originCollectionPointId ||
+            (firstRoute ? String(firstRoute.originCollectionPointId) : '');
+          const nextDestinationCollectionPointId =
+            current.destinationCollectionPointId ||
+            (firstRoute ? String(firstRoute.destinationCollectionPointId) : '');
+          const normalizedCriteria = normalizeCriteria(current.selectedCriteria);
+          const nextCriteria: PricingCriterion[] = envelope ? ['FIXED'] : normalizedCriteria;
+          const currentCriteriaKey = normalizedCriteria.join('|');
+          const nextCriteriaKey = nextCriteria.join('|');
+
+          if (
+            current.originCollectionPointId === nextOriginCollectionPointId &&
+            current.destinationCollectionPointId === nextDestinationCollectionPointId &&
+            current.parcelTypeId === nextParcelId &&
+            currentCriteriaKey === nextCriteriaKey
+          ) {
+            return current;
+          }
 
           return {
             ...current,
-            originCollectionPointId:
-              current.originCollectionPointId ||
-              (firstRoute ? String(firstRoute.originCollectionPointId) : ''),
-            destinationCollectionPointId:
-              current.destinationCollectionPointId ||
-              (firstRoute ? String(firstRoute.destinationCollectionPointId) : ''),
+            originCollectionPointId: nextOriginCollectionPointId,
+            destinationCollectionPointId: nextDestinationCollectionPointId,
             parcelTypeId: nextParcelId,
-            selectedCriteria: envelope ? ['FIXED'] : normalizeCriteria(current.selectedCriteria),
+            selectedCriteria:
+              currentCriteriaKey === nextCriteriaKey ? current.selectedCriteria : nextCriteria,
           };
         });
       })
@@ -816,6 +867,11 @@ function CompanyPricingInner({
     setSelectedPricingId(pricing.id);
     setValidationErrors([]);
     setForm(buildFormFromPricing(pricing));
+  };
+
+  const findPricingForSelection = (selection: PricingSelection) => {
+    if (!hasCompletePricingSelection(selection)) return null;
+    return pricingList.find((pricing) => pricingMatchesSelection(pricing, selection)) ?? null;
   };
 
   const startNewPricing = () => {
@@ -857,7 +913,20 @@ function CompanyPricingInner({
         buildRouteKey(item.originCollectionPointId, item.destinationCollectionPointId) === routeKey,
     );
     if (!route) return;
+    const nextSelection = {
+      ...form,
+      originCollectionPointId: String(route.originCollectionPointId),
+      destinationCollectionPointId: String(route.destinationCollectionPointId),
+    };
+    const matchingPricing = findPricingForSelection(nextSelection);
+
+    if (matchingPricing) {
+      selectPricing(matchingPricing);
+      return;
+    }
+
     setSelectedPricingId(null);
+    setValidationErrors([]);
     setForm((current) => ({
       ...current,
       originCollectionPointId: String(route.originCollectionPointId),
@@ -868,7 +937,16 @@ function CompanyPricingInner({
   const handleParcelChange = (parcelTypeId: string) => {
     const parcel =
       availableParcelTypes.find((item) => String(item.id) === parcelTypeId) ?? null;
+    const nextSelection = { ...form, parcelTypeId };
+    const matchingPricing = findPricingForSelection(nextSelection);
+
+    if (matchingPricing) {
+      selectPricing(matchingPricing);
+      return;
+    }
+
     setSelectedPricingId(null);
+    setValidationErrors([]);
     setForm((current) => ({
       ...current,
       parcelTypeId,
