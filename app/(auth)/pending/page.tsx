@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock, CheckCircle2, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SendamLogo } from '@/components/sendam-logo';
 
 const STEPS = [
   {
@@ -33,11 +31,6 @@ export default function PendingPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-md space-y-10 text-center">
-        {/* Logo */}
-        <div className="flex justify-center">
-          <SendamLogo />
-        </div>
-
         {/* Icon + Title */}
         <div className="space-y-4">
           <div className="relative mx-auto flex h-20 w-20 items-center justify-center">

@@ -1,7 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calculator, Plus, RefreshCw, Save, Trash2, Waypoints } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
+import {
+  AlertTriangle,
+  Calculator,
+  CheckCircle2,
+  ClipboardCheck,
+  Copy,
+  Package,
+  Plus,
+  RefreshCw,
+  Route,
+  Save,
+  Search,
+  Sparkles,
+  Weight,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,25 +29,32 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import {
   getCollectionPoints,
+  getCompanyParcelTypes,
   getCompanyPricing,
+  getCompanyPricingBySelection,
   getCompanyTransportModes,
   getPricingRequirements,
   upsertCompanyPricing,
 } from '@/lib/company/api';
 import type {
   CollectionPointResponse,
-  CompanyPricingDistanceRuleRequest,
   CompanyPricingRangeRuleRequest,
+  CompanyPricingRequest,
   CompanyPricingRequirementsResponse,
   CompanyPricingResponse,
+  CompanyPricingRouteResponse,
+  ParcelTypeResponse,
+  PricingApplicationMode,
   PricingCriterion,
   TransportModeResponse,
 } from '@/lib/company/types';
 import {
+  Badge,
   CompanyGuard,
   SectionHeader,
   StatusState,
@@ -40,11 +62,28 @@ import {
   useToastSimple,
 } from '@/components/company/company-shared';
 
-const CRITERIA: { id: PricingCriterion; label: string; hint: string }[] = [
-  { id: 'FIXED', label: 'Prix fixe', hint: 'Un montant unique par expedition.' },
-  { id: 'DISTANCE', label: 'Trajet', hint: 'Un prix par paire origine/destination.' },
-  { id: 'WEIGHT', label: 'Poids', hint: 'Des tranches basees sur le poids.' },
-  { id: 'VOLUME', label: 'Volume', hint: 'Des tranches basees sur le volume.' },
+const CRITERIA: {
+  id: PricingCriterion;
+  label: string;
+  hint: string;
+  icon: ElementType;
+}[] = [
+  { id: 'FIXED', label: 'Prix fixe', hint: 'Base obligatoire pour les enveloppes.', icon: Calculator },
+  { id: 'WEIGHT', label: 'Poids', hint: 'Prix unitaire par tranches de kg.', icon: Weight },
+  { id: 'VOLUME', label: 'Volume', hint: 'Prix unitaire par tranches de m3.', icon: Package },
+];
+
+const APPLICATION_MODES: { value: PricingApplicationMode; label: string; hint: string }[] = [
+  {
+    value: 'PROPORTIONAL',
+    label: 'Proportionnel',
+    hint: 'Calcule au prorata de la valeur saisie.',
+  },
+  {
+    value: 'ROUND_UP_UNIT',
+    label: "Arrondi a l'unite",
+    hint: 'Arrondit au kg ou m3 superieur.',
+  },
 ];
 
 type RangeRuleDraft = {
@@ -54,19 +93,23 @@ type RangeRuleDraft = {
   amount: string;
 };
 
-type DistanceRuleDraft = {
-  id: string;
+type PricingFormState = {
+  transportModeId: string;
   originCollectionPointId: string;
   destinationCollectionPointId: string;
-  amount: string;
-};
-
-type PricingFormState = {
+  parcelTypeId: string;
   selectedCriteria: PricingCriterion[];
   fixedPrice: string;
-  distanceRules: DistanceRuleDraft[];
+  expressSurcharge: string;
+  weightApplicationMode: PricingApplicationMode;
+  volumeApplicationMode: PricingApplicationMode;
   weightRules: RangeRuleDraft[];
   volumeRules: RangeRuleDraft[];
+};
+
+type ValidationResult = {
+  errors: string[];
+  payload?: CompanyPricingRequest;
 };
 
 function createId() {
@@ -77,39 +120,37 @@ function createEmptyRangeRule(): RangeRuleDraft {
   return { id: createId(), minValue: '', maxValue: '', amount: '' };
 }
 
-function createEmptyDistanceRule(): DistanceRuleDraft {
-  return {
-    id: createId(),
-    originCollectionPointId: '',
-    destinationCollectionPointId: '',
-    amount: '',
-  };
+function normalizeCriteria(criteria: PricingCriterion[]) {
+  return CRITERIA.map((item) => item.id).filter((criterion) => criteria.includes(criterion));
 }
 
-function createDefaultForm(): PricingFormState {
+function createDefaultForm(transportModeId = ''): PricingFormState {
   return {
+    transportModeId,
+    originCollectionPointId: '',
+    destinationCollectionPointId: '',
+    parcelTypeId: '',
     selectedCriteria: ['FIXED'],
     fixedPrice: '',
-    distanceRules: [],
+    expressSurcharge: '0',
+    weightApplicationMode: 'PROPORTIONAL',
+    volumeApplicationMode: 'PROPORTIONAL',
     weightRules: [createEmptyRangeRule()],
     volumeRules: [createEmptyRangeRule()],
   };
 }
 
-function buildFormFromPricing(pricing?: CompanyPricingResponse | null): PricingFormState {
-  if (!pricing) {
-    return createDefaultForm();
-  }
-
+function buildFormFromPricing(pricing: CompanyPricingResponse): PricingFormState {
   return {
-    selectedCriteria: pricing.selectedCriteria,
+    transportModeId: String(pricing.transportModeId),
+    originCollectionPointId: String(pricing.originCollectionPointId),
+    destinationCollectionPointId: String(pricing.destinationCollectionPointId),
+    parcelTypeId: String(pricing.parcelTypeId),
+    selectedCriteria: normalizeCriteria(pricing.selectedCriteria),
     fixedPrice: pricing.fixedPrice != null ? String(pricing.fixedPrice) : '',
-    distanceRules: pricing.distanceRules.map((rule) => ({
-      id: String(rule.id),
-      originCollectionPointId: String(rule.originCollectionPointId),
-      destinationCollectionPointId: String(rule.destinationCollectionPointId),
-      amount: String(rule.amount),
-    })),
+    expressSurcharge: pricing.expressSurcharge != null ? String(pricing.expressSurcharge) : '0',
+    weightApplicationMode: pricing.weightApplicationMode ?? 'PROPORTIONAL',
+    volumeApplicationMode: pricing.volumeApplicationMode ?? 'PROPORTIONAL',
     weightRules:
       pricing.weightRules.length > 0
         ? pricing.weightRules.map((rule) => ({
@@ -131,40 +172,225 @@ function buildFormFromPricing(pricing?: CompanyPricingResponse | null): PricingF
   };
 }
 
-function formatCriterionList(criteria: PricingCriterion[]) {
-  return CRITERIA.filter((item) => criteria.includes(item.id))
-    .map((item) => item.label)
-    .join(', ');
+function parseNumber(value: string) {
+  if (value.trim() === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function buildCriteriaKey(criteria: PricingCriterion[]) {
-  return [...criteria].sort().join('|');
+function formatMoney(value?: number | null) {
+  if (value == null || !Number.isFinite(value)) return '-';
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)} FCFA`;
 }
 
-function areDistanceRulesEquivalent(left: DistanceRuleDraft[], right: DistanceRuleDraft[]) {
-  if (left.length !== right.length) {
-    return false;
+function formatDate(value?: string) {
+  if (!value) return 'Jamais';
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function buildRouteKey(originId: number, destinationId: number) {
+  return `${originId}->${destinationId}`;
+}
+
+function buildPricingKey(pricing: Pick<CompanyPricingResponse, 'originCollectionPointId' | 'destinationCollectionPointId' | 'parcelTypeId'>) {
+  return `${pricing.originCollectionPointId}->${pricing.destinationCollectionPointId}|${pricing.parcelTypeId}`;
+}
+
+function isEnvelopeParcel(parcel?: ParcelTypeResponse | null) {
+  const normalized = parcel?.name.trim().toLowerCase() ?? '';
+  return normalized.includes('envelope') || normalized.includes('enveloppe');
+}
+
+function validateMoneyField(label: string, value: string, required: boolean) {
+  const parsed = parseNumber(value);
+  if (parsed === null) {
+    return required ? { error: `${label} est requis.` } : { value: undefined };
+  }
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return { error: `${label} doit etre un nombre positif.` };
+  }
+  return { value: parsed };
+}
+
+function validateRangeRules(
+  label: string,
+  unit: string,
+  drafts: RangeRuleDraft[],
+): { errors: string[]; rules: CompanyPricingRangeRuleRequest[] } {
+  const errors: string[] = [];
+  const filled = drafts.filter(
+    (rule) => rule.minValue.trim() !== '' || rule.maxValue.trim() !== '' || rule.amount.trim() !== '',
+  );
+
+  if (filled.length === 0) {
+    return {
+      errors: [`Ajoutez au moins une tranche ${label}.`],
+      rules: [],
+    };
   }
 
-  return left.every((rule, index) => {
-    const candidate = right[index];
-    return (
-      candidate !== undefined &&
-      rule.originCollectionPointId === candidate.originCollectionPointId &&
-      rule.destinationCollectionPointId === candidate.destinationCollectionPointId &&
-      rule.amount === candidate.amount
-    );
+  const parsed = filled.map((rule, index) => {
+    const minValue = parseNumber(rule.minValue);
+    const maxValue = parseNumber(rule.maxValue);
+    const amount = parseNumber(rule.amount);
+
+    if (minValue === null || Number.isNaN(minValue) || minValue < 0) {
+      errors.push(`Tranche ${label} ${index + 1}: min ${unit} invalide.`);
+    }
+    if (maxValue !== null && (Number.isNaN(maxValue) || maxValue <= (minValue ?? 0))) {
+      errors.push(`Tranche ${label} ${index + 1}: max ${unit} doit etre superieur au min.`);
+    }
+    if (amount === null || Number.isNaN(amount) || amount < 0) {
+      errors.push(`Tranche ${label} ${index + 1}: montant invalide.`);
+    }
+
+    return {
+      minValue: minValue ?? 0,
+      maxValue: maxValue === null || Number.isNaN(maxValue) ? undefined : maxValue,
+      amount: amount ?? 0,
+    };
   });
+
+  const sorted = [...parsed].sort((left, right) => left.minValue - right.minValue);
+
+  if (sorted[0]?.minValue !== 0) {
+    errors.push(`Les tranches ${label} doivent commencer a 0 ${unit}.`);
+  }
+
+  sorted.forEach((rule, index) => {
+    const next = sorted[index + 1];
+    if (!next) return;
+    if (rule.maxValue == null) {
+      errors.push(`Seule la derniere tranche ${label} peut avoir un max vide.`);
+      return;
+    }
+    if (Math.abs(next.minValue - rule.maxValue) > 0.000001) {
+      errors.push(`Les tranches ${label} doivent etre contigues, sans trou ni chevauchement.`);
+    }
+  });
+
+  return { errors, rules: sorted };
+}
+
+function validateForm(form: PricingFormState, parcel?: ParcelTypeResponse | null): ValidationResult {
+  const errors: string[] = [];
+  const selectedCriteria = normalizeCriteria(form.selectedCriteria);
+  const envelope = isEnvelopeParcel(parcel);
+
+  if (!form.transportModeId) errors.push('Selectionnez un mode de transport.');
+  if (!form.originCollectionPointId || !form.destinationCollectionPointId) {
+    errors.push('Selectionnez une route origine -> destination.');
+  }
+  if (!form.parcelTypeId) errors.push('Selectionnez un type de colis.');
+  if (selectedCriteria.length === 0) errors.push('Selectionnez au moins un critere tarifaire.');
+  if (envelope && selectedCriteria.some((criterion) => criterion !== 'FIXED')) {
+    errors.push('Le backend limite les enveloppes au critere Prix fixe.');
+  }
+
+  const fixedPrice = validateMoneyField(
+    'Prix fixe',
+    form.fixedPrice,
+    selectedCriteria.includes('FIXED'),
+  );
+  if (fixedPrice.error) errors.push(fixedPrice.error);
+
+  const expressSurcharge = validateMoneyField('Surcharge express', form.expressSurcharge, true);
+  if (expressSurcharge.error) errors.push(expressSurcharge.error);
+
+  let weightRules: CompanyPricingRangeRuleRequest[] | undefined;
+  let volumeRules: CompanyPricingRangeRuleRequest[] | undefined;
+
+  if (selectedCriteria.includes('WEIGHT')) {
+    const result = validateRangeRules('poids', 'kg', form.weightRules);
+    errors.push(...result.errors);
+    weightRules = result.rules;
+  }
+
+  if (selectedCriteria.includes('VOLUME')) {
+    const result = validateRangeRules('volume', 'm3', form.volumeRules);
+    errors.push(...result.errors);
+    volumeRules = result.rules;
+  }
+
+  if (errors.length > 0) {
+    return { errors };
+  }
+
+  return {
+    errors: [],
+    payload: {
+      originCollectionPointId: Number(form.originCollectionPointId),
+      destinationCollectionPointId: Number(form.destinationCollectionPointId),
+      parcelTypeId: Number(form.parcelTypeId),
+      selectedCriteria,
+      fixedPrice: selectedCriteria.includes('FIXED') ? fixedPrice.value : undefined,
+      expressSurcharge: expressSurcharge.value,
+      weightApplicationMode: selectedCriteria.includes('WEIGHT')
+        ? form.weightApplicationMode
+        : undefined,
+      volumeApplicationMode: selectedCriteria.includes('VOLUME')
+        ? form.volumeApplicationMode
+        : undefined,
+      weightRules,
+      volumeRules,
+    },
+  };
+}
+
+function CriteriaBadges({ criteria }: { criteria: PricingCriterion[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {normalizeCriteria(criteria).map((criterion) => (
+        <Badge key={criterion} className="bg-primary/10 text-primary">
+          {CRITERIA.find((item) => item.id === criterion)?.label ?? criterion}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  helper,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  icon: ElementType;
+}) {
+  return (
+    <Card className="border-border bg-card">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="truncate text-xl font-bold text-foreground">{value}</p>
+          {helper && <p className="truncate text-xs text-muted-foreground">{helper}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function RangeRulesEditor({
   title,
   unit,
+  instruction,
   value,
   onChange,
 }: {
   title: string;
   unit: string;
+  instruction?: string;
   value: RangeRuleDraft[];
   onChange: (value: RangeRuleDraft[]) => void;
 }) {
@@ -177,22 +403,30 @@ function RangeRulesEditor({
     );
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border p-4">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="font-medium text-foreground">{title}</p>
           <p className="text-sm text-muted-foreground">
-            Definissez les tranches de {unit} et leur montant.
+            Tranches contigues a partir de 0. Le dernier max peut rester vide.
           </p>
+          {instruction && <p className="mt-1 text-xs text-muted-foreground">{instruction}</p>}
         </div>
-        <Button variant="outline" size="sm" onClick={() => onChange([...value, createEmptyRangeRule()])}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...value, createEmptyRangeRule()])}
+          className="shrink-0 gap-2"
+        >
           <Plus className="h-4 w-4" />
+          Tranche
         </Button>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {value.map((rule) => (
-          <div key={rule.id} className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <div key={rule.id} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
             <Input
               type="number"
               min="0"
@@ -208,7 +442,7 @@ function RangeRulesEditor({
               step="0.01"
               value={rule.maxValue}
               onChange={(event) => updateRule(rule.id, { maxValue: event.target.value })}
-              placeholder={`Max ${unit} (optionnel)`}
+              placeholder={`Max ${unit}`}
               className="bg-secondary"
             />
             <Input
@@ -220,8 +454,14 @@ function RangeRulesEditor({
               placeholder="Montant"
               className="bg-secondary"
             />
-            <Button variant="ghost" size="icon" onClick={() => removeRule(rule.id)}>
-              <Trash2 className="h-4 w-4" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => removeRule(rule.id)}
+              title="Retirer la tranche"
+            >
+              <AlertTriangle className="h-4 w-4" />
             </Button>
           </div>
         ))}
@@ -230,125 +470,166 @@ function RangeRulesEditor({
   );
 }
 
-function DistanceRulesEditor({
-  points,
-  value,
-  requirements,
-  onChange,
+function PricingList({
+  pricing,
+  selectedId,
+  search,
+  onSearchChange,
+  onSelect,
 }: {
-  points: CollectionPointResponse[];
-  value: DistanceRuleDraft[];
-  requirements: CompanyPricingRequirementsResponse | null;
-  onChange: (value: DistanceRuleDraft[]) => void;
+  pricing: CompanyPricingResponse[];
+  selectedId: number | null;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSelect: (pricing: CompanyPricingResponse) => void;
 }) {
-  const pointMap = useMemo(
-    () => new Map(points.map((point) => [String(point.id), point.name])),
-    [points],
-  );
-
-  const updateRule = (id: string, patch: Partial<DistanceRuleDraft>) =>
-    onChange(value.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
-
-  const removeRule = (id: string) =>
-    onChange(
-      value.length === 1
-        ? [createEmptyDistanceRule()]
-        : value.filter((rule) => rule.id !== id),
+  const filtered = useMemo(() => {
+    const normalized = search.trim().toLowerCase();
+    if (!normalized) return pricing;
+    return pricing.filter((item) =>
+      [
+        item.transportModeName,
+        item.originCollectionPointName,
+        item.destinationCollectionPointName,
+        item.parcelTypeName,
+        ...item.selectedCriteria,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalized),
     );
+  }, [pricing, search]);
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium text-foreground">Regles par trajet</p>
-          <p className="text-sm text-muted-foreground">
-            Associez un montant a chaque trajet entre points de collecte.
+    <Card className="border-border bg-card">
+      <CardHeader className="space-y-3">
+        <CardTitle className="text-base">Grilles existantes</CardTitle>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Rechercher route, colis, critere"
+            className="bg-secondary pl-9"
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="max-h-[520px] space-y-2 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            Aucune grille ne correspond a ce filtre.
           </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...value, createEmptyDistanceRule()])}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {requirements && requirements.requiredDistancePairs.length > 0 && (
-        <div className="rounded-xl bg-secondary/60 p-3 text-sm text-muted-foreground">
-          Paires attendues:{' '}
-          {requirements.requiredDistancePairs
-            .map(
-              (pair) =>
-                `${pair.originCollectionPointName} -> ${pair.destinationCollectionPointName}`,
-            )
-            .join(' • ')}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {value.map((rule) => (
-          <div key={rule.id} className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]">
-            <Select
-              value={rule.originCollectionPointId}
-              onValueChange={(originCollectionPointId) =>
-                updateRule(rule.id, { originCollectionPointId })
-              }
+        ) : (
+          filtered.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelect(item)}
+              className={cn(
+                'w-full rounded-lg border p-3 text-left transition-colors',
+                selectedId === item.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:bg-secondary/60',
+              )}
             >
-              <SelectTrigger className="bg-secondary">
-                <SelectValue placeholder="Point origine" />
-              </SelectTrigger>
-              <SelectContent>
-                {points.map((point) => (
-                  <SelectItem key={point.id} value={String(point.id)}>
-                    {point.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {item.originCollectionPointName}
+                    {' -> '}
+                    {item.destinationCollectionPointName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.parcelTypeName} - {formatDate(item.updatedAt ?? item.createdAt)}
+                  </p>
+                </div>
+                <Badge className="bg-success/15 text-success">{formatMoney(item.fixedPrice)}</Badge>
+              </div>
+              <div className="mt-3">
+                <CriteriaBadges criteria={item.selectedCriteria} />
+              </div>
+            </button>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
-            <Select
-              value={rule.destinationCollectionPointId}
-              onValueChange={(destinationCollectionPointId) =>
-                updateRule(rule.id, { destinationCollectionPointId })
-              }
-            >
-              <SelectTrigger className="bg-secondary">
-                <SelectValue placeholder="Point destination" />
-              </SelectTrigger>
-              <SelectContent>
-                {points.map((point) => (
-                  <SelectItem key={point.id} value={String(point.id)}>
-                    {point.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+function CoveragePanel({
+  requirements,
+  configuredKeys,
+  onPickMissing,
+}: {
+  requirements: CompanyPricingRequirementsResponse | null;
+  configuredKeys: Set<string>;
+  onPickMissing: (route: CompanyPricingRouteResponse, parcel: ParcelTypeResponse) => void;
+}) {
+  const routes = requirements?.availableRoutes ?? [];
+  const parcels = requirements?.availableParcelTypes ?? [];
+  const combos = routes.flatMap((route) => parcels.map((parcel) => ({ route, parcel })));
+  const missing = combos.filter(
+    ({ route, parcel }) =>
+      !configuredKeys.has(
+        `${route.originCollectionPointId}->${route.destinationCollectionPointId}|${parcel.id}`,
+      ),
+  );
+  const configuredCount = combos.length - missing.length;
 
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={rule.amount}
-              onChange={(event) => updateRule(rule.id, { amount: event.target.value })}
-              placeholder="Montant"
-              className="bg-secondary"
-            />
-
-            <Button variant="ghost" size="icon" onClick={() => removeRule(rule.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-
-            {rule.originCollectionPointId && rule.destinationCollectionPointId && (
-              <p className="text-xs text-muted-foreground md:col-span-4">
-                {pointMap.get(rule.originCollectionPointId)} {'->'}{' '}
-                {pointMap.get(rule.destinationCollectionPointId)}
-              </p>
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base">Couverture du mode</CardTitle>
+          <Badge
+            className={cn(
+              missing.length === 0 ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning',
             )}
+          >
+            {configuredCount}/{combos.length || 0}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!requirements ? (
+          <p className="text-sm text-muted-foreground">
+            Selectionnez un mode pour charger les routes et types disponibles.
+          </p>
+        ) : combos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Aucune route exploitable ou aucun type de colis actif pour ce mode.
+          </p>
+        ) : missing.length === 0 ? (
+          <div className="flex items-start gap-2 rounded-lg bg-success/10 p-3 text-sm text-success">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            Toutes les combinaisons route/type de colis disposent d'une grille.
           </div>
-        ))}
-      </div>
-    </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {missing.length} combinaison(s) a completer.
+            </p>
+            <div className="max-h-48 space-y-2 overflow-y-auto">
+              {missing.slice(0, 8).map(({ route, parcel }) => (
+                <button
+                  key={`${buildRouteKey(route.originCollectionPointId, route.destinationCollectionPointId)}|${parcel.id}`}
+                  type="button"
+                  onClick={() => onPickMissing(route, parcel)}
+                  className="w-full rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-secondary/70"
+                >
+                  <span className="font-medium text-foreground">
+                    {route.originCollectionPointName}
+                    {' -> '}
+                    {route.destinationCollectionPointName}
+                  </span>
+                  <span className="block text-muted-foreground">{parcel.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -363,137 +644,243 @@ function CompanyPricingInner({
   const { toast, success, error: showError } = useToastSimple();
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [transportModes, setTransportModes] = useState<TransportModeResponse[]>([]);
+  const [parcelTypes, setParcelTypes] = useState<ParcelTypeResponse[]>([]);
   const [collectionPoints, setCollectionPoints] = useState<CollectionPointResponse[]>([]);
   const [pricingList, setPricingList] = useState<CompanyPricingResponse[]>([]);
-  const [selectedTransportModeId, setSelectedTransportModeId] = useState<string>('');
-  const [form, setForm] = useState<PricingFormState>(createDefaultForm());
   const [requirements, setRequirements] =
     useState<CompanyPricingRequirementsResponse | null>(null);
   const [requirementsLoading, setRequirementsLoading] = useState(false);
+  const [requirementsError, setRequirementsError] = useState<string | null>(null);
+  const [selectedPricingId, setSelectedPricingId] = useState<number | null>(null);
+  const [form, setForm] = useState<PricingFormState>(createDefaultForm());
+  const [search, setSearch] = useState('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const criteriaKey = useMemo(
-    () => buildCriteriaKey(form.selectedCriteria),
+  const selectedMode = useMemo(
+    () => transportModes.find((mode) => String(mode.id) === form.transportModeId) ?? null,
+    [form.transportModeId, transportModes],
+  );
+
+  const availableParcelTypes = requirements?.availableParcelTypes ?? parcelTypes;
+  const selectedParcel = useMemo(
+    () => availableParcelTypes.find((parcel) => String(parcel.id) === form.parcelTypeId) ?? null,
+    [availableParcelTypes, form.parcelTypeId],
+  );
+
+  const selectedModePricing = useMemo(
+    () => pricingList.filter((item) => String(item.transportModeId) === form.transportModeId),
+    [form.transportModeId, pricingList],
+  );
+
+  const configuredKeys = useMemo(
+    () => new Set(selectedModePricing.map((item) => buildPricingKey(item))),
+    [selectedModePricing],
+  );
+
+  const selectedCriteriaForRequirements = useMemo(
+    () => normalizeCriteria(form.selectedCriteria),
     [form.selectedCriteria],
   );
 
+  const criteriaKey = useMemo(
+    () => selectedCriteriaForRequirements.join('|'),
+    [selectedCriteriaForRequirements],
+  );
+
+  const configuredModeCount = useMemo(
+    () => new Set(pricingList.map((item) => item.transportModeId)).size,
+    [pricingList],
+  );
+
   const load = useCallback(async () => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     setLoading(true);
-    setError(null);
+    setLoadError(null);
 
     try {
-      const [modeResponse, pointsResponse, pricingResponse] = await Promise.all([
-        getCompanyTransportModes(token, companyId),
-        getCollectionPoints(token, companyId),
-        getCompanyPricing(token, companyId),
-      ]);
+      const [modeResponse, parcelTypeResponse, pointsResponse, pricingResponse] =
+        await Promise.all([
+          getCompanyTransportModes(token, companyId),
+          getCompanyParcelTypes(token, companyId),
+          getCollectionPoints(token, companyId),
+          getCompanyPricing(token, companyId),
+        ]);
 
-      setTransportModes(modeResponse.transportModes);
+      const nextModes = modeResponse.transportModes;
+      const firstPricing = pricingResponse[0];
+      const firstModeId = firstPricing?.transportModeId ?? nextModes[0]?.id;
+
+      setTransportModes(nextModes);
+      setParcelTypes(parcelTypeResponse.parcelTypes);
       setCollectionPoints(pointsResponse);
       setPricingList(pricingResponse);
 
-      const firstModeId =
-        selectedTransportModeId ||
-        String(pricingResponse[0]?.transportModeId ?? modeResponse.transportModes[0]?.id ?? '');
-      setSelectedTransportModeId(firstModeId);
-
-      const currentPricing =
-        pricingResponse.find((item) => String(item.transportModeId) === firstModeId) ?? null;
-      setForm(buildFormFromPricing(currentPricing));
+      if (firstPricing) {
+        setSelectedPricingId(firstPricing.id);
+        setForm(buildFormFromPricing(firstPricing));
+      } else {
+        setSelectedPricingId(null);
+        setForm(createDefaultForm(firstModeId ? String(firstModeId) : ''));
+      }
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Erreur lors du chargement');
+      setLoadError(cause instanceof ApiError ? cause.message : 'Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
-  }, [companyId, selectedTransportModeId, token]);
+  }, [companyId, token]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const selectedPricing = useMemo(
-    () =>
-      pricingList.find((item) => String(item.transportModeId) === selectedTransportModeId) ??
-      null,
-    [pricingList, selectedTransportModeId],
-  );
-
   useEffect(() => {
-    setForm(buildFormFromPricing(selectedPricing));
-  }, [selectedPricing]);
-
-  useEffect(() => {
-    const transportModeId = Number(selectedTransportModeId);
-    if (!token || !transportModeId || form.selectedCriteria.length === 0) {
+    const transportModeId = Number(form.transportModeId);
+    if (!token || !transportModeId) {
       setRequirements(null);
       return;
     }
 
     let cancelled = false;
     setRequirementsLoading(true);
+    setRequirementsError(null);
 
     getPricingRequirements(token, companyId, transportModeId, {
-      selectedCriteria: form.selectedCriteria,
+      selectedCriteria: selectedCriteriaForRequirements,
+      originCollectionPointId: form.originCollectionPointId
+        ? Number(form.originCollectionPointId)
+        : undefined,
+      destinationCollectionPointId: form.destinationCollectionPointId
+        ? Number(form.destinationCollectionPointId)
+        : undefined,
+      parcelTypeId: form.parcelTypeId ? Number(form.parcelTypeId) : undefined,
     })
       .then((response) => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setRequirements(response);
-        if (
-          response.requiredDistancePairs.length > 0 &&
-          form.selectedCriteria.includes('DISTANCE')
-        ) {
-          setForm((current) => {
-            const nextRules = response.requiredDistancePairs.map((pair) => {
-              const existing = current.distanceRules.find(
-                (rule) =>
-                  Number(rule.originCollectionPointId) === pair.originCollectionPointId &&
-                  Number(rule.destinationCollectionPointId) === pair.destinationCollectionPointId,
-              );
 
-              return {
-                id: existing?.id ?? createId(),
-                originCollectionPointId: String(pair.originCollectionPointId),
-                destinationCollectionPointId: String(pair.destinationCollectionPointId),
-                amount: existing?.amount ?? '',
-              };
-            });
+        setForm((current) => {
+          if (current.transportModeId !== String(response.transportModeId)) return current;
 
-            if (areDistanceRulesEquivalent(current.distanceRules, nextRules)) {
-              return current;
-            }
+          const firstRoute = response.availableRoutes[0];
+          const firstParcel = response.availableParcelTypes[0];
+          const nextParcelId = current.parcelTypeId || (firstParcel ? String(firstParcel.id) : '');
+          const nextParcel =
+            response.availableParcelTypes.find((parcel) => String(parcel.id) === nextParcelId) ??
+            null;
+          const envelope = isEnvelopeParcel(nextParcel);
 
-            return { ...current, distanceRules: nextRules };
-          });
-        }
+          return {
+            ...current,
+            originCollectionPointId:
+              current.originCollectionPointId ||
+              (firstRoute ? String(firstRoute.originCollectionPointId) : ''),
+            destinationCollectionPointId:
+              current.destinationCollectionPointId ||
+              (firstRoute ? String(firstRoute.destinationCollectionPointId) : ''),
+            parcelTypeId: nextParcelId,
+            selectedCriteria: envelope ? ['FIXED'] : normalizeCriteria(current.selectedCriteria),
+          };
+        });
       })
       .catch((cause) => {
         if (!cancelled) {
-          showError(
+          setRequirementsError(
             cause instanceof ApiError ? cause.message : 'Impossible de charger les exigences',
           );
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setRequirementsLoading(false);
-        }
+        if (!cancelled) setRequirementsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [token, companyId, selectedTransportModeId, criteriaKey]);
+  }, [
+    companyId,
+    criteriaKey,
+    form.destinationCollectionPointId,
+    form.originCollectionPointId,
+    form.parcelTypeId,
+    form.transportModeId,
+    selectedCriteriaForRequirements,
+    token,
+  ]);
+
+  const selectPricing = (pricing: CompanyPricingResponse) => {
+    setSelectedPricingId(pricing.id);
+    setValidationErrors([]);
+    setForm(buildFormFromPricing(pricing));
+  };
+
+  const startNewPricing = () => {
+    const firstRoute = requirements?.availableRoutes[0];
+    const firstParcel = requirements?.availableParcelTypes[0];
+
+    setSelectedPricingId(null);
+    setValidationErrors([]);
+    setForm({
+      ...createDefaultForm(form.transportModeId || (transportModes[0] ? String(transportModes[0].id) : '')),
+      originCollectionPointId: firstRoute ? String(firstRoute.originCollectionPointId) : '',
+      destinationCollectionPointId: firstRoute ? String(firstRoute.destinationCollectionPointId) : '',
+      parcelTypeId: firstParcel ? String(firstParcel.id) : '',
+      selectedCriteria: isEnvelopeParcel(firstParcel) ? ['FIXED'] : ['FIXED'],
+    });
+  };
+
+  const duplicateCurrent = () => {
+    setSelectedPricingId(null);
+    setValidationErrors([]);
+    setForm((current) => ({ ...current }));
+    success('Grille dupliquee en brouillon');
+  };
+
+  const handleModeChange = (transportModeId: string) => {
+    const candidate = pricingList.find((item) => String(item.transportModeId) === transportModeId);
+    setValidationErrors([]);
+    if (candidate) {
+      selectPricing(candidate);
+      return;
+    }
+    setSelectedPricingId(null);
+    setForm(createDefaultForm(transportModeId));
+  };
+
+  const handleRouteChange = (routeKey: string) => {
+    const route = requirements?.availableRoutes.find(
+      (item) =>
+        buildRouteKey(item.originCollectionPointId, item.destinationCollectionPointId) === routeKey,
+    );
+    if (!route) return;
+    setSelectedPricingId(null);
+    setForm((current) => ({
+      ...current,
+      originCollectionPointId: String(route.originCollectionPointId),
+      destinationCollectionPointId: String(route.destinationCollectionPointId),
+    }));
+  };
+
+  const handleParcelChange = (parcelTypeId: string) => {
+    const parcel =
+      availableParcelTypes.find((item) => String(item.id) === parcelTypeId) ?? null;
+    setSelectedPricingId(null);
+    setForm((current) => ({
+      ...current,
+      parcelTypeId,
+      selectedCriteria: isEnvelopeParcel(parcel) ? ['FIXED'] : current.selectedCriteria,
+      weightRules: isEnvelopeParcel(parcel) ? [createEmptyRangeRule()] : current.weightRules,
+      volumeRules: isEnvelopeParcel(parcel) ? [createEmptyRangeRule()] : current.volumeRules,
+    }));
+  };
 
   const toggleCriterion = (criterion: PricingCriterion) => {
+    if (isEnvelopeParcel(selectedParcel) && criterion !== 'FIXED') return;
+    setSelectedPricingId(null);
     setForm((current) => {
       const exists = current.selectedCriteria.includes(criterion);
       const next = exists
@@ -502,77 +889,80 @@ function CompanyPricingInner({
 
       return {
         ...current,
-        selectedCriteria: next.length > 0 ? next : [criterion],
+        selectedCriteria: next.length > 0 ? normalizeCriteria(next) : [criterion],
       };
     });
   };
 
-  const buildRangeRules = (value: RangeRuleDraft[]): CompanyPricingRangeRuleRequest[] =>
-    value
-      .filter((rule) => rule.minValue !== '' && rule.amount !== '')
-      .map((rule) => ({
-        minValue: Number(rule.minValue),
-        maxValue: rule.maxValue !== '' ? Number(rule.maxValue) : undefined,
-        amount: Number(rule.amount),
-      }));
+  const pickMissingCombination = (
+    route: CompanyPricingRouteResponse,
+    parcel: ParcelTypeResponse,
+  ) => {
+    setSelectedPricingId(null);
+    setValidationErrors([]);
+    setForm((current) => ({
+      ...createDefaultForm(current.transportModeId),
+      originCollectionPointId: String(route.originCollectionPointId),
+      destinationCollectionPointId: String(route.destinationCollectionPointId),
+      parcelTypeId: String(parcel.id),
+      selectedCriteria: isEnvelopeParcel(parcel) ? ['FIXED'] : ['FIXED'],
+    }));
+  };
 
-  const buildDistanceRules = (
-    value: DistanceRuleDraft[],
-  ): CompanyPricingDistanceRuleRequest[] =>
-    value
-      .filter(
-        (rule) =>
-          rule.originCollectionPointId !== '' &&
-          rule.destinationCollectionPointId !== '' &&
-          rule.amount !== '',
-      )
-      .map((rule) => ({
-        originCollectionPointId: Number(rule.originCollectionPointId),
-        destinationCollectionPointId: Number(rule.destinationCollectionPointId),
-        amount: Number(rule.amount),
-      }));
-
-  const handleSave = async () => {
-    if (!token || !selectedTransportModeId) {
+  const handleCheckSelection = async () => {
+    if (!token || !form.transportModeId || !form.originCollectionPointId || !form.destinationCollectionPointId || !form.parcelTypeId) {
+      setValidationErrors(['Selectionnez un mode, une route et un type de colis avant verification.']);
       return;
     }
 
-    setSaving(true);
-
+    setChecking(true);
     try {
-      const payload = {
-        selectedCriteria: form.selectedCriteria,
-        fixedPrice:
-          form.selectedCriteria.includes('FIXED') && form.fixedPrice !== ''
-            ? Number(form.fixedPrice)
-            : undefined,
-        distanceRules: form.selectedCriteria.includes('DISTANCE')
-          ? buildDistanceRules(form.distanceRules)
-          : undefined,
-        weightRules: form.selectedCriteria.includes('WEIGHT')
-          ? buildRangeRules(form.weightRules)
-          : undefined,
-        volumeRules: form.selectedCriteria.includes('VOLUME')
-          ? buildRangeRules(form.volumeRules)
-          : undefined,
-      };
+      const pricing = await getCompanyPricingBySelection(
+        token,
+        companyId,
+        Number(form.transportModeId),
+        Number(form.originCollectionPointId),
+        Number(form.destinationCollectionPointId),
+        Number(form.parcelTypeId),
+      );
+      setPricingList((current) => {
+        const exists = current.some((item) => item.id === pricing.id);
+        return exists ? current.map((item) => (item.id === pricing.id ? pricing : item)) : [pricing, ...current];
+      });
+      selectPricing(pricing);
+      success('Grille existante chargee');
+    } catch (cause) {
+      showError(cause instanceof ApiError ? cause.message : 'Aucune grille pour cette selection');
+    } finally {
+      setChecking(false);
+    }
+  };
 
+  const handleSave = async () => {
+    if (!token) return;
+
+    const result = validateForm(form, selectedParcel);
+    setValidationErrors(result.errors);
+    if (!result.payload) return;
+
+    setSaving(true);
+    try {
       const saved = await upsertCompanyPricing(
         token,
         companyId,
-        Number(selectedTransportModeId),
-        payload,
+        Number(form.transportModeId),
+        result.payload,
       );
 
       setPricingList((current) => {
-        const exists = current.some((item) => item.transportModeId === saved.transportModeId);
+        const exists = current.some((item) => item.id === saved.id);
         return exists
-          ? current.map((item) =>
-              item.transportModeId === saved.transportModeId ? saved : item,
-            )
+          ? current.map((item) => (item.id === saved.id ? saved : item))
           : [saved, ...current];
       });
-
+      setSelectedPricingId(saved.id);
+      setForm(buildFormFromPricing(saved));
+      setValidationErrors([]);
       success('Tarification enregistree');
     } catch (cause) {
       showError(cause instanceof ApiError ? cause.message : 'Enregistrement impossible');
@@ -589,15 +979,15 @@ function CompanyPricingInner({
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <StatusState
         icon={Calculator}
         tone="destructive"
         title="Erreur de chargement"
-        description={error}
+        description={loadError}
         action={
-          <Button variant="outline" onClick={load} className="gap-2">
+          <Button variant="outline" onClick={() => void load()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Reessayer
           </Button>
@@ -609,257 +999,370 @@ function CompanyPricingInner({
   if (transportModes.length === 0) {
     return (
       <StatusState
-        icon={Waypoints}
+        icon={Route}
         title="Aucun mode de transport actif"
-        description="Activez d'abord un ou plusieurs modes de transport pour pouvoir definir les tarifs."
+        description="Activez au moins un mode de transport avant de definir les tarifs."
       />
     );
   }
+
+  const routeValue =
+    form.originCollectionPointId && form.destinationCollectionPointId
+      ? buildRouteKey(Number(form.originCollectionPointId), Number(form.destinationCollectionPointId))
+      : '';
+  const selectedPricing = pricingList.find((item) => item.id === selectedPricingId) ?? null;
+  const activeEnvelope = isEnvelopeParcel(selectedParcel);
 
   return (
     <div className="space-y-6">
       <ToastBar toast={toast} />
 
       <SectionHeader
-        title="Tarification"
-        subtitle={`Configuration des grilles tarifaires de ${companyName} par mode de transport.`}
+        title="Moteur de tarification"
+        subtitle={`Grilles operationnelles de ${companyName} par mode, route et type de colis.`}
         action={
-          <Button
-            onClick={handleSave}
-            disabled={saving || !selectedTransportModeId}
-            className="gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? 'Enregistrement...' : 'Enregistrer'}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => void load()} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Actualiser
+            </Button>
+            <Button onClick={startNewPricing} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nouvelle grille
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Modes configures</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">{pricingList.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Points disponibles</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">{collectionPoints.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Criteres actifs</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">
-              {formatCriterionList(form.selectedCriteria)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          icon={ClipboardCheck}
+          label="Grilles"
+          value={pricingList.length}
+          helper="Configurations enregistrees"
+        />
+        <MetricCard
+          icon={Route}
+          label="Modes couverts"
+          value={`${configuredModeCount}/${transportModes.length}`}
+          helper={selectedMode?.name ?? 'Aucun mode'}
+        />
+        <MetricCard
+          icon={Package}
+          label="Types actifs"
+          value={availableParcelTypes.length}
+          helper={`${collectionPoints.length} points de collecte`}
+        />
+        <MetricCard
+          icon={Sparkles}
+          label="Assurance"
+          value={formatMoney(selectedPricing?.insurancePrice ?? requirements?.defaultInsurancePrice)}
+          helper="Montant fourni par l'API"
+        />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-base">Modes de transport</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {transportModes.map((mode) => {
-              const configured = pricingList.some((item) => item.transportModeId === mode.id);
-              const active = String(mode.id) === selectedTransportModeId;
-
-              return (
-                <button
-                  key={mode.id}
-                  onClick={() => setSelectedTransportModeId(String(mode.id))}
-                  className={`w-full rounded-2xl border p-4 text-left transition-colors ${
-                    active ? 'border-primary bg-primary/5' : 'border-border'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{mode.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {configured ? 'Tarification enregistree' : 'A configurer'}
-                      </p>
-                    </div>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        configured ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
-                      }`}
-                    >
-                      {configured ? 'OK' : 'Brouillon'}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+        <div className="space-y-4">
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-base">Configuration tarifaire</CardTitle>
+              <CardTitle className="text-base">Mode de transport</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-3">
+              <Select value={form.transportModeId} onValueChange={handleModeChange}>
+                <SelectTrigger className="bg-secondary">
+                  <SelectValue placeholder="Selectionnez un mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transportModes.map((mode) => (
+                    <SelectItem key={mode.id} value={String(mode.id)}>
+                      {mode.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {requirementsLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="h-4 w-4" />
+                  Chargement des exigences...
+                </div>
+              )}
+
+              {requirementsError && (
+                <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
+                  {requirementsError}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <CoveragePanel
+            requirements={requirements}
+            configuredKeys={configuredKeys}
+            onPickMissing={pickMissingCombination}
+          />
+
+          <PricingList
+            pricing={selectedModePricing}
+            selectedId={selectedPricingId}
+            search={search}
+            onSearchChange={setSearch}
+            onSelect={selectPricing}
+          />
+        </div>
+
+        <Card className="border-border bg-card">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="text-base">
+                  {selectedPricingId ? 'Modifier la grille' : 'Nouvelle grille'}
+                </CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Une grille couvre une route, un type de colis et un mode de transport.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={duplicateCurrent}
+                  disabled={!selectedPricingId}
+                  className="gap-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  Dupliquer
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleCheckSelection()}
+                  disabled={checking}
+                  className="gap-2"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {checking ? 'Verification...' : 'Verifier'}
+                </Button>
+                <Button onClick={() => void handleSave()} disabled={saving} className="gap-2">
+                  <Save className="h-4 w-4" />
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {validationErrors.length > 0 && (
+              <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-4 text-sm text-destructive">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="space-y-1">
+                    {validationErrors.map((item) => (
+                      <p key={item}>{item}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-4 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label>Mode de transport</Label>
-                <Select value={selectedTransportModeId} onValueChange={setSelectedTransportModeId}>
+                <Label>Route</Label>
+                <Select value={routeValue} onValueChange={handleRouteChange}>
                   <SelectTrigger className="bg-secondary">
-                    <SelectValue placeholder="Selectionnez un mode" />
+                    <SelectValue placeholder="Origine -> destination" />
                   </SelectTrigger>
                   <SelectContent>
-                    {transportModes.map((mode) => (
-                      <SelectItem key={mode.id} value={String(mode.id)}>
-                        {mode.name}
+                    {(requirements?.availableRoutes ?? []).map((route) => (
+                      <SelectItem
+                        key={buildRouteKey(route.originCollectionPointId, route.destinationCollectionPointId)}
+                        value={buildRouteKey(route.originCollectionPointId, route.destinationCollectionPointId)}
+                      >
+                        {route.originCollectionPointName}
+                        {' -> '}
+                        {route.destinationCollectionPointName}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-3">
-                <Label>Criteres de calcul</Label>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {CRITERIA.map((criterion) => {
-                    const active = form.selectedCriteria.includes(criterion.id);
-
-                    return (
-                      <button
-                        key={criterion.id}
-                        onClick={() => toggleCriterion(criterion.id)}
-                        className={`rounded-2xl border p-4 text-left transition-colors ${
-                          active ? 'border-primary bg-primary/5' : 'border-border'
-                        }`}
-                      >
-                        <p className="font-medium text-foreground">{criterion.label}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{criterion.hint}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="space-y-2">
+                <Label>Type de colis</Label>
+                <Select value={form.parcelTypeId} onValueChange={handleParcelChange}>
+                  <SelectTrigger className="bg-secondary">
+                    <SelectValue placeholder="Selectionnez un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableParcelTypes.map((parcel) => (
+                      <SelectItem key={parcel.id} value={String(parcel.id)}>
+                        {parcel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {requirementsLoading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner className="h-4 w-4" />
-                  Verification des exigences tarifaires...
-                </div>
-              )}
-
-              {requirements && (
-                <div className="rounded-2xl border border-border bg-secondary/40 p-4 text-sm">
-                  <p className="font-medium text-foreground">Exigences de l'API</p>
-                  <div className="mt-2 space-y-1 text-muted-foreground">
-                    <p>Prix fixe requis: {requirements.fixedPriceRequired ? 'Oui' : 'Non'}</p>
-                    <p>Regles trajet requises: {requirements.distanceRulesRequired ? 'Oui' : 'Non'}</p>
-                    <p>Regles poids requises: {requirements.weightRulesRequired ? 'Oui' : 'Non'}</p>
-                    <p>Regles volume requises: {requirements.volumeRulesRequired ? 'Oui' : 'Non'}</p>
-                    {requirements.weightRulesInstruction && <p>{requirements.weightRulesInstruction}</p>}
-                    {requirements.volumeRulesInstruction && <p>{requirements.volumeRulesInstruction}</p>}
-                  </div>
-                </div>
-              )}
-
-              {form.selectedCriteria.includes('FIXED') && (
-                <div className="space-y-2">
-                  <Label>Prix fixe</Label>
+              <div className="space-y-2">
+                <Label>Surcharge express</Label>
+                <div className="relative">
+                  <Zap className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={form.fixedPrice}
+                    value={form.expressSurcharge}
                     onChange={(event) =>
-                      setForm((current) => ({ ...current, fixedPrice: event.target.value }))
+                      setForm((current) => ({ ...current, expressSurcharge: event.target.value }))
                     }
-                    className="max-w-xs bg-secondary"
-                    placeholder="0.00"
+                    className="bg-secondary pl-9"
+                    placeholder="0"
                   />
                 </div>
-              )}
+              </div>
+            </div>
 
-              {form.selectedCriteria.includes('DISTANCE') && (
-                <div className="space-y-3">
-                  <DistanceRulesEditor
-                    points={collectionPoints}
-                    value={form.distanceRules}
-                    requirements={requirements}
-                    onChange={(distanceRules) =>
-                      setForm((current) => ({ ...current, distanceRules }))
-                    }
-                  />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Criteres de calcul</Label>
+                {activeEnvelope && (
+                  <Badge className="bg-warning/15 text-warning">Enveloppe: prix fixe uniquement</Badge>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {CRITERIA.map((criterion) => {
+                  const Icon = criterion.icon;
+                  const active = form.selectedCriteria.includes(criterion.id);
+                  const disabled = activeEnvelope && criterion.id !== 'FIXED';
+
+                  return (
+                    <button
+                      key={criterion.id}
+                      type="button"
+                      onClick={() => toggleCriterion(criterion.id)}
+                      disabled={disabled}
+                      className={cn(
+                        'rounded-lg border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+                        active ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/70',
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-primary" />
+                        <p className="font-medium text-foreground">{criterion.label}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{criterion.hint}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {requirements && (
+              <div className="grid gap-3 rounded-lg border border-border bg-secondary/40 p-4 text-sm md:grid-cols-2">
+                <div>
+                  <p className="font-medium text-foreground">Exigences backend</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Prix fixe: {requirements.fixedPriceRequired ? 'requis' : 'optionnel'} - Poids:{' '}
+                    {requirements.weightRulesRequired ? 'requis' : 'non requis'} - Volume:{' '}
+                    {requirements.volumeRulesRequired ? 'requis' : 'non requis'}
+                  </p>
                 </div>
-              )}
+                <div>
+                  <p className="font-medium text-foreground">Selection</p>
+                  <p className="mt-1 text-muted-foreground">
+                    {selectedMode?.name ?? 'Mode'} - {selectedParcel?.name ?? 'Type'} - Assurance{' '}
+                    {formatMoney(requirements.defaultInsurancePrice)}
+                  </p>
+                </div>
+              </div>
+            )}
 
-              {form.selectedCriteria.includes('WEIGHT') && (
+            {form.selectedCriteria.includes('FIXED') && (
+              <div className="space-y-2">
+                <Label>Prix fixe</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.fixedPrice}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, fixedPrice: event.target.value }))
+                  }
+                  className="max-w-sm bg-secondary"
+                  placeholder="0"
+                />
+              </div>
+            )}
+
+            {form.selectedCriteria.includes('WEIGHT') && (
+              <div className="space-y-4">
+                <div className="max-w-sm space-y-2">
+                  <Label>Application du poids</Label>
+                  <Select
+                    value={form.weightApplicationMode}
+                    onValueChange={(value: PricingApplicationMode) =>
+                      setForm((current) => ({ ...current, weightApplicationMode: value }))
+                    }
+                  >
+                    <SelectTrigger className="bg-secondary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {APPLICATION_MODES.map((mode) => (
+                        <SelectItem key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <RangeRulesEditor
                   title="Tranches de poids"
                   unit="kg"
+                  instruction={requirements?.weightRulesInstruction}
                   value={form.weightRules}
-                  onChange={(weightRules) => setForm((current) => ({ ...current, weightRules }))}
+                  onChange={(weightRules) =>
+                    setForm((current) => ({ ...current, weightRules }))
+                  }
                 />
-              )}
+              </div>
+            )}
 
-              {form.selectedCriteria.includes('VOLUME') && (
+            {form.selectedCriteria.includes('VOLUME') && (
+              <div className="space-y-4">
+                <div className="max-w-sm space-y-2">
+                  <Label>Application du volume</Label>
+                  <Select
+                    value={form.volumeApplicationMode}
+                    onValueChange={(value: PricingApplicationMode) =>
+                      setForm((current) => ({ ...current, volumeApplicationMode: value }))
+                    }
+                  >
+                    <SelectTrigger className="bg-secondary">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {APPLICATION_MODES.map((mode) => (
+                        <SelectItem key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <RangeRulesEditor
                   title="Tranches de volume"
                   unit="m3"
+                  instruction={requirements?.volumeRulesInstruction}
                   value={form.volumeRules}
-                  onChange={(volumeRules) => setForm((current) => ({ ...current, volumeRules }))}
+                  onChange={(volumeRules) =>
+                    setForm((current) => ({ ...current, volumeRules }))
+                  }
                 />
-              )}
-            </CardContent>
-          </Card>
-
-          {selectedPricing && (
-            <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="text-base">Derniere configuration enregistree</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  Mode:{' '}
-                  <span className="font-medium text-foreground">
-                    {selectedPricing.transportModeName}
-                  </span>
-                </p>
-                <p>
-                  Criteres:{' '}
-                  <span className="font-medium text-foreground">
-                    {formatCriterionList(selectedPricing.selectedCriteria)}
-                  </span>
-                </p>
-                <p>
-                  Trajet:{' '}
-                  <span className="font-medium text-foreground">
-                    {selectedPricing.distanceRules.length} regle(s)
-                  </span>
-                </p>
-                <p>
-                  Poids:{' '}
-                  <span className="font-medium text-foreground">
-                    {selectedPricing.weightRules.length} tranche(s)
-                  </span>
-                </p>
-                <p>
-                  Volume:{' '}
-                  <span className="font-medium text-foreground">
-                    {selectedPricing.volumeRules.length} tranche(s)
-                  </span>
-                </p>
-                {selectedPricing.updatedAt && (
-                  <p>
-                    Mis a jour le{' '}
-                    <span className="font-medium text-foreground">
-                      {new Date(selectedPricing.updatedAt).toLocaleString()}
-                    </span>
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

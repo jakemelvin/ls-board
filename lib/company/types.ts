@@ -207,13 +207,8 @@ export interface FlotteStatusUpdateRequest {
 
 // Pricing
 
-export type PricingCriterion = 'FIXED' | 'DISTANCE' | 'WEIGHT' | 'VOLUME';
-
-export interface CompanyPricingDistanceRuleRequest {
-  originCollectionPointId: number;
-  destinationCollectionPointId: number;
-  amount: number;
-}
+export type PricingCriterion = 'FIXED' | 'WEIGHT' | 'VOLUME';
+export type PricingApplicationMode = 'PROPORTIONAL' | 'ROUND_UP_UNIT';
 
 export interface CompanyPricingRangeRuleRequest {
   minValue: number;
@@ -222,20 +217,23 @@ export interface CompanyPricingRangeRuleRequest {
 }
 
 export interface CompanyPricingRequest {
+  originCollectionPointId: number;
+  destinationCollectionPointId: number;
+  parcelTypeId: number;
   selectedCriteria: PricingCriterion[];
   fixedPrice?: number;
-  distanceRules?: CompanyPricingDistanceRuleRequest[];
+  expressSurcharge?: number;
+  weightApplicationMode?: PricingApplicationMode;
+  volumeApplicationMode?: PricingApplicationMode;
   weightRules?: CompanyPricingRangeRuleRequest[];
   volumeRules?: CompanyPricingRangeRuleRequest[];
 }
 
-export interface CompanyPricingDistanceRuleResponse {
-  id: number;
+export interface CompanyPricingRouteResponse {
   originCollectionPointId: number;
   originCollectionPointName: string;
   destinationCollectionPointId: number;
   destinationCollectionPointName: string;
-  amount: number;
 }
 
 export interface CompanyPricingRangeRuleResponse {
@@ -250,9 +248,18 @@ export interface CompanyPricingResponse {
   companyId: number;
   transportModeId: number;
   transportModeName: string;
+  originCollectionPointId: number;
+  originCollectionPointName: string;
+  destinationCollectionPointId: number;
+  destinationCollectionPointName: string;
+  parcelTypeId: number;
+  parcelTypeName: string;
   selectedCriteria: PricingCriterion[];
   fixedPrice?: number;
-  distanceRules: CompanyPricingDistanceRuleResponse[];
+  expressSurcharge?: number;
+  insurancePrice?: number;
+  weightApplicationMode?: PricingApplicationMode;
+  volumeApplicationMode?: PricingApplicationMode;
   weightRules: CompanyPricingRangeRuleResponse[];
   volumeRules: CompanyPricingRangeRuleResponse[];
   createdBy?: string;
@@ -262,13 +269,9 @@ export interface CompanyPricingResponse {
 
 export interface CompanyPricingRequirementsRequest {
   selectedCriteria: PricingCriterion[];
-}
-
-export interface CompanyPricingRequiredDistancePairResponse {
-  originCollectionPointId: number;
-  originCollectionPointName: string;
-  destinationCollectionPointId: number;
-  destinationCollectionPointName: string;
+  originCollectionPointId?: number;
+  destinationCollectionPointId?: number;
+  parcelTypeId?: number;
 }
 
 export interface CompanyPricingRequirementsResponse {
@@ -276,11 +279,14 @@ export interface CompanyPricingRequirementsResponse {
   transportModeId: number;
   transportModeName: string;
   selectedCriteria: PricingCriterion[];
+  availableRoutes: CompanyPricingRouteResponse[];
+  availableParcelTypes: ParcelTypeResponse[];
   fixedPriceRequired: boolean;
-  distanceRulesRequired: boolean;
   weightRulesRequired: boolean;
   volumeRulesRequired: boolean;
-  requiredDistancePairs: CompanyPricingRequiredDistancePairResponse[];
+  weightApplicationModeRequired: boolean;
+  volumeApplicationModeRequired: boolean;
+  defaultInsurancePrice?: number;
   weightRulesInstruction?: string;
   volumeRulesInstruction?: string;
 }

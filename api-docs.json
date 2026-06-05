@@ -1325,7 +1325,10 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/CompanyPricingResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyPricingResponse"
+                  }
                 }
               }
             }
@@ -2830,6 +2833,54 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ShipmentTransmissionRequestResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/delivery/shipments/simulate-price": {
+      "post": {
+        "tags": [
+          "shipment-controller"
+        ],
+        "operationId": "simulateShipmentPriceFromMultipart",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "$ref": "#/components/schemas/ShipmentCreateRequest"
+                  }
+                },
+                "required": [
+                  "data"
+                ]
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipmentCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentPriceSimulationResponse"
                 }
               }
             }
@@ -4492,6 +4543,51 @@
         ]
       }
     },
+    "/api/delivery/companies/{companyId}/collection-points/{pointId}/activate": {
+      "patch": {
+        "tags": [
+          "collection-point-controller"
+        ],
+        "operationId": "activatePoint",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/delivery/companies/{companyId}/announcements/{announcementId}/renew": {
       "patch": {
         "tags": [
@@ -5672,6 +5768,78 @@
         ]
       }
     },
+    "/api/delivery/companies/{companyId}/pricing/{transportModeId}/routes/{originCollectionPointId}/{destinationCollectionPointId}/parcel-types/{parcelTypeId}": {
+      "get": {
+        "tags": [
+          "company-pricing-controller"
+        ],
+        "operationId": "getCompanyPricingBySelection",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "transportModeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "originCollectionPointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "destinationCollectionPointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "parcelTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyPricingResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/countries": {
       "get": {
         "tags": [
@@ -6591,28 +6759,6 @@
           }
         }
       },
-      "CompanyPricingDistanceRuleRequest": {
-        "type": "object",
-        "properties": {
-          "originCollectionPointId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "destinationCollectionPointId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "amount": {
-            "type": "number",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "amount",
-          "destinationCollectionPointId",
-          "originCollectionPointId"
-        ]
-      },
       "CompanyPricingRangeRuleRequest": {
         "type": "object",
         "properties": {
@@ -6637,13 +6783,24 @@
       "CompanyPricingRequest": {
         "type": "object",
         "properties": {
+          "originCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "destinationCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "parcelTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
           "selectedCriteria": {
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "FIXED",
-                "DISTANCE",
                 "WEIGHT",
                 "VOLUME"
               ]
@@ -6655,11 +6812,23 @@
             "type": "number",
             "minimum": 0
           },
-          "distanceRules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CompanyPricingDistanceRuleRequest"
-            }
+          "expressSurcharge": {
+            "type": "number",
+            "minimum": 0
+          },
+          "weightApplicationMode": {
+            "type": "string",
+            "enum": [
+              "PROPORTIONAL",
+              "ROUND_UP_UNIT"
+            ]
+          },
+          "volumeApplicationMode": {
+            "type": "string",
+            "enum": [
+              "PROPORTIONAL",
+              "ROUND_UP_UNIT"
+            ]
           },
           "weightRules": {
             "type": "array",
@@ -6675,34 +6844,11 @@
           }
         },
         "required": [
+          "destinationCollectionPointId",
+          "originCollectionPointId",
+          "parcelTypeId",
           "selectedCriteria"
         ]
-      },
-      "CompanyPricingDistanceRuleResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "originCollectionPointId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "originCollectionPointName": {
-            "type": "string"
-          },
-          "destinationCollectionPointId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "destinationCollectionPointName": {
-            "type": "string"
-          },
-          "amount": {
-            "type": "number"
-          }
-        }
       },
       "CompanyPricingRangeRuleResponse": {
         "type": "object",
@@ -6740,13 +6886,33 @@
           "transportModeName": {
             "type": "string"
           },
+          "originCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "originCollectionPointName": {
+            "type": "string"
+          },
+          "destinationCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "destinationCollectionPointName": {
+            "type": "string"
+          },
+          "parcelTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "parcelTypeName": {
+            "type": "string"
+          },
           "selectedCriteria": {
             "type": "array",
             "items": {
               "type": "string",
               "enum": [
                 "FIXED",
-                "DISTANCE",
                 "WEIGHT",
                 "VOLUME"
               ]
@@ -6756,11 +6922,25 @@
           "fixedPrice": {
             "type": "number"
           },
-          "distanceRules": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CompanyPricingDistanceRuleResponse"
-            }
+          "expressSurcharge": {
+            "type": "number"
+          },
+          "insurancePrice": {
+            "type": "number"
+          },
+          "weightApplicationMode": {
+            "type": "string",
+            "enum": [
+              "PROPORTIONAL",
+              "ROUND_UP_UNIT"
+            ]
+          },
+          "volumeApplicationMode": {
+            "type": "string",
+            "enum": [
+              "PROPORTIONAL",
+              "ROUND_UP_UNIT"
+            ]
           },
           "weightRules": {
             "type": "array",
@@ -7641,6 +7821,12 @@
           "companyPrice": {
             "type": "number"
           },
+          "expressSurchargeAmount": {
+            "type": "number"
+          },
+          "insuranceAmount": {
+            "type": "number"
+          },
           "feeAmount": {
             "type": "number"
           },
@@ -8207,6 +8393,118 @@
           }
         }
       },
+      "ShipmentPriceSimulationResponse": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "originCountryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "originCountryName": {
+            "type": "string"
+          },
+          "originCityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "originCityName": {
+            "type": "string"
+          },
+          "destinationCountryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "destinationCountryName": {
+            "type": "string"
+          },
+          "destinationCityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "destinationCityName": {
+            "type": "string"
+          },
+          "transportModeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "transportModeName": {
+            "type": "string"
+          },
+          "parcelTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "parcelTypeName": {
+            "type": "string"
+          },
+          "originCollectionPoint": {
+            "$ref": "#/components/schemas/ShipmentCollectionPointOptionResponse"
+          },
+          "destinationCollectionPoint": {
+            "$ref": "#/components/schemas/ShipmentCollectionPointOptionResponse"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "STANDARD",
+              "EXPRESS"
+            ]
+          },
+          "paymentCollectionMode": {
+            "type": "string",
+            "enum": [
+              "PLATFORM",
+              "COLLECTION_POINT"
+            ]
+          },
+          "expectedPaymentStatus": {
+            "type": "string",
+            "enum": [
+              "UNPAID",
+              "PAID",
+              "PAYMENT_AT_COLLECTION_POINT"
+            ]
+          },
+          "baseCompanyPrice": {
+            "type": "number"
+          },
+          "expressSurchargeAmount": {
+            "type": "number"
+          },
+          "insuranceAmount": {
+            "type": "number"
+          },
+          "totalCompanyPrice": {
+            "type": "number"
+          },
+          "feeAmount": {
+            "type": "number"
+          },
+          "discountAmount": {
+            "type": "number"
+          },
+          "totalBeforeDiscount": {
+            "type": "number"
+          },
+          "totalToPay": {
+            "type": "number"
+          },
+          "promoCode": {
+            "type": "string"
+          },
+          "promoCodeApplied": {
+            "type": "boolean"
+          }
+        }
+      },
       "ShipmentReceptionValidationRequest": {
         "type": "object",
         "properties": {
@@ -8549,35 +8847,23 @@
               "type": "string",
               "enum": [
                 "FIXED",
-                "DISTANCE",
                 "WEIGHT",
                 "VOLUME"
               ]
             },
-            "minItems": 1,
             "uniqueItems": true
-          }
-        },
-        "required": [
-          "selectedCriteria"
-        ]
-      },
-      "CompanyPricingRequiredDistancePairResponse": {
-        "type": "object",
-        "properties": {
+          },
           "originCollectionPointId": {
             "type": "integer",
             "format": "int64"
-          },
-          "originCollectionPointName": {
-            "type": "string"
           },
           "destinationCollectionPointId": {
             "type": "integer",
             "format": "int64"
           },
-          "destinationCollectionPointName": {
-            "type": "string"
+          "parcelTypeId": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -8601,17 +8887,25 @@
               "type": "string",
               "enum": [
                 "FIXED",
-                "DISTANCE",
                 "WEIGHT",
                 "VOLUME"
               ]
             },
             "uniqueItems": true
           },
-          "fixedPriceRequired": {
-            "type": "boolean"
+          "availableRoutes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompanyPricingRouteResponse"
+            }
           },
-          "distanceRulesRequired": {
+          "availableParcelTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParcelTypeResponse"
+            }
+          },
+          "fixedPriceRequired": {
             "type": "boolean"
           },
           "weightRulesRequired": {
@@ -8620,16 +8914,38 @@
           "volumeRulesRequired": {
             "type": "boolean"
           },
-          "requiredDistancePairs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CompanyPricingRequiredDistancePairResponse"
-            }
+          "weightApplicationModeRequired": {
+            "type": "boolean"
+          },
+          "volumeApplicationModeRequired": {
+            "type": "boolean"
+          },
+          "defaultInsurancePrice": {
+            "type": "number"
           },
           "weightRulesInstruction": {
             "type": "string"
           },
           "volumeRulesInstruction": {
+            "type": "string"
+          }
+        }
+      },
+      "CompanyPricingRouteResponse": {
+        "type": "object",
+        "properties": {
+          "originCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "originCollectionPointName": {
+            "type": "string"
+          },
+          "destinationCollectionPointId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "destinationCollectionPointName": {
             "type": "string"
           }
         }
@@ -9919,6 +10235,12 @@
             "format": "int32"
           },
           "missingPricingTransportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missingPricingConfigurations": {
             "type": "array",
             "items": {
               "type": "string"

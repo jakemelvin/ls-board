@@ -135,6 +135,11 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     () => cities.filter((city) => String(city.countryId) === form.destinationCountryId),
     [cities, form.destinationCountryId],
   );
+  const selectedParcelType = useMemo(
+    () => parcelTypes.find((type) => String(type.id) === form.parcelTypeId),
+    [form.parcelTypeId, parcelTypes],
+  );
+  const isEnvelopeParcel = selectedParcelType ? isEnvelopeParcelType(selectedParcelType) : false;
 
   const routeReady = Boolean(
     form.originCountryId &&
@@ -409,6 +414,32 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     token,
   ]);
 
+  useEffect(() => {
+    if (!isEnvelopeParcel) {
+      return;
+    }
+
+    setForm((current) =>
+      current.weightKg || current.volumeM3
+        ? {
+            ...current,
+            weightKg: '',
+            volumeM3: '',
+          }
+        : current,
+    );
+    setErrors((current) => {
+      if (!current.weightKg && !current.volumeM3) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next.weightKg;
+      delete next.volumeM3;
+      return next;
+    });
+  }, [isEnvelopeParcel]);
+
   function updateField<Key extends keyof ShipmentCreateFormState>(
     field: Key,
     value: ShipmentCreateFormState[Key],
@@ -474,6 +505,9 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   }
 
   function handleParcelTypeChange(value: string) {
+    const nextParcelType = parcelTypes.find((type) => String(type.id) === value);
+    const nextIsEnvelopeParcel = nextParcelType ? isEnvelopeParcelType(nextParcelType) : false;
+
     updateField('parcelTypeId', value);
     setForm((current) => ({
       ...current,
@@ -481,7 +515,19 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       companyId: '',
       originCollectionPointId: '',
       destinationCollectionPointId: '',
+      weightKg: nextIsEnvelopeParcel ? '' : current.weightKg,
+      volumeM3: nextIsEnvelopeParcel ? '' : current.volumeM3,
     }));
+    setErrors((current) => {
+      if (!nextIsEnvelopeParcel || (!current.weightKg && !current.volumeM3)) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next.weightKg;
+      delete next.volumeM3;
+      return next;
+    });
     setCompanies([]);
     setOriginCollectionPoints([]);
     setDestinationCollectionPoints([]);
@@ -543,11 +589,11 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       nextErrors.receiverWhatsappNumber = 'Le telephone du destinataire est requis.';
     }
 
-    if (form.weightKg && Number(form.weightKg) < 0) {
+    if (!isEnvelopeParcel && form.weightKg && Number(form.weightKg) < 0) {
       nextErrors.weightKg = 'Le poids doit etre positif.';
     }
 
-    if (form.volumeM3 && Number(form.volumeM3) < 0) {
+    if (!isEnvelopeParcel && form.volumeM3 && Number(form.volumeM3) < 0) {
       nextErrors.volumeM3 = 'Le volume doit etre positif.';
     }
 
@@ -578,8 +624,12 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       priority: form.priority,
       description: normalizeOptionalString(form.description),
       promoCode: normalizeOptionalString(form.promoCode),
-      weightKg: toOptionalNumber(form.weightKg),
-      volumeM3: toOptionalNumber(form.volumeM3),
+      ...(isEnvelopeParcel
+        ? {}
+        : {
+            weightKg: toOptionalNumber(form.weightKg),
+            volumeM3: toOptionalNumber(form.volumeM3),
+          }),
       senderUsesRegisteredProfile: false,
       sender: {
         fullName: form.senderFullName.trim(),
@@ -903,7 +953,9 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     value={form.weightKg}
                     onChange={(event) => updateField('weightKg', event.target.value)}
                     error={errors.weightKg}
-                    placeholder="5.50"
+                    hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
+                    disabled={isEnvelopeParcel}
+                    placeholder={isEnvelopeParcel ? 'Non applicable' : '5.50'}
                   />
                   <InputField
                     label="Volume (m3)"
@@ -913,7 +965,9 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     value={form.volumeM3}
                     onChange={(event) => updateField('volumeM3', event.target.value)}
                     error={errors.volumeM3}
-                    placeholder="0.250"
+                    hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
+                    disabled={isEnvelopeParcel}
+                    placeholder={isEnvelopeParcel ? 'Non applicable' : '0.250'}
                   />
                   <InputField
                     label="Code promo"
@@ -1190,6 +1244,18 @@ function getCityName(cities: CityResponse[], cityId: string) {
 
 function buildCollectionPointLabel(point: ShipmentCollectionPointOption) {
   return [point.name, point.cityName, point.countryName].filter(Boolean).join(' • ');
+}
+
+function isEnvelopeParcelType(parcelType: ParcelTypeResponse) {
+  return normalizeCatalogName(parcelType.name).includes('enveloppe');
+}
+
+function normalizeCatalogName(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 function normalizeOptionalString(value: string) {

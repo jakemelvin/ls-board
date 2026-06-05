@@ -459,9 +459,23 @@ export function getCompanyPricingByTransportMode(
   token: string,
   companyId: number,
   transportModeId: number,
+): Promise<CompanyPricingResponse[]> {
+  return apiClient.get<CompanyPricingResponse[]>(
+    `/api/delivery/companies/${companyId}/pricing/${transportModeId}`,
+    token,
+  );
+}
+
+export function getCompanyPricingBySelection(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+  originCollectionPointId: number,
+  destinationCollectionPointId: number,
+  parcelTypeId: number,
 ): Promise<CompanyPricingResponse> {
   return apiClient.get<CompanyPricingResponse>(
-    `/api/delivery/companies/${companyId}/pricing/${transportModeId}`,
+    `/api/delivery/companies/${companyId}/pricing/${transportModeId}/routes/${originCollectionPointId}/${destinationCollectionPointId}/parcel-types/${parcelTypeId}`,
     token,
   );
 }

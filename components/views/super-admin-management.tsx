@@ -124,14 +124,15 @@ function ConfirmDialog({
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
         </div>
-        <div className="flex gap-3 justify-end">
-          <Button variant="outline" onClick={onCancel} disabled={loading}>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={onCancel} disabled={loading} className="w-full sm:w-auto">
             Annuler
           </Button>
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={onConfirm}
             disabled={loading}
+            className="w-full sm:w-auto"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -428,7 +429,7 @@ function PaginationBar({
   onPageChange: (p: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between px-1 py-3 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 px-1 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <span>{totalElements} résultat{totalElements !== 1 ? 's' : ''}</span>
       <div className="flex items-center gap-2">
         <Button
@@ -701,7 +702,7 @@ function CreateCompanyDialog({
                 {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Email entreprise</Label>
                   <input type="email" className={inputCls()} placeholder="contact@sendam.com" value={form.email} onChange={set('email')} />
@@ -719,7 +720,7 @@ function CreateCompanyDialog({
                 {errors.companyUrl && <p className="text-xs text-destructive">{errors.companyUrl}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Pays *</Label>
                   <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
@@ -744,7 +745,7 @@ function CreateCompanyDialog({
 
               <div className="space-y-1.5">
                 <Label>Mode de collecte des paiements</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {([
                     { value: 'PLATFORM', label: 'Via la plateforme' },
                     { value: 'COLLECTION_POINT', label: 'Aux points de collecte' },
@@ -801,7 +802,7 @@ function CreateCompanyDialog({
           {/* ── Admin tab ── */}
           {tab === 'admin' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Prénom *</Label>
                   <input className={inputCls(errors.firstName)} placeholder="Jean" value={form.firstName} onChange={set('firstName')} />
@@ -820,7 +821,7 @@ function CreateCompanyDialog({
                 {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Email personnel</Label>
                   <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.adminEmail} onChange={set('adminEmail')} />
@@ -850,7 +851,7 @@ function CreateCompanyDialog({
                 {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Langue</Label>
                   <select className={selectCls()} value={form.language} onChange={set('language')}>
@@ -879,7 +880,7 @@ function CreateCompanyDialog({
                   Lieu de résidence de l'administrateur — pré-rempli depuis l'entreprise, modifiable s'il réside ailleurs.
                 </p>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Pays *</Label>
                     <select className={selectCls(errors.adminCountryId)} value={form.adminCountryId} onChange={set('adminCountryId')} disabled={countriesLoading}>
@@ -956,6 +957,7 @@ function CompaniesTab({ token }: { token: string }) {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [readiness, setReadiness] = useState<CompanyOperationalReadiness | null>(null);
   const [readinessLoading, setReadinessLoading] = useState<number | null>(null);
+  const [confirmApprove, setConfirmApprove] = useState<CompanyResponse | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CompanyResponse | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -973,10 +975,11 @@ function CompaniesTab({ token }: { token: string }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleApprove = async (company: CompanyResponse) => {
-    setActionLoading(company.id);
+  const handleApprove = async () => {
+    if (!confirmApprove) return;
+    setActionLoading(confirmApprove.id);
     try {
-      const updated = await approveCompany(token, company.id);
+      const updated = await approveCompany(token, confirmApprove.id);
       setData((prev) =>
         prev
           ? {
@@ -985,11 +988,12 @@ function CompaniesTab({ token }: { token: string }) {
             }
           : prev,
       );
-      success(`${company.name} approuvée`);
+      success(`${confirmApprove.name} approuvée`);
     } catch (err) {
       showError(err instanceof ApiError ? err.message : 'Erreur lors de l\'approbation');
     } finally {
       setActionLoading(null);
+      setConfirmApprove(null);
     }
   };
 
@@ -1052,6 +1056,15 @@ function CompaniesTab({ token }: { token: string }) {
       <ToastBar toast={toast} />
       <ReadinessDialog data={readiness} onClose={() => setReadiness(null)} />
       <ConfirmDialog
+        open={!!confirmApprove}
+        title="Approuver l'entreprise"
+        description={`Confirmer l'approbation de "${confirmApprove?.name}" ? L'entreprise pourra ensuite exploiter la plateforme selon sa configuration.`}
+        confirmLabel="Approuver"
+        loading={actionLoading === confirmApprove?.id}
+        onConfirm={handleApprove}
+        onCancel={() => setConfirmApprove(null)}
+      />
+      <ConfirmDialog
         open={!!confirmDelete}
         title="Supprimer l'entreprise"
         description={`Êtes-vous sûr de vouloir supprimer "${confirmDelete?.name}" ? Cette action est irréversible.`}
@@ -1062,17 +1075,131 @@ function CompaniesTab({ token }: { token: string }) {
         onCancel={() => setConfirmDelete(null)}
       />
 
-      <div className="flex items-center justify-between pb-2">
+      <div className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {data?.totalElements ?? 0} entreprise{(data?.totalElements ?? 0) !== 1 ? 's' : ''}
         </p>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button size="sm" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           <Building2 className="mr-2 h-4 w-4" />
           Créer une entreprise
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="space-y-3 md:hidden">
+        {data?.content.length === 0 && (
+          <div className="rounded-xl border border-border py-10 text-center text-sm text-muted-foreground">
+            Aucune entreprise trouvée
+          </div>
+        )}
+        {data?.content.map((company) => (
+          <div key={company.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <p className="break-words font-semibold text-foreground">{company.name}</p>
+                {company.companyUrl && (
+                  <a
+                    href={company.companyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{company.companyUrl.replace(/^https?:\/\//, '')}</span>
+                  </a>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <Badge
+                  className={
+                    company.approved
+                      ? 'bg-success/20 text-success'
+                      : 'bg-warning/20 text-warning'
+                  }
+                >
+                  {company.approved ? (
+                    <><CheckCircle2 className="h-3 w-3" />Approuvée</>
+                  ) : (
+                    <><Info className="h-3 w-3" />En attente</>
+                  )}
+                </Badge>
+                {company.exploitable && (
+                  <Badge className="bg-primary/20 text-primary">
+                    <Shield className="h-3 w-3" />Opérationnelle
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact</p>
+                <p className="break-words text-foreground">{company.phone || '—'}</p>
+                {company.email && <p className="break-words text-xs text-muted-foreground">{company.email}</p>}
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Localisation</p>
+                <p className="text-foreground">{company.country?.countryName ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">{company.city}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Admin</p>
+                <p className="text-foreground">{company.adminUsername ?? '—'}</p>
+                {company.adminId && <p className="text-xs text-muted-foreground">ID #{company.adminId}</p>}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleReadiness(company)}
+                disabled={readinessLoading === company.id}
+                title="Vérifier opérationnalité"
+                className="px-2"
+              >
+                {readinessLoading === company.id ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+              {!company.approved ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setConfirmApprove(company)}
+                  disabled={actionLoading === company.id}
+                  title="Approuver"
+                  className="px-2"
+                >
+                  {actionLoading === company.id ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" size="sm" disabled className="px-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDelete(company)}
+                title="Supprimer"
+                className="px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1165,7 +1292,7 @@ function CompaniesTab({ token }: { token: string }) {
                     {/* Approve */}
                     {!company.approved && (
                       <button
-                        onClick={() => handleApprove(company)}
+                        onClick={() => setConfirmApprove(company)}
                         disabled={actionLoading === company.id}
                         title="Approuver"
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-success transition-colors hover:bg-success/10 disabled:opacity-40"
@@ -1393,7 +1520,7 @@ function CreateUserDialog({
           )}
 
           {/* Name */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Prénom *</Label>
               <input className={inputCls(errors.firstName)} placeholder="Jean" value={form.firstName} onChange={set('firstName')} />
@@ -1414,7 +1541,7 @@ function CreateUserDialog({
           </div>
 
           {/* Email + Phone */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Email</Label>
               <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.email} onChange={set('email')} />
@@ -1450,7 +1577,7 @@ function CreateUserDialog({
           </div>
 
           {/* Role + Language */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Rôle *</Label>
               <select className={selectCls(errors.role)} value={form.role} onChange={set('role')}>
@@ -1471,7 +1598,7 @@ function CreateUserDialog({
           </div>
 
           {/* Country + City */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Pays *</Label>
               <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
@@ -1490,7 +1617,7 @@ function CreateUserDialog({
           </div>
 
           {/* Address + ID card */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Adresse</Label>
               <input className={inputCls()} placeholder="12 Rue de la Paix" value={form.address} onChange={set('address')} />
@@ -1502,14 +1629,14 @@ function CreateUserDialog({
           </div>
 
           {/* Commission + Gender */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {showCommission && (
               <div className="space-y-1.5">
                 <Label>Commission (%)</Label>
                 <input type="number" min="0" max="100" step="0.1" className={inputCls()} placeholder="10.5" value={form.commissionPercentage} onChange={set('commissionPercentage')} />
               </div>
             )}
-            <div className={cn('space-y-1.5', !showCommission && 'col-span-2')}>
+            <div className={cn('space-y-1.5', !showCommission && 'sm:col-span-2')}>
               <Label>Genre</Label>
               <select className={selectCls()} value={form.gender} onChange={set('gender')}>
                 <option value="">Non précisé</option>
@@ -1775,17 +1902,118 @@ function UsersTab({ token }: { token: string }) {
         onCancel={closeAction}
       />
 
-      <div className="flex items-center justify-between pb-2">
+      <div className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {data?.totalElements ?? 0} utilisateur{(data?.totalElements ?? 0) !== 1 ? 's' : ''}
         </p>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button size="sm" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           <UserPlus className="mr-2 h-4 w-4" />
           Créer un utilisateur
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="space-y-3 md:hidden">
+        {data?.content.length === 0 && (
+          <div className="rounded-xl border border-border py-10 text-center text-sm text-muted-foreground">
+            Aucun utilisateur trouvé
+          </div>
+        )}
+        {data?.content.map((user) => {
+          const statusCfg = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.INACTIVE;
+          return (
+            <div key={user.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="break-words font-semibold text-foreground">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="break-words text-xs text-muted-foreground">@{user.username}</p>
+                  {user.email && <p className="break-words text-xs text-muted-foreground">{user.email}</p>}
+                </div>
+                <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rôle</p>
+                  <Badge className="bg-secondary text-secondary-foreground">
+                    {ROLE_LABELS[user.role] ?? user.role}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact</p>
+                  <p className="break-words text-foreground">{user.phone}</p>
+                  {user.city && <p className="text-xs text-muted-foreground">{user.city}</p>}
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Commission</p>
+                  {user.commissionPercentage != null ? (
+                    <p className="font-medium text-foreground">{user.commissionPercentage}%</p>
+                  ) : (
+                    <p className="text-muted-foreground">—</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-5 gap-2">
+                {user.status !== 'ACTIVE' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleActivate(user)}
+                    disabled={isLoading(user.id)}
+                    title="Activer"
+                    className="px-2"
+                  >
+                    {isLoading(user.id) ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Shield className="h-4 w-4" />
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSuspend(user)}
+                    disabled={isLoading(user.id)}
+                    title="Suspendre"
+                    className="px-2 text-warning hover:bg-warning/10 hover:text-warning"
+                  >
+                    {isLoading(user.id) ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={() => openAction(user, 'phone')} title="Modifier téléphone" className="px-2">
+                  <Phone className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => openAction(user, 'password')} title="Changer mot de passe" className="px-2">
+                  <Lock className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => openAction(user, 'commission')} title="Modifier commission" className="px-2">
+                  <Percent className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openAction(user, 'delete')}
+                  title="Supprimer"
+                  className="px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1963,11 +2191,11 @@ export function SuperAdminManagement() {
   if (!token) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Administration</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-foreground sm:text-2xl">Administration</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Gestion des entreprises et utilisateurs de la plateforme
           </p>
@@ -1976,7 +2204,7 @@ export function SuperAdminManagement() {
           variant="outline"
           size="sm"
           onClick={() => setRefreshKey((k) => k + 1)}
-          className="shrink-0"
+          className="w-full shrink-0 sm:w-auto"
         >
           <RefreshCw className="mr-2 h-3.5 w-3.5" />
           Actualiser
@@ -1984,13 +2212,13 @@ export function SuperAdminManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-muted p-1 w-fit">
+      <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:flex sm:w-fit">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
             className={cn(
-              'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4',
               activeTab === id
                 ? 'bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',
