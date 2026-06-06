@@ -1,6 +1,6 @@
 'use client';
 
-import { Boxes, LayoutDashboard, Map, Menu, ShieldCheck } from 'lucide-react';
+import { Boxes, CreditCard, LayoutDashboard, Map, Menu, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -29,6 +29,7 @@ const primaryItems = [
 const SUPER_ADMIN_ITEMS = [
   { id: 'super-admin', label: 'Administration', icon: ShieldCheck },
   { id: 'catalog', label: 'Catalogue', icon: Boxes },
+  { id: 'platform-finance', label: 'Finance', icon: CreditCard },
 ];
 
 export function DashboardMobileNav({

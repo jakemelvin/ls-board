@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { OperationalReadinessDialog } from '@/components/company/operational-readiness';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -291,90 +292,6 @@ function PasswordDialog({
             ) : 'Enregistrer'}
           </Button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Operational readiness dialog ─────────────────────────────────────────
-
-function ReadinessDialog({
-  data,
-  onClose,
-}: {
-  data: CompanyOperationalReadiness | null;
-  onClose: () => void;
-}) {
-  if (!data) return null;
-
-  const checks = [
-    { label: 'Types de colis', ok: data.parcelTypesConfigured, count: data.parcelTypeCount },
-    { label: 'Modes de transport', ok: data.transportModesConfigured, count: data.transportModeCount },
-    { label: 'Tarification', ok: data.pricingConfigured, count: data.pricingCount },
-    { label: 'Zones géographiques', ok: data.zonesConfigured, count: data.zoneCount },
-    { label: 'Points de collecte', ok: data.collectionPointsConfigured, count: data.collectionPointCount },
-    { label: 'Responsables points', ok: data.collectionPointResponsiblesConfigured },
-    { label: 'Transporteurs', ok: data.transportersConfigured, count: data.transporterCount },
-    { label: 'Flottes assignées', ok: data.assignedFlottesConfigured, count: data.assignedFlotteCount },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-xl space-y-5 max-h-[90dvh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-foreground">{data.companyName}</h3>
-            <p className="text-sm text-muted-foreground">Vérification opérationnelle</p>
-          </div>
-          <Badge
-            className={data.exploitable ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}
-          >
-            {data.exploitable ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-            {data.exploitable ? 'Opérationnelle' : 'Non opérationnelle'}
-          </Badge>
-        </div>
-
-        <div className="space-y-2">
-          {checks.map((check) => (
-            <div
-              key={check.label}
-              className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-2.5"
-            >
-              <div className="flex items-center gap-2.5">
-                {check.ok ? (
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-destructive" />
-                )}
-                <span className="text-sm text-foreground">{check.label}</span>
-              </div>
-              {check.count !== undefined && (
-                <span className="text-sm font-medium text-muted-foreground">{check.count}</span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {data.missingItems.length > 0 && (
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 space-y-2">
-            <p className="text-sm font-semibold text-warning">Éléments manquants</p>
-            <ul className="space-y-1">
-              {data.missingItems.map((item) => (
-                <li key={item} className="text-xs text-warning/80 flex items-start gap-1.5">
-                  <span className="mt-0.5 text-warning">•</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {data.summary && (
-          <p className="text-xs text-muted-foreground bg-muted/30 rounded-xl px-4 py-3">{data.summary}</p>
-        )}
-
-        <Button variant="outline" className="w-full" onClick={onClose}>Fermer</Button>
       </div>
     </div>
   );
@@ -1054,7 +971,7 @@ function CompaniesTab({ token }: { token: string }) {
         onClose={() => setCreateOpen(false)}
       />
       <ToastBar toast={toast} />
-      <ReadinessDialog data={readiness} onClose={() => setReadiness(null)} />
+      <OperationalReadinessDialog data={readiness} onClose={() => setReadiness(null)} />
       <ConfirmDialog
         open={!!confirmApprove}
         title="Approuver l'entreprise"

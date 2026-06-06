@@ -290,3 +290,43 @@ export interface CompanyPricingRequirementsResponse {
   weightRulesInstruction?: string;
   volumeRulesInstruction?: string;
 }
+
+// Delivery estimates
+
+export type DeliveryEstimateUnit = 'HOURS' | 'DAYS';
+
+export interface CompanyDeliveryEstimateRequest {
+  originCollectionPointId: number;
+  destinationCollectionPointId: number;
+  parcelTypeId: number;
+  durationValue: number;
+  durationUnit: DeliveryEstimateUnit;
+}
+
+export interface CompanyDeliveryEstimateResponse {
+  id: number;
+  companyId: number;
+  transportModeId: number;
+  transportModeName: string;
+  originCollectionPointId: number;
+  originCollectionPointName: string;
+  destinationCollectionPointId: number;
+  destinationCollectionPointName: string;
+  parcelTypeId: number;
+  parcelTypeName: string;
+  durationValue: number;
+  durationUnit: DeliveryEstimateUnit;
+  label?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CompanyDeliveryEstimateRequirementsResponse {
+  companyId: number;
+  transportModeId: number;
+  transportModeName: string;
+  availableRoutes: CompanyPricingRouteResponse[];
+  availableParcelTypes: ParcelTypeResponse[];
+  instruction?: string;
+}

@@ -1,3 +1,5 @@
+import { redirectToLoginAfterAuthFailure } from '@/lib/auth/session';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export class ApiError extends Error {
@@ -36,12 +38,24 @@ async function request<T>(
     } catch {
       if (text) message = text;
     }
+    if (token && isAuthFailure(response.status, message)) {
+      redirectToLoginAfterAuthFailure();
+    }
+
     throw new ApiError(response.status, message);
   }
 
   const text = await response.text();
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
+}
+
+function isAuthFailure(status: number, message: string) {
+  if (status === 401) return true;
+
+  if (status !== 403) return false;
+
+  return /auth|token|jwt|expir|invalid|unauthori[sz]ed/i.test(message);
 }
 
 export const apiClient = {

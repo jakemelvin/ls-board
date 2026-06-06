@@ -42,8 +42,13 @@ export interface CompanyOperationalReadiness {
   pricingConfigured: boolean;
   pricingCount: number;
   missingPricingTransportModes: string[];
+  missingPricingConfigurations: string[];
   envelopePricingCompatible: boolean;
   missingEnvelopeCompatiblePricingTransportModes: string[];
+  deliveryEstimatesConfigured: boolean;
+  deliveryEstimateCount: number;
+  missingDeliveryEstimateTransportModes: string[];
+  missingDeliveryEstimateConfigurations: string[];
   zonesConfigured: boolean;
   zoneCount: number;
   collectionPointsConfigured: boolean;

@@ -29,7 +29,11 @@ function LoginForm() {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(() =>
+    searchParams.get('reason') === 'session-expired'
+      ? 'Votre session a expire. Veuillez vous reconnecter.'
+      : null,
+  );
 
   const {
     register,

@@ -10,6 +10,7 @@ import {
   Pencil,
   Phone,
   Plus,
+  Power,
   PowerOff,
   RefreshCw,
   Trash2,
@@ -270,12 +271,12 @@ function getErrorMessage(error: unknown) {
 }
 
 function getAvailabilityStatus(point: CollectionPointResponse): CollectionPointAvailabilityStatus {
-  if (point.availabilityStatus) {
-    return point.availabilityStatus;
-  }
-
   if (!point.active) {
     return 'DEACTIVATED';
+  }
+
+  if (point.availabilityStatus) {
+    return point.availabilityStatus;
   }
 
   if (point.manuallyClosed) {
@@ -1064,6 +1065,7 @@ function CollectionPointsInner({
     removePoint,
     togglePointAvailability,
     deactivatePoint,
+    activatePoint,
   } = useCollectionPointsManager({ companyId, token });
 
   const [search, setSearch] = useState('');
@@ -1079,6 +1081,8 @@ function CollectionPointsInner({
   const [deleteZoneTarget, setDeleteZoneTarget] = useState<ZoneResponse | null>(null);
   const [deletePointTarget, setDeletePointTarget] = useState<CollectionPointResponse | null>(null);
   const [deactivatePointTarget, setDeactivatePointTarget] =
+    useState<CollectionPointResponse | null>(null);
+  const [activatePointTarget, setActivatePointTarget] =
     useState<CollectionPointResponse | null>(null);
 
   const filteredPoints = useMemo(() => {
@@ -1245,6 +1249,20 @@ function CollectionPointsInner({
     }
   };
 
+  const handleActivatePoint = async () => {
+    if (!activatePointTarget) {
+      return;
+    }
+
+    try {
+      const response = await activatePoint(activatePointTarget.id);
+      success(response.message || 'Point active');
+      setActivatePointTarget(null);
+    } catch (err) {
+      showError(err instanceof ApiError ? err.message : 'Activation impossible');
+    }
+  };
+
   const handleToggleAvailability = async (point: CollectionPointResponse) => {
     try {
       await togglePointAvailability(point);
@@ -1333,6 +1351,16 @@ function CollectionPointsInner({
         loading={actionPointId === deactivatePointTarget?.id}
         onConfirm={() => void handleDeactivatePoint()}
         onCancel={() => setDeactivatePointTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!activatePointTarget}
+        title="Activer le point"
+        description="Le point sera de nouveau exploitable par les parcours actifs selon sa configuration."
+        confirmLabel="Activer"
+        loading={actionPointId === activatePointTarget?.id}
+        onConfirm={() => void handleActivatePoint()}
+        onCancel={() => setActivatePointTarget(null)}
       />
 
       <ConfirmDialog
@@ -1685,6 +1713,18 @@ function CollectionPointsInner({
                             >
                               <PowerOff className="h-4 w-4" />
                               Desactiver
+                            </Button>
+                          )}
+
+                          {!point.active && (
+                            <Button
+                              variant="outline"
+                              onClick={() => setActivatePointTarget(point)}
+                              className="w-full gap-2 text-success hover:text-success sm:w-auto xl:w-full xl:justify-start"
+                              disabled={isBusy}
+                            >
+                              <Power className="h-4 w-4" />
+                              {isBusy ? 'Traitement...' : 'Activer'}
                             </Button>
                           )}
 

@@ -9,11 +9,13 @@ import {
   Clock3,
   CreditCard,
   Eye,
+  ExternalLink,
   FileText,
   MapPin,
   Package,
   Plus,
   Phone,
+  QrCode,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -66,6 +68,7 @@ import type { User, UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 const STATUS_FILTERS: Array<{ value: ShipmentStatus | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Tous' },
@@ -743,7 +746,6 @@ function ShipmentDetailView({
                   value: shipment.volumeM3 != null ? `${shipment.volumeM3} m3` : undefined,
                 },
                 { label: 'Description', value: shipment.description },
-                { label: 'QR code', value: shipment.qrCodeUrl },
               ]}
             />
 
@@ -770,6 +772,8 @@ function ShipmentDetailView({
               ]}
             />
           </div>
+
+          <ShipmentQrCodeCard qrCodeUrl={shipment.qrCodeUrl} reference={shipment.reference} />
 
           <SectionCard
             title="Photos du shipment"
@@ -939,6 +943,56 @@ function PersonCard({
   );
 }
 
+function ShipmentQrCodeCard({
+  qrCodeUrl,
+  reference,
+}: {
+  qrCodeUrl?: string;
+  reference: string;
+}) {
+  const imageUrl = resolveShipmentAssetUrl(qrCodeUrl);
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader className="flex flex-row items-center gap-3 space-y-0">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <QrCode className="h-5 w-5" />
+        </div>
+        <div>
+          <CardTitle className="text-base sm:text-lg">QR code du shipment</CardTitle>
+          <p className="text-sm text-muted-foreground">Code a scanner pour identifier ce shipment.</p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {imageUrl ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="flex w-full justify-center rounded-lg border border-border bg-white p-4 sm:w-fit">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={`QR code du shipment ${reference}`}
+                className="h-56 w-56 object-contain"
+                loading="lazy"
+              />
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              <InfoTile label="Reference" value={reference} icon={Package} />
+              <Button variant="outline" asChild className="w-full gap-2 sm:w-fit">
+                <a href={imageUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Ouvrir l&apos;image
+                </a>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Aucun QR code disponible pour ce shipment.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SectionCard({
   title,
   icon: Icon,
@@ -1059,4 +1113,30 @@ function StatusTimelineEntry({
 function joinParts(parts: Array<string | undefined>) {
   const value = parts.filter(Boolean).join(', ');
   return value || undefined;
+}
+
+function resolveShipmentAssetUrl(value?: string) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('//')) {
+    const protocol = typeof window === 'undefined' ? 'https:' : window.location.protocol;
+    return `${protocol}${trimmed}`;
+  }
+
+  if (!API_BASE_URL) {
+    return trimmed;
+  }
+
+  try {
+    return new URL(trimmed, API_BASE_URL).toString();
+  } catch {
+    return trimmed;
+  }
 }

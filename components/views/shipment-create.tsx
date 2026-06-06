@@ -4,9 +4,11 @@ import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Building2,
+  CreditCard,
   FileImage,
   MapPinned,
   Package,
+  ReceiptText,
   RefreshCw,
   Route,
   ShieldCheck,
@@ -25,18 +27,27 @@ import { getCities, getParcelTypes } from '@/lib/company/api';
 import type { CityResponse, ParcelTypeResponse } from '@/lib/company/types';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
+import { getPaymentModes, getPromoCodes, getShipmentFees } from '@/lib/platform-finance/api';
+import type {
+  PaymentModeResponse,
+  PromoCodeResponse,
+  ShipmentFeeResponse,
+} from '@/lib/platform-finance/types';
 import {
   createShipment,
   getShipmentCollectionPointOptions,
   searchShipmentCompanies,
   searchShipmentTransportModes,
+  simulateShipmentPrice,
 } from '@/lib/shipments/api';
 import type {
+  CreateShipmentInput,
   Shipment,
   ShipmentAvailableCompany,
   ShipmentAvailableTransportMode,
   ShipmentCollectionPointOption,
   ShipmentCreateRequest,
+  ShipmentPriceSimulationResponse,
   ShipmentPriority,
 } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
@@ -110,11 +121,15 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   const [companies, setCompanies] = useState<ShipmentAvailableCompany[]>([]);
   const [originCollectionPoints, setOriginCollectionPoints] = useState<ShipmentCollectionPointOption[]>([]);
   const [destinationCollectionPoints, setDestinationCollectionPoints] = useState<ShipmentCollectionPointOption[]>([]);
+  const [shipmentFees, setShipmentFees] = useState<ShipmentFeeResponse[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCodeResponse[]>([]);
+  const [paymentModes, setPaymentModes] = useState<PaymentModeResponse[]>([]);
 
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [transportModesLoading, setTransportModesLoading] = useState(false);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [collectionPointsLoading, setCollectionPointsLoading] = useState(false);
+  const [simulating, setSimulating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [metadataError, setMetadataError] = useState<string | null>(null);
@@ -126,6 +141,10 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   const [senderFrontIdCard, setSenderFrontIdCard] = useState<File | null>(null);
   const [senderBackIdCard, setSenderBackIdCard] = useState<File | null>(null);
   const [parcelPhotos, setParcelPhotos] = useState<File[]>([]);
+  const [priceSimulation, setPriceSimulation] =
+    useState<ShipmentPriceSimulationResponse | null>(null);
+  const [pendingShipmentInput, setPendingShipmentInput] =
+    useState<CreateShipmentInput | null>(null);
 
   const originCities = useMemo(
     () => cities.filter((city) => String(city.countryId) === form.originCountryId),
@@ -136,8 +155,28 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     [cities, form.destinationCountryId],
   );
   const selectedParcelType = useMemo(
-    () => parcelTypes.find((type) => String(type.id) === form.parcelTypeId),
+    () => parcelTypes.find((type) => getParcelTypeId(type) === form.parcelTypeId),
     [form.parcelTypeId, parcelTypes],
+  );
+  const selectedShipmentFee = useMemo(
+    () =>
+      shipmentFees.find(
+        (fee) => fee.active !== false && String(fee.originCountryId) === form.originCountryId,
+      ) ?? null,
+    [form.originCountryId, shipmentFees],
+  );
+  const activePromoCodes = useMemo(
+    () =>
+      promoCodes.filter((promo) => {
+        if (promo.active === false) return false;
+        if (!promo.expiresAt) return true;
+        return new Date(promo.expiresAt).getTime() > Date.now();
+      }),
+    [promoCodes],
+  );
+  const activePaymentModes = useMemo(
+    () => paymentModes.filter((mode) => mode.active !== false),
+    [paymentModes],
   );
   const isEnvelopeParcel = selectedParcelType ? isEnvelopeParcelType(selectedParcelType) : false;
 
@@ -164,10 +203,20 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       setMetadataError(null);
 
       try {
-        const [countriesResponse, citiesResponse, parcelTypesResponse] = await Promise.all([
+        const [
+          countriesResponse,
+          citiesResponse,
+          parcelTypesResponse,
+          feesResponse,
+          promosResponse,
+          paymentsResponse,
+        ] = await Promise.all([
           getCountries(),
           getCities(),
           getParcelTypes(token),
+          getShipmentFees(token).catch(() => []),
+          getPromoCodes(token).catch(() => []),
+          getPaymentModes(token).catch(() => []),
         ]);
 
         if (cancelled) {
@@ -177,6 +226,9 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
         setCountries(countriesResponse);
         setCities(citiesResponse);
         setParcelTypes(parcelTypesResponse);
+        setShipmentFees(feesResponse);
+        setPromoCodes(promosResponse);
+        setPaymentModes(paymentsResponse);
       } catch (error) {
         if (!cancelled) {
           setMetadataError(
@@ -444,6 +496,10 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     field: Key,
     value: ShipmentCreateFormState[Key],
   ) {
+    if (isEnvelopeParcel && (field === 'weightKg' || field === 'volumeM3')) {
+      return;
+    }
+
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => {
       if (!current[field]) {
@@ -455,6 +511,8 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       return next;
     });
     setSubmitError(null);
+    setPriceSimulation(null);
+    setPendingShipmentInput(null);
   }
 
   function handleCountryChange(field: 'originCountryId' | 'destinationCountryId', value: string) {
@@ -505,7 +563,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   }
 
   function handleParcelTypeChange(value: string) {
-    const nextParcelType = parcelTypes.find((type) => String(type.id) === value);
+    const nextParcelType = parcelTypes.find((type) => getParcelTypeId(type) === value);
     const nextIsEnvelopeParcel = nextParcelType ? isEnvelopeParcelType(nextParcelType) : false;
 
     updateField('parcelTypeId', value);
@@ -564,6 +622,12 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     setter: (file: File | null) => void,
   ) {
     setter(event.target.files?.[0] ?? null);
+    resetSimulation();
+  }
+
+  function resetSimulation() {
+    setPriceSimulation(null);
+    setPendingShipmentInput(null);
   }
 
   function validateForm() {
@@ -601,17 +665,8 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     return Object.keys(nextErrors).length === 0;
   }
 
-  async function handleSubmit() {
-    if (!token) {
-      setSubmitError('Session expiree');
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const payload: ShipmentCreateRequest = {
+  function buildShipmentCreatePayload(): ShipmentCreateRequest {
+    return {
       companyId: Number(form.companyId),
       transportModeId: Number(form.transportModeId),
       originCountryId: Number(form.originCountryId),
@@ -644,17 +699,65 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
         idCardNumber: normalizeOptionalString(form.receiverIdCardNumber),
       },
     };
+  }
+
+  async function handleSimulatePrice() {
+    if (!token) {
+      setSubmitError('Session expiree');
+      return;
+    }
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const payload = buildShipmentCreatePayload();
+    const shipmentInput: CreateShipmentInput = {
+      data: payload,
+      senderFrontIdCard,
+      senderBackIdCard,
+      parcelPhotos,
+    };
+
+    setSimulating(true);
+    setSubmitError(null);
+    setPriceSimulation(null);
+    setPendingShipmentInput(null);
+
+    try {
+      const simulation = await simulateShipmentPrice(token, payload);
+      setPriceSimulation(simulation);
+      setPendingShipmentInput(shipmentInput);
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : 'Impossible de simuler le prix du shipment.';
+      setSubmitError(message);
+      toast({
+        title: 'Simulation impossible',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSimulating(false);
+    }
+  }
+
+  async function handleConfirmCreate() {
+    if (!token) {
+      setSubmitError('Session expiree');
+      return;
+    }
+
+    if (!pendingShipmentInput) {
+      setSubmitError('Relancez la simulation avant de creer le shipment.');
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      const shipment = await createShipment(token, {
-        data: payload,
-        senderFrontIdCard,
-        senderBackIdCard,
-        parcelPhotos,
-      });
+      const shipment = await createShipment(token, pendingShipmentInput);
 
       toast({
         title: 'Shipment cree',
@@ -675,6 +778,15 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     }
   }
 
+  function closeSimulationDialog() {
+    if (submitting) {
+      return;
+    }
+
+    setPriceSimulation(null);
+    setPendingShipmentInput(null);
+  }
+
   const selectedTransportMode = transportModes.find(
     (mode) => String(mode.transportModeId) === form.transportModeId,
   );
@@ -682,6 +794,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
 
   return (
     <div className="space-y-6">
+      <PriceSimulationDialog
+        data={priceSimulation}
+        loading={submitting}
+        onClose={closeSimulationDialog}
+        onConfirm={() => void handleConfirmCreate()}
+      />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-3">
           <Button variant="ghost" className="w-fit gap-2 px-0 text-muted-foreground hover:text-foreground" onClick={onBack}>
@@ -795,7 +914,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     error={errors.parcelTypeId}
                     placeholder="Selectionner..."
                     options={parcelTypes.map((type) => ({
-                      value: String(type.id),
+                      value: getParcelTypeId(type),
                       label: type.name,
                     }))}
                   />
@@ -951,10 +1070,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     min="0"
                     step="0.01"
                     value={form.weightKg}
-                    onChange={(event) => updateField('weightKg', event.target.value)}
+                    onChange={(event) => {
+                      if (!isEnvelopeParcel) updateField('weightKg', event.target.value);
+                    }}
                     error={errors.weightKg}
                     hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
                     disabled={isEnvelopeParcel}
+                    readOnly={isEnvelopeParcel}
                     placeholder={isEnvelopeParcel ? 'Non applicable' : '5.50'}
                   />
                   <InputField
@@ -963,18 +1085,29 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     min="0"
                     step="0.001"
                     value={form.volumeM3}
-                    onChange={(event) => updateField('volumeM3', event.target.value)}
+                    onChange={(event) => {
+                      if (!isEnvelopeParcel) updateField('volumeM3', event.target.value);
+                    }}
                     error={errors.volumeM3}
                     hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
                     disabled={isEnvelopeParcel}
+                    readOnly={isEnvelopeParcel}
                     placeholder={isEnvelopeParcel ? 'Non applicable' : '0.250'}
                   />
                   <InputField
                     label="Code promo"
+                    list="active-promo-codes"
                     value={form.promoCode}
                     onChange={(event) => updateField('promoCode', event.target.value)}
-                    placeholder="PROMO2026"
+                    placeholder={activePromoCodes[0]?.code ?? 'PROMO2026'}
                   />
+                  <datalist id="active-promo-codes">
+                    {activePromoCodes.map((promo) => (
+                      <option key={promo.id} value={promo.code}>
+                        {promo.description ?? promo.code}
+                      </option>
+                    ))}
+                  </datalist>
                   <div className="lg:col-span-2">
                     <TextAreaField
                       label="Description"
@@ -1000,7 +1133,10 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                       label="Photos du colis"
                       accept="image/*"
                       multiple
-                      onChange={(event) => setParcelPhotos(Array.from(event.target.files ?? []))}
+                      onChange={(event) => {
+                        setParcelPhotos(Array.from(event.target.files ?? []));
+                        resetSimulation();
+                      }}
                       fileName={
                         parcelPhotos.length > 0
                           ? `${parcelPhotos.length} photo(s) selectionnee(s)`
@@ -1043,6 +1179,26 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                     value={form.priority === 'EXPRESS' ? 'Express' : 'Standard'}
                   />
                   <SummaryLine
+                    icon={ReceiptText}
+                    label="Frais plateforme"
+                    value={
+                      selectedShipmentFee
+                        ? formatMoney(selectedShipmentFee.amount)
+                        : form.originCountryId
+                          ? 'Aucun frais actif'
+                          : 'Pays origine requis'
+                    }
+                  />
+                  <SummaryLine
+                    icon={CreditCard}
+                    label="Paiements"
+                    value={
+                      activePaymentModes.length > 0
+                        ? activePaymentModes.map((mode) => mode.name).join(', ')
+                        : 'Aucun mode actif'
+                    }
+                  />
+                  <SummaryLine
                     icon={FileImage}
                     label="Fichiers"
                     value={[
@@ -1061,11 +1217,24 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                   )}
 
                   <div className="space-y-3 pt-2">
-                    <Button className="w-full gap-2" onClick={handleSubmit} disabled={submitting}>
-                      <Package className="h-4 w-4" />
-                      {submitting ? 'Creation en cours...' : 'Creer le shipment'}
+                    <Button
+                      className="w-full gap-2"
+                      onClick={() => void handleSimulatePrice()}
+                      disabled={simulating || submitting}
+                    >
+                      {simulating ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ReceiptText className="h-4 w-4" />
+                      )}
+                      {simulating ? 'Simulation en cours...' : 'Simuler le prix'}
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={onBack} disabled={submitting}>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={onBack}
+                      disabled={simulating || submitting}
+                    >
                       Annuler
                     </Button>
                   </div>
@@ -1238,16 +1407,149 @@ function SummaryLine({
   );
 }
 
+function PriceSimulationDialog({
+  data,
+  loading,
+  onClose,
+  onConfirm,
+}: {
+  data: ShipmentPriceSimulationResponse | null;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!data) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={loading ? undefined : onClose} />
+      <div className="relative max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card shadow-xl">
+        <div className="border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Simulation tarifaire</p>
+              <h3 className="text-xl font-semibold text-foreground">Prix potentiel du shipment</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Verifiez le montant calcule avant de confirmer la creation.
+              </p>
+            </div>
+            <Badge variant={data.promoCodeApplied ? 'default' : 'outline'}>
+              {data.promoCodeApplied ? 'Promo appliquee' : 'Sans promo'}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="rounded-lg border border-primary/25 bg-primary/10 p-5">
+            <p className="text-sm text-muted-foreground">Total a payer</p>
+            <p className="mt-1 text-3xl font-bold text-foreground">
+              {formatMoney(data.totalToPay)}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Paiement attendu : {formatPaymentStatus(data.expectedPaymentStatus)}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SimulationLine label="Prix compagnie" value={formatMoney(data.totalCompanyPrice)} />
+            <SimulationLine label="Frais plateforme" value={formatMoney(data.feeAmount)} />
+            <SimulationLine label="Assurance" value={formatMoney(data.insuranceAmount)} />
+            <SimulationLine label="Avant remise" value={formatMoney(data.totalBeforeDiscount)} />
+            <SimulationLine label="Remise" value={formatMoney(data.discountAmount)} />
+            <SimulationLine label="Base compagnie" value={formatMoney(data.baseCompanyPrice)} />
+            <SimulationLine label="Surcout express" value={formatMoney(data.expressSurchargeAmount)} />
+            <SimulationLine label="Total final" value={formatMoney(data.totalToPay)} emphasis />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SimulationLine label="Compagnie" value={data.companyName ?? 'Non renseignee'} />
+            <SimulationLine label="Transport" value={data.transportModeName ?? 'Non renseigne'} />
+            <SimulationLine label="Type de colis" value={data.parcelTypeName ?? 'Non renseigne'} />
+            <SimulationLine label="Priorite" value={formatSimulationPriority(data.priority)} />
+            <SimulationLine
+              label="Paiement"
+              value={formatPaymentCollectionMode(data.paymentCollectionMode)}
+            />
+            <SimulationLine
+              label="Code promo"
+              value={
+                data.promoCode
+                  ? `${data.promoCode} (${data.promoCodeApplied ? 'applique' : 'non applique'})`
+                  : 'Aucun'
+              }
+            />
+            <SimulationLine
+              label="Origine"
+              value={data.originCollectionPoint?.name ?? data.originCityName ?? 'Non renseignee'}
+            />
+            <SimulationLine
+              label="Destination"
+              value={data.destinationCollectionPoint?.name ?? data.destinationCityName ?? 'Non renseignee'}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Modifier
+          </Button>
+          <Button onClick={onConfirm} disabled={loading} className="gap-2">
+            {loading ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Package className="h-4 w-4" />
+            )}
+            {loading ? 'Creation en cours...' : 'Confirmer et creer'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SimulationLine({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-lg border border-border bg-secondary/20 px-4 py-3',
+        emphasis && 'border-primary/40 bg-primary/10',
+      )}
+    >
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
 function getCityName(cities: CityResponse[], cityId: string) {
   return cities.find((city) => String(city.cityId) === cityId)?.cityName || 'Ville';
 }
 
 function buildCollectionPointLabel(point: ShipmentCollectionPointOption) {
-  return [point.name, point.cityName, point.countryName].filter(Boolean).join(' • ');
+  return [point.name, point.cityName, point.countryName].filter(Boolean).join(' - ');
+}
+
+function getParcelTypeId(parcelType: ParcelTypeResponse) {
+  return String(parcelType.id);
 }
 
 function isEnvelopeParcelType(parcelType: ParcelTypeResponse) {
-  return normalizeCatalogName(parcelType.name).includes('enveloppe');
+  const normalizedName = normalizeCatalogName(parcelType.name);
+  return [
+    'enveloppe',
+    'envelope',
+    'courrier',
+    'letter',
+    'document',
+  ].some((keyword) => normalizedName.includes(keyword));
 }
 
 function normalizeCatalogName(value: string) {
@@ -1270,4 +1572,51 @@ function toOptionalNumber(value: string) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function formatMoney(value?: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '--';
+  }
+
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XAF',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatPaymentStatus(status?: string) {
+  switch (status) {
+    case 'PAID':
+      return 'paye';
+    case 'PAYMENT_AT_COLLECTION_POINT':
+      return 'paiement au point de collecte';
+    case 'UNPAID':
+      return 'non paye';
+    default:
+      return 'non renseigne';
+  }
+}
+
+function formatPaymentCollectionMode(mode?: string) {
+  switch (mode) {
+    case 'PLATFORM':
+      return 'Plateforme';
+    case 'COLLECTION_POINT':
+      return 'Point de collecte';
+    default:
+      return 'Non renseigne';
+  }
+}
+
+function formatSimulationPriority(priority?: ShipmentPriority) {
+  switch (priority) {
+    case 'EXPRESS':
+      return 'Express';
+    case 'STANDARD':
+      return 'Standard';
+    default:
+      return 'Non renseignee';
+  }
 }

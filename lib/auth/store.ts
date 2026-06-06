@@ -3,17 +3,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthSession, ApiRole } from './types';
-
-const AUTH_COOKIE = 'sendam_auth_token';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
-
-function setCookie(name: string, value: string, maxAge: number) {
-  document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
-}
-
-function clearCookie(name: string) {
-  document.cookie = `${name}=; path=/; max-age=0`;
-}
+import {
+  AUTH_EXPIRED_EVENT,
+  AUTH_STORAGE_KEY,
+  clearAuthCookie,
+  setAuthCookie,
+} from './session';
 
 interface AuthStore extends AuthSession {
   isHydrated: boolean;
@@ -39,12 +34,12 @@ export const useAuthStore = create<AuthStore>()(
 
       setAuth: (session) => {
         set({ ...session });
-        setCookie(AUTH_COOKIE, session.token, COOKIE_MAX_AGE);
+        setAuthCookie(session.token);
       },
 
       clearAuth: () => {
         set({ ...EMPTY });
-        clearCookie(AUTH_COOKIE);
+        clearAuthCookie();
       },
 
       getToken: () => {
@@ -59,17 +54,30 @@ export const useAuthStore = create<AuthStore>()(
       isCompanyAdmin: () => get().role === 'ADMIN_COMPANY',
     }),
     {
-      name: 'sendam-auth',
+      name: AUTH_STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isHydrated = true;
           // Re-sync cookie in case it was cleared but localStorage wasn't
           if (state.token) {
-            setCookie(AUTH_COOKIE, state.token, COOKIE_MAX_AGE);
+            setAuthCookie(state.token);
           }
         }
       },
     },
   ),
 );
+
+if (typeof window !== 'undefined') {
+  const browserWindow = window as typeof window & {
+    __sendamAuthExpiredListenerRegistered?: boolean;
+  };
+
+  if (!browserWindow.__sendamAuthExpiredListenerRegistered) {
+    browserWindow.addEventListener(AUTH_EXPIRED_EVENT, () => {
+      useAuthStore.getState().clearAuth();
+    });
+    browserWindow.__sendamAuthExpiredListenerRegistered = true;
+  }
+}

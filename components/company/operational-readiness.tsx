@@ -3,8 +3,8 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock3,
   Package,
-  Truck,
   Waypoints,
   XCircle,
 } from 'lucide-react';
@@ -26,6 +26,11 @@ function getOperationalReadinessChecks(
     { label: 'Types de colis', ok: data.parcelTypesConfigured, count: data.parcelTypeCount },
     { label: 'Modes de transport', ok: data.transportModesConfigured, count: data.transportModeCount },
     { label: 'Tarification', ok: data.pricingConfigured, count: data.pricingCount },
+    {
+      label: 'Estimations de livraison',
+      ok: data.deliveryEstimatesConfigured,
+      count: data.deliveryEstimateCount,
+    },
     { label: 'Zones geographiques', ok: data.zonesConfigured, count: data.zoneCount },
     { label: 'Points de collecte', ok: data.collectionPointsConfigured, count: data.collectionPointCount },
     {
@@ -154,15 +159,47 @@ export function OperationalReadinessDialog({
                 <InfoRow label="Compatibilite enveloppes" value={data.envelopePricingCompatible ? 'OK' : 'Incomplet'} ok={data.envelopePricingCompatible} />
                 <ReadinessList
                   title="Modes sans tarification"
-                  items={data.missingPricingTransportModes}
+                  items={data.missingPricingTransportModes ?? []}
                   emptyLabel="Tous les modes actifs ont une tarification."
                   icon={Waypoints}
                 />
                 <ReadinessList
+                  title="Configurations tarifaires manquantes"
+                  items={data.missingPricingConfigurations ?? []}
+                  emptyLabel="Toutes les configurations tarifaires requises sont couvertes."
+                  icon={Waypoints}
+                />
+                <ReadinessList
                   title="Modes non compatibles enveloppes"
-                  items={data.missingEnvelopeCompatiblePricingTransportModes}
+                  items={data.missingEnvelopeCompatiblePricingTransportModes ?? []}
                   emptyLabel="Les tarifs sont compatibles avec les envois enveloppe."
                   icon={Package}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-background/50">
+              <CardHeader>
+                <CardTitle className="text-base">Estimations</CardTitle>
+                <CardDescription>Delais de livraison par configuration.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <InfoRow
+                  label="Estimations configurees"
+                  value={data.deliveryEstimateCount}
+                  ok={data.deliveryEstimatesConfigured}
+                />
+                <ReadinessList
+                  title="Modes sans estimation"
+                  items={data.missingDeliveryEstimateTransportModes ?? []}
+                  emptyLabel="Tous les modes actifs ont une estimation."
+                  icon={Clock3}
+                />
+                <ReadinessList
+                  title="Configurations d'estimation manquantes"
+                  items={data.missingDeliveryEstimateConfigurations ?? []}
+                  emptyLabel="Toutes les configurations d'estimation sont couvertes."
+                  icon={Clock3}
                 />
               </CardContent>
             </Card>

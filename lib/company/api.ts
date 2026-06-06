@@ -23,6 +23,9 @@ import type {
   CompanyPricingResponse,
   CompanyPricingRequirementsRequest,
   CompanyPricingRequirementsResponse,
+  CompanyDeliveryEstimateRequest,
+  CompanyDeliveryEstimateResponse,
+  CompanyDeliveryEstimateRequirementsResponse,
   MessageResponse,
 } from './types';
 
@@ -332,6 +335,18 @@ export function deactivateCollectionPoint(
   );
 }
 
+export function activateCollectionPoint(
+  token: string,
+  companyId: number,
+  pointId: number,
+): Promise<MessageResponse> {
+  return apiClient.patch<MessageResponse>(
+    `/api/delivery/companies/${companyId}/collection-points/${pointId}/activate`,
+    undefined,
+    token,
+  );
+}
+
 export function updateCollectionPointCommissionPercentage(
   token: string,
   companyId: number,
@@ -502,6 +517,81 @@ export function upsertCompanyPricing(
   return apiClient.put<CompanyPricingResponse>(
     `/api/delivery/companies/${companyId}/pricing/${transportModeId}`,
     payload,
+    token,
+  );
+}
+
+// Delivery estimates
+
+export function getCompanyDeliveryEstimates(
+  token: string,
+  companyId: number,
+): Promise<CompanyDeliveryEstimateResponse[]> {
+  return apiClient.get<CompanyDeliveryEstimateResponse[]>(
+    `/api/delivery/companies/${companyId}/delivery-estimates`,
+    token,
+  );
+}
+
+export function getCompanyDeliveryEstimatesByTransportMode(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+): Promise<CompanyDeliveryEstimateResponse[]> {
+  return apiClient.get<CompanyDeliveryEstimateResponse[]>(
+    `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}`,
+    token,
+  );
+}
+
+export function getCompanyDeliveryEstimateBySelection(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+  originCollectionPointId: number,
+  destinationCollectionPointId: number,
+  parcelTypeId: number,
+): Promise<CompanyDeliveryEstimateResponse> {
+  return apiClient.get<CompanyDeliveryEstimateResponse>(
+    `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}/routes/${originCollectionPointId}/${destinationCollectionPointId}/parcel-types/${parcelTypeId}`,
+    token,
+  );
+}
+
+export function getDeliveryEstimateRequirements(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+): Promise<CompanyDeliveryEstimateRequirementsResponse> {
+  return apiClient.get<CompanyDeliveryEstimateRequirementsResponse>(
+    `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}/requirements`,
+    token,
+  );
+}
+
+export function upsertCompanyDeliveryEstimate(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+  payload: CompanyDeliveryEstimateRequest,
+): Promise<CompanyDeliveryEstimateResponse> {
+  return apiClient.put<CompanyDeliveryEstimateResponse>(
+    `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}`,
+    payload,
+    token,
+  );
+}
+
+export function deleteCompanyDeliveryEstimate(
+  token: string,
+  companyId: number,
+  transportModeId: number,
+  originCollectionPointId: number,
+  destinationCollectionPointId: number,
+  parcelTypeId: number,
+): Promise<MessageResponse> {
+  return apiClient.delete<MessageResponse>(
+    `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}/routes/${originCollectionPointId}/${destinationCollectionPointId}/parcel-types/${parcelTypeId}`,
     token,
   );
 }

@@ -1,9 +1,12 @@
 import type {
   Shipment,
+  ShipmentDestinationDepositItemStatus,
+  ShipmentDestinationDepositStatus,
   ShipmentPaymentCollectionMode,
   ShipmentPaymentStatus,
   ShipmentPriority,
   ShipmentStatus,
+  ShipmentTransmissionStatus,
 } from './types';
 
 export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
@@ -58,6 +61,82 @@ export function getShipmentStatusClassName(status: ShipmentStatus) {
       return 'bg-success/15 text-success';
     case 'CANCELLED':
     case 'RETURNED':
+      return 'bg-destructive/15 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+export const SHIPMENT_TRANSMISSION_STATUS_LABELS: Record<ShipmentTransmissionStatus, string> = {
+  PENDING_COLLECTOR_APPROVAL: 'En attente collecteur',
+  COLLECTOR_APPROVED: 'Approuvee',
+  COLLECTOR_REJECTED: 'Rejetee',
+  PARTIALLY_DISPATCHED: 'Partiellement embarquee',
+  FULLY_DISPATCHED: 'Entierement embarquee',
+};
+
+export function getShipmentTransmissionStatusClassName(status: ShipmentTransmissionStatus) {
+  switch (status) {
+    case 'PENDING_COLLECTOR_APPROVAL':
+      return 'bg-warning/15 text-warning';
+    case 'COLLECTOR_APPROVED':
+      return 'bg-primary/15 text-primary';
+    case 'PARTIALLY_DISPATCHED':
+      return 'bg-chart-2/15 text-chart-2';
+    case 'FULLY_DISPATCHED':
+      return 'bg-success/15 text-success';
+    case 'COLLECTOR_REJECTED':
+      return 'bg-destructive/15 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+export const SHIPMENT_DESTINATION_DEPOSIT_STATUS_LABELS: Record<
+  ShipmentDestinationDepositStatus,
+  string
+> = {
+  PENDING_COLLECTOR_REVIEW: 'En attente de controle',
+  FULLY_ACCEPTED: 'Acceptee',
+  PARTIALLY_ACCEPTED: 'Partiellement acceptee',
+  FULLY_REJECTED: 'Rejetee',
+};
+
+export function getShipmentDestinationDepositStatusClassName(
+  status: ShipmentDestinationDepositStatus,
+) {
+  switch (status) {
+    case 'PENDING_COLLECTOR_REVIEW':
+      return 'bg-warning/15 text-warning';
+    case 'FULLY_ACCEPTED':
+      return 'bg-success/15 text-success';
+    case 'PARTIALLY_ACCEPTED':
+      return 'bg-chart-2/15 text-chart-2';
+    case 'FULLY_REJECTED':
+      return 'bg-destructive/15 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+export const SHIPMENT_DESTINATION_DEPOSIT_ITEM_STATUS_LABELS: Record<
+  ShipmentDestinationDepositItemStatus,
+  string
+> = {
+  PENDING: 'En attente',
+  ACCEPTED: 'Accepte',
+  REJECTED: 'Rejete',
+};
+
+export function getShipmentDestinationDepositItemStatusClassName(
+  status: ShipmentDestinationDepositItemStatus,
+) {
+  switch (status) {
+    case 'PENDING':
+      return 'bg-warning/15 text-warning';
+    case 'ACCEPTED':
+      return 'bg-success/15 text-success';
+    case 'REJECTED':
       return 'bg-destructive/15 text-destructive';
     default:
       return 'bg-muted text-muted-foreground';

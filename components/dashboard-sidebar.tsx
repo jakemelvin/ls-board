@@ -12,7 +12,6 @@ import {
   Users,
   Settings,
   DollarSign,
-  ClipboardList,
   Warehouse,
   ArrowRightLeft,
   Route,
@@ -21,6 +20,7 @@ import {
   Megaphone,
   Boxes,
   Waypoints,
+  Clock3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/lib/mock-data';
@@ -39,13 +39,13 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'points-map', label: 'Carte des Points', icon: Map, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
-  { id: 'tracking', label: 'Gestion des Colis', icon: ClipboardList, roles: ['TRANSPORTER'] },
-  { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: ['COLLECTOR', 'TRANSPORTER'] },
   { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
   { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },
   { id: 'parcel-types', label: 'Types de Colis', icon: Boxes, roles: ADMIN_LIKE_ROLES },
   { id: 'transport-modes', label: 'Modes de Transport', icon: Waypoints, roles: ADMIN_LIKE_ROLES },
   { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
+  { id: 'delivery-estimates', label: 'Delais de Livraison', icon: Clock3, roles: ADMIN_LIKE_ROLES },
   { id: 'billing', label: 'Facturation', icon: CreditCard, roles: ADMIN_LIKE_ROLES },
   { id: 'commissions', label: 'Commissions', icon: HandCoins, roles: ADMIN_LIKE_ROLES },
   { id: 'team', label: 'Gestion d\'Équipe', icon: Users, roles: ADMIN_LIKE_ROLES },
@@ -133,6 +133,18 @@ export function DashboardSidebar({
             >
               <Boxes className="h-5 w-5" />
               Catalogue
+            </button>
+            <button
+              onClick={() => onSectionChange('platform-finance')}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
+                activeSection === 'platform-finance'
+                  ? 'bg-sidebar-accent text-sidebar-primary'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+              )}
+            >
+              <CreditCard className="h-5 w-5" />
+              Finance plateforme
             </button>
           </>
         )}

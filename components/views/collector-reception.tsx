@@ -1,18 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { type ElementType, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Package,
-  Check,
-  X,
   AlertTriangle,
-  QrCode,
-  ShieldCheck,
+  Check,
   CircleAlert,
+  Clock3,
+  Package,
+  PackageCheck,
+  QrCode,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -22,351 +35,506 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
+import { ApiError } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/auth/store';
 import {
-  getKycDocumentLabel,
-  getKycVerificationStatusColor,
-  getKycVerificationStatusLabel,
-  getStatusLabel,
-  getStatusColor,
-  type Parcel,
-} from '@/lib/mock-data';
-import { useStore } from '@/lib/store';
+  getCollectorIncomingShipments,
+  rejectIncomingShipment,
+  validateIncomingShipment,
+} from '@/lib/shipments/api';
+import {
+  formatShipmentDate,
+  getShipmentStatusClassName,
+  getShipmentStatusLabel,
+  SHIPMENT_PAYMENT_STATUS_LABELS,
+  SHIPMENT_PRIORITY_LABELS,
+} from '@/lib/shipments/presentation';
+import type { CollectorIncomingShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
+const PAGE_SIZE = 20;
+
 export function CollectorReception() {
-  const { parcels, collectionPoints, updateParcelStatus } = useStore();
+  const token = useAuthStore((state) => state.token);
+  const [shipments, setShipments] = useState<CollectorIncomingShipment[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [isValidateDialogOpen, setIsValidateDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
-  const [isKycChecked, setIsKycChecked] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<CollectorIncomingShipment | null>(null);
+  const [isIdentityChecked, setIsIdentityChecked] = useState(false);
   const [isParcelChecked, setIsParcelChecked] = useState(false);
   const [referenceInput, setReferenceInput] = useState('');
   const [rejectReason, setRejectReason] = useState('');
+  const [validatedCount, setValidatedCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
 
-  const pendingParcels = parcels.filter((parcel) => parcel.status === 'CREATED');
-  const receivedToday = parcels.filter(
-    (parcel) => parcel.status === 'RECEIVED_AT_COLLECTION_POINT'
-  ).length;
-  const rejectedTotal = parcels.filter((parcel) => parcel.status === 'REJECTED').length;
+  const loadIncomingShipments = useCallback(async () => {
+    if (!token) {
+      setError('Session expiree');
+      setLoading(false);
+      return;
+    }
 
-  const getPointName = (pointId: string) =>
-    collectionPoints.find((point) => point.id === pointId)?.name || pointId;
+    setLoading(true);
+    setError(null);
 
-  const normalizedReference = referenceInput.trim().toUpperCase();
-  const expectedReference = selectedParcel?.trackingNumber.trim().toUpperCase() ?? '';
-  const isReferenceValid = normalizedReference.length > 0 && normalizedReference === expectedReference;
-  const isReadyForFinalValidation = isKycChecked && isParcelChecked && isReferenceValid;
+    try {
+      const response = await getCollectorIncomingShipments(token, {
+        page,
+        size: PAGE_SIZE,
+      });
 
-  const handleValidate = (parcel: Parcel) => {
-    setSelectedParcel(parcel);
-    setIsKycChecked(false);
+      setShipments(response.content ?? []);
+      setTotalPages(response.totalPages ?? 0);
+      setTotalElements(response.totalElements ?? 0);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Impossible de charger les colis a receptionner.',
+      );
+      setShipments([]);
+      setTotalPages(0);
+      setTotalElements(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, token]);
+
+  useEffect(() => {
+    void loadIncomingShipments();
+  }, [loadIncomingShipments]);
+
+  const filteredShipments = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return shipments;
+
+    return shipments.filter((shipment) =>
+      [
+        String(shipment.shipmentId),
+        shipment.senderFullName,
+        shipment.receiverFullName,
+        shipment.originCollectionPointName,
+        shipment.destinationCollectionPointName,
+        shipment.companyName,
+        shipment.parcelTypeName,
+        shipment.transportModeName,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [searchTerm, shipments]);
+
+  const isReferenceReady = referenceInput.trim().length > 0;
+  const isReadyForFinalValidation = isIdentityChecked && isParcelChecked && isReferenceReady;
+
+  const openValidateDialog = (shipment: CollectorIncomingShipment) => {
+    setSelectedShipment(shipment);
+    setIsIdentityChecked(false);
     setIsParcelChecked(false);
     setReferenceInput('');
     setIsValidateDialogOpen(true);
   };
 
-  const handleFinalValidation = () => {
-    if (!selectedParcel || !isReadyForFinalValidation) {
-      return;
-    }
-
-    updateParcelStatus(
-      selectedParcel.id,
-      'RECEIVED_AT_COLLECTION_POINT',
-      'collector-1',
-      'Jean Bastos',
-      getPointName(selectedParcel.originPointId)
-    );
-    setSelectedParcel(null);
-    setIsKycChecked(false);
-    setIsParcelChecked(false);
-    setReferenceInput('');
-    setIsValidateDialogOpen(false);
-  };
-
-  const handleReject = () => {
-    if (selectedParcel) {
-      updateParcelStatus(
-        selectedParcel.id,
-        'REJECTED',
-        'collector-1',
-        'Jean Bastos',
-        getPointName(selectedParcel.originPointId)
-      );
-      setSelectedParcel(null);
-      setRejectReason('');
-      setIsRejectDialogOpen(false);
-    }
-  };
-
-  const openRejectDialog = (parcel: Parcel) => {
-    setSelectedParcel(parcel);
+  const openRejectDialog = (shipment: CollectorIncomingShipment) => {
+    setSelectedShipment(shipment);
+    setRejectReason('');
     setIsRejectDialogOpen(true);
   };
 
-  const handleValidateDialogChange = (open: boolean) => {
-    setIsValidateDialogOpen(open);
+  const resetValidateDialog = () => {
+    setIsValidateDialogOpen(false);
+    setSelectedShipment(null);
+    setIsIdentityChecked(false);
+    setIsParcelChecked(false);
+    setReferenceInput('');
+  };
 
+  const resetRejectDialog = () => {
+    setIsRejectDialogOpen(false);
+    setSelectedShipment(null);
+    setRejectReason('');
+  };
+
+  const handleValidateDialogChange = (open: boolean) => {
+    if (actionLoading) return;
+
+    setIsValidateDialogOpen(open);
     if (!open) {
-      setSelectedParcel(null);
-      setIsKycChecked(false);
-      setIsParcelChecked(false);
-      setReferenceInput('');
+      resetValidateDialog();
     }
   };
 
   const handleRejectDialogChange = (open: boolean) => {
-    setIsRejectDialogOpen(open);
+    if (actionLoading) return;
 
+    setIsRejectDialogOpen(open);
     if (!open) {
-      setSelectedParcel(null);
-      setRejectReason('');
+      resetRejectDialog();
     }
   };
 
-  const referenceHelperText =
-    referenceInput.trim().length === 0
-      ? 'Saisissez le numero de reference figurant sur le colis ou le bordereau client.'
-      : isReferenceValid
-        ? 'Numero de reference valide.'
-        : 'Le numero de reference saisi ne correspond pas au colis en cours de reception.';
+  const handleFinalValidation = async () => {
+    if (!token || !selectedShipment || !isReadyForFinalValidation) {
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      const response = await validateIncomingShipment(token, selectedShipment.shipmentId, {
+        shipmentReference: referenceInput.trim(),
+      });
+
+      toast({
+        title: 'Colis receptionne',
+        description:
+          response.note ??
+          `Le colis #${selectedShipment.shipmentId} a ete valide par le collecteur.`,
+      });
+      setValidatedCount((current) => current + 1);
+      resetValidateDialog();
+      await loadIncomingShipments();
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : 'Impossible de valider la reception du colis.';
+      toast({
+        title: 'Validation refusee',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!token || !selectedShipment || !rejectReason.trim()) {
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      const response = await rejectIncomingShipment(token, selectedShipment.shipmentId, {
+        reason: rejectReason.trim(),
+      });
+
+      toast({
+        title: 'Colis rejete',
+        description:
+          response.note ??
+          `Le colis #${selectedShipment.shipmentId} a ete rejete par le collecteur.`,
+      });
+      setRejectedCount((current) => current + 1);
+      resetRejectDialog();
+      await loadIncomingShipments();
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.message : 'Impossible de rejeter la reception du colis.';
+      toast({
+        title: 'Rejet impossible',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Flux de Reception</h2>
-        <p className="text-muted-foreground">Validez ou rejetez les colis soumis par les clients</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Flux de Reception</h2>
+          <p className="text-muted-foreground">
+            Receptionnez ou rejetez les colis remis par les clients au point de collecte.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="w-fit gap-2"
+          onClick={() => void loadIncomingShipments()}
+          disabled={loading}
+        >
+          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          Actualiser
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20">
-              <Package className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{pendingParcels.length}</p>
-              <p className="text-xs text-muted-foreground">En attente</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/20">
-              <Check className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{receivedToday}</p>
-              <p className="text-xs text-muted-foreground">Valides</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/20">
-              <X className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{rejectedTotal}</p>
-              <p className="text-xs text-muted-foreground">Rejetes</p>
-            </div>
-          </CardContent>
-        </Card>
+        <ReceptionStatCard
+          icon={Clock3}
+          label="A receptionner"
+          value={totalElements}
+          className="bg-warning/15 text-warning"
+        />
+        <ReceptionStatCard
+          icon={Check}
+          label="Valides session"
+          value={validatedCount}
+          className="bg-success/15 text-success"
+        />
+        <ReceptionStatCard
+          icon={X}
+          label="Rejetes session"
+          value={rejectedCount}
+          className="bg-destructive/15 text-destructive"
+        />
       </div>
 
       <Card className="border-border bg-card">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Client</TableHead>
-                <TableHead className="text-muted-foreground">Poids</TableHead>
-                <TableHead className="text-muted-foreground">Destination</TableHead>
-                <TableHead className="text-muted-foreground">Statut</TableHead>
-                <TableHead className="text-right text-muted-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pendingParcels.map((parcel) => (
-                <TableRow key={parcel.id} className="border-border">
-                  <TableCell className="text-foreground">{parcel.senderName}</TableCell>
-                  <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {getPointName(parcel.destinationPointId)}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        'inline-block rounded-lg px-2 py-1 text-xs font-medium',
-                        getStatusColor(parcel.status)
-                      )}
-                    >
-                      {getStatusLabel(parcel.status)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => openRejectDialog(parcel)}
-                      >
-                        <AlertTriangle className="h-4 w-4" />
-                        Rejeter
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-1 bg-success text-success-foreground hover:bg-success/90"
-                        onClick={() => handleValidate(parcel)}
-                      >
-                        <Check className="h-4 w-4" />
-                        Valider
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {pendingParcels.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Check className="h-8 w-8 text-success" />
-                      <p className="font-medium text-foreground">Tous les colis sont traites</p>
-                      <p className="text-sm text-muted-foreground">
-                        Aucun colis en attente de validation
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="space-y-4 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Rechercher par expediteur, destinataire, point ou type..."
+              className="bg-secondary pl-10"
+            />
+          </div>
+
+          {error ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center">
+              <p className="text-sm text-destructive">{error}</p>
+              <Button
+                variant="outline"
+                className="mt-4 gap-2"
+                onClick={() => void loadIncomingShipments()}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reessayer
+              </Button>
+            </div>
+          ) : loading ? (
+            <div className="flex items-center justify-center py-20">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground">Colis</TableHead>
+                      <TableHead className="text-muted-foreground">Client</TableHead>
+                      <TableHead className="text-muted-foreground">Trajet</TableHead>
+                      <TableHead className="text-muted-foreground">Paiement</TableHead>
+                      <TableHead className="text-muted-foreground">Statut</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredShipments.map((shipment) => (
+                      <TableRow key={shipment.shipmentId} className="border-border">
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium text-foreground">#{shipment.shipmentId}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {shipment.parcelTypeName ?? 'Type non renseigne'}
+                              {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
+                            </p>
+                            {shipment.priority && (
+                              <Badge variant="outline">
+                                {SHIPMENT_PRIORITY_LABELS[shipment.priority]}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <p className="font-medium text-foreground">
+                              {shipment.senderFullName ?? 'Expediteur non renseigne'}
+                            </p>
+                            <p className="text-muted-foreground">
+                              Vers {shipment.receiverFullName ?? 'destinataire non renseigne'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-foreground">
+                              {shipment.originCollectionPointName ?? 'Origine non renseignee'}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <p className="font-medium text-foreground">
+                              {formatReceptionMoney(shipment.price)}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {shipment.paymentStatus
+                                ? SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]
+                                : 'Paiement non renseigne'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {shipment.status ? (
+                            <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
+                              {getShipmentStatusLabel(shipment.status)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">Non renseigne</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => openRejectDialog(shipment)}
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              Rejeter
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="gap-1 bg-success text-success-foreground hover:bg-success/90"
+                              onClick={() => openValidateDialog(shipment)}
+                            >
+                              <PackageCheck className="h-4 w-4" />
+                              Receptionner
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    {filteredShipments.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-28 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Package className="h-8 w-8 text-muted-foreground" />
+                            <p className="font-medium text-foreground">Aucun colis a receptionner</p>
+                            <p className="text-sm text-muted-foreground">
+                              Les colis entrants valides par le backend apparaitront ici.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Page {totalPages === 0 ? 0 : page + 1} sur {totalPages} - {totalElements} colis
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 0}
+                    onClick={() => setPage((current) => Math.max(0, current - 1))}
+                  >
+                    Precedent
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={totalPages === 0 || page >= totalPages - 1}
+                    onClick={() => setPage((current) => current + 1)}
+                  >
+                    Suivant
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <Dialog open={isValidateDialogOpen} onOpenChange={handleValidateDialogChange}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Verification avant prise en charge</DialogTitle>
+            <DialogTitle className="text-foreground">Reception du colis client</DialogTitle>
             <DialogDescription>
-              Controlez le deposant, le colis et le numero de reference avant la validation finale.
+              Controlez le deposant, le colis et saisissez la reference lue sur le colis.
             </DialogDescription>
           </DialogHeader>
 
-          {selectedParcel && (
+          {selectedShipment && (
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-border bg-secondary/40 p-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">Identite deposant</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Nom</span>
-                      <span className="font-medium text-foreground">{selectedParcel.senderName}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Telephone</span>
-                      <span className="font-medium text-foreground">{selectedParcel.senderPhone}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Piece</span>
-                      <span className="font-medium text-foreground">
-                        {getKycDocumentLabel(selectedParcel.senderKyc.documentType)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Statut KYC</span>
-                      <span
-                        className={cn(
-                          'rounded-lg px-2 py-1 text-xs font-medium',
-                          getKycVerificationStatusColor(selectedParcel.senderKyc.verificationStatus)
-                        )}
-                      >
-                        {getKycVerificationStatusLabel(selectedParcel.senderKyc.verificationStatus)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-border bg-secondary/40 p-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">Colis a receptionner</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Destinataire</span>
-                      <span className="font-medium text-foreground">{selectedParcel.recipientName}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Poids</span>
-                      <span className="font-medium text-foreground">{selectedParcel.weight} kg</span>
-                    </div>
-                    {selectedParcel.estimatedPrice !== undefined && (
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">Prix estime</span>
-                        <span className="font-medium text-foreground">
-                          {selectedParcel.estimatedPrice.toLocaleString('fr-FR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{' '}
-                          EUR
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Etat</span>
-                      <span className="font-medium text-foreground">
-                        {selectedParcel.packageCondition === 'FRAGILE' ? 'Fragile' : 'Conforme'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">Destination</span>
-                      <span className="font-medium text-foreground">
-                        {getPointName(selectedParcel.destinationPointId)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <ReceptionInfoPanel
+                  title="Remise client"
+                  rows={[
+                    ['Expediteur', selectedShipment.senderFullName],
+                    ['Destinataire', selectedShipment.receiverFullName],
+                    ['Cree le', formatShipmentDate(selectedShipment.createdAt)],
+                    ['Entreprise', selectedShipment.companyName],
+                  ]}
+                />
+                <ReceptionInfoPanel
+                  title="Colis"
+                  rows={[
+                    ['Type', selectedShipment.parcelTypeName],
+                    ['Transport', selectedShipment.transportModeName],
+                    [
+                      'Priorite',
+                      selectedShipment.priority
+                        ? SHIPMENT_PRIORITY_LABELS[selectedShipment.priority]
+                        : undefined,
+                    ],
+                    ['Prix', formatReceptionMoney(selectedShipment.price)],
+                  ]}
+                />
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Numero de reference</p>
+                    <p className="text-sm font-semibold text-foreground">Reference du colis</p>
                     <p className="text-sm text-muted-foreground">
-                      Saisissez la reference du colis pour confirmer qu&apos;il s&apos;agit bien de la bonne remise client.
+                      La reference n&apos;est pas exposee dans la liste pour eviter une validation
+                      automatique. Le backend verifiera la reference saisie.
                     </p>
                   </div>
                 </div>
                 <Input
                   value={referenceInput}
                   onChange={(event) => setReferenceInput(event.target.value)}
-                  placeholder="Entrer le numero de reference"
+                  placeholder="Reference presente sur le colis ou le bordereau"
                   className="bg-secondary"
+                  disabled={actionLoading}
                 />
                 <div
                   className={cn(
                     'mt-3 flex items-start gap-3 rounded-lg border px-3 py-3',
-                    isReferenceValid
+                    isReferenceReady
                       ? 'border-success/40 bg-success/10'
-                      : 'border-warning/40 bg-warning/10'
+                      : 'border-warning/40 bg-warning/10',
                   )}
                 >
                   <CircleAlert
                     className={cn(
                       'mt-0.5 h-5 w-5',
-                      isReferenceValid ? 'text-success' : 'text-warning'
+                      isReferenceReady ? 'text-success' : 'text-warning',
                     )}
                   />
-                  <p className="text-sm text-muted-foreground">{referenceHelperText}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isReferenceReady
+                      ? 'Reference prete pour verification backend.'
+                      : 'Saisissez la reference du colis remis par le client.'}
+                  </p>
                 </div>
               </div>
 
@@ -375,22 +543,24 @@ export function CollectorReception() {
                 <div className="space-y-3">
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
-                      checked={isKycChecked}
-                      onCheckedChange={(checked) => setIsKycChecked(checked === true)}
-                      aria-label="Confirmer la verification KYC"
+                      checked={isIdentityChecked}
+                      onCheckedChange={(checked) => setIsIdentityChecked(checked === true)}
+                      disabled={actionLoading}
+                      aria-label="Confirmer la verification du deposant"
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai verifie l&apos;identite du deposant et la coherence des informations KYC.
+                      J&apos;ai verifie l&apos;identite du deposant et la coherence avec le colis.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
                       checked={isParcelChecked}
                       onCheckedChange={(checked) => setIsParcelChecked(checked === true)}
-                      aria-label="Confirmer la verification du colis"
+                      disabled={actionLoading}
+                      aria-label="Confirmer la verification physique du colis"
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai controle le colis physiquement, son etat et ses informations logistiques.
+                      J&apos;ai controle physiquement le colis avant la prise en charge.
                     </span>
                   </label>
                 </div>
@@ -399,16 +569,24 @@ export function CollectorReception() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleValidateDialogChange(false)}>
+            <Button
+              variant="outline"
+              onClick={() => handleValidateDialogChange(false)}
+              disabled={actionLoading}
+            >
               Annuler
             </Button>
             <Button
-              onClick={handleFinalValidation}
-              disabled={!isReadyForFinalValidation}
+              onClick={() => void handleFinalValidation()}
+              disabled={!isReadyForFinalValidation || actionLoading}
               className="gap-2 bg-success text-success-foreground hover:bg-success/90"
             >
-              <QrCode className="h-4 w-4" />
-              Valider la prise en charge
+              {actionLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <QrCode className="h-4 w-4" />
+              )}
+              {actionLoading ? 'Validation...' : 'Valider la reception'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -417,9 +595,9 @@ export function CollectorReception() {
       <Dialog open={isRejectDialogOpen} onOpenChange={handleRejectDialogChange}>
         <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Rejeter le colis</DialogTitle>
+            <DialogTitle className="text-foreground">Rejeter la reception</DialogTitle>
             <DialogDescription>
-              Vous allez rejeter le colis {selectedParcel?.trackingNumber}. Veuillez indiquer le motif du rejet.
+              Indiquez le motif de rejet du colis #{selectedShipment?.shipmentId}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -427,21 +605,97 @@ export function CollectorReception() {
             <Textarea
               value={rejectReason}
               onChange={(event) => setRejectReason(event.target.value)}
-              placeholder="Colis endommage, poids incorrect, emballage non conforme..."
+              placeholder="Colis endommage, reference incoherente, client non conforme..."
               className="min-h-[100px] bg-secondary"
+              disabled={actionLoading}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => handleRejectDialogChange(false)}>
+            <Button
+              variant="outline"
+              onClick={() => handleRejectDialogChange(false)}
+              disabled={actionLoading}
+            >
               Annuler
             </Button>
-            <Button variant="destructive" onClick={handleReject} className="gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Confirmer le rejet
+            <Button
+              variant="destructive"
+              onClick={() => void handleReject()}
+              disabled={!rejectReason.trim() || actionLoading}
+              className="gap-2"
+            >
+              {actionLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+              {actionLoading ? 'Rejet...' : 'Confirmer le rejet'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+function ReceptionStatCard({
+  icon: Icon,
+  label,
+  value,
+  className,
+}: {
+  icon: ElementType;
+  label: string;
+  value: number;
+  className: string;
+}) {
+  return (
+    <Card className="border-border bg-card">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', className)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReceptionInfoPanel({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<[string, string | number | undefined]>;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-secondary/40 p-4">
+      <p className="mb-3 text-sm font-semibold text-foreground">{title}</p>
+      <div className="space-y-2 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="text-right font-medium text-foreground">
+              {value || 'Non renseigne'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatReceptionMoney(value?: number) {
+  if (value == null) {
+    return 'Non renseigne';
+  }
+
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XAF',
+    maximumFractionDigits: 0,
+  }).format(value);
 }

@@ -1,17 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Package, MapPin, Send, Check } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Check, MapPin, Package, RefreshCw, Send, Truck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -20,297 +13,398 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
-import { isCollectionPointVisibleToClients } from '@/lib/collection-point-availability';
-import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
-import { getStatusLabel, getStatusColor, type Parcel, type User } from '@/lib/mock-data';
 import {
-  getRecipientColumnLabel,
-  getRecipientDisplayName,
-  getSenderColumnLabel,
-  getSenderDisplayName,
-} from '@/lib/parcel-privacy';
-import { useStore } from '@/lib/store';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { toast } from '@/hooks/use-toast';
+import { ApiError } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/auth/store';
+import {
+  createTransmissionRequest,
+  getTransporterReadyShipments,
+} from '@/lib/shipments/api';
+import {
+  formatShipmentDate,
+  getShipmentStatusClassName,
+  getShipmentStatusLabel,
+  SHIPMENT_PRIORITY_LABELS,
+} from '@/lib/shipments/presentation';
+import type { TransporterReadyShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-interface PickupRequestProps {
-  currentUser: User;
-}
+const PAGE_SIZE = 50;
 
-export function PickupRequest({ currentUser }: PickupRequestProps) {
-  const { parcels, collectionPoints, countries, cities, zones, createTransferRequest } = useStore();
-  const [selectedParcels, setSelectedParcels] = useState<string[]>([]);
-  const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
+export function PickupRequest() {
+  const token = useAuthStore((state) => state.token);
+  const [shipments, setShipments] = useState<TransporterReadyShipment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
+  const [selectedOriginId, setSelectedOriginId] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // Available parcels for pickup (RECEIVED_AT_COLLECTION_POINT)
-  const visibleCollectionPointIds = new Set(
-    collectionPoints.filter(isCollectionPointVisibleToClients).map((point) => point.id)
-  );
-  const availableParcels = parcels.filter(
-    (p) => p.status === 'RECEIVED_AT_COLLECTION_POINT' && visibleCollectionPointIds.has(p.originPointId)
-  );
+  const loadShipments = useCallback(async () => {
+    if (!token) {
+      setError('Session expiree');
+      setLoading(false);
+      return;
+    }
 
-  const toggleParcel = (parcelId: string) => {
-    setSelectedParcels((prev) =>
-      prev.includes(parcelId) ? prev.filter((id) => id !== parcelId) : [...prev, parcelId]
-    );
-  };
+    setLoading(true);
+    setError(null);
 
-  const handleSendRequest = () => {
-    const selectedCollectionPoint = collectionPoints.find((point) => point.id === selectedPoint);
-
-    if (selectedParcels.length > 0 && selectedPoint && selectedCollectionPoint) {
-      createTransferRequest({
-        parcelIds: selectedParcels,
-        transporterId: currentUser.id,
-        collectorId: selectedCollectionPoint.responsibleId,
-        collectionPointId: selectedPoint,
-        status: 'PENDING',
+    try {
+      const response = await getTransporterReadyShipments(token, {
+        page: 0,
+        size: PAGE_SIZE,
       });
-      setRequestSent(true);
-      setIsConfirmDialogOpen(false);
-      setTimeout(() => {
-        setSelectedParcels([]);
-        setSelectedPoint(null);
-        setRequestSent(false);
-      }, 3000);
+
+      setShipments(response.content ?? []);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Impossible de charger les colis disponibles.',
+      );
+      setShipments([]);
+    } finally {
+      setLoading(false);
     }
+  }, [token]);
+
+  useEffect(() => {
+    void loadShipments();
+  }, [loadShipments]);
+
+  const shipmentsByOrigin = useMemo(() => {
+    const groups = new Map<number, TransporterReadyShipment[]>();
+
+    shipments.forEach((shipment) => {
+      const originId = shipment.originCollectionPointId ?? 0;
+      groups.set(originId, [...(groups.get(originId) ?? []), shipment]);
+    });
+
+    return Array.from(groups.entries()).map(([originId, items]) => ({
+      originId,
+      originName: items[0]?.originCollectionPointName ?? 'Point non renseigne',
+      items,
+    }));
+  }, [shipments]);
+
+  const selectedShipments = shipments.filter((shipment) =>
+    selectedShipmentIds.includes(shipment.shipmentId),
+  );
+
+  const selectedOriginName =
+    shipmentsByOrigin.find((group) => group.originId === selectedOriginId)?.originName ??
+    'Point non selectionne';
+
+  const toggleShipment = (shipment: TransporterReadyShipment) => {
+    const originId = shipment.originCollectionPointId ?? 0;
+
+    setSelectedShipmentIds((current) => {
+      const isChangingOrigin = selectedOriginId != null && selectedOriginId !== originId;
+      const base = isChangingOrigin ? [] : current;
+
+      const next = base.includes(shipment.shipmentId)
+        ? base.filter((id) => id !== shipment.shipmentId)
+        : [...base, shipment.shipmentId];
+
+      setSelectedOriginId(next.length > 0 ? originId : null);
+      return next;
+    });
   };
 
-  const getPointName = (pointId: string) => {
-    return collectionPoints.find((p) => p.id === pointId)?.name || pointId;
+  const resetSelection = () => {
+    setSelectedShipmentIds([]);
+    setSelectedOriginId(null);
+    setNote('');
   };
 
-  // Group parcels by collection point
-  const parcelsByPoint: Record<string, Parcel[]> = {};
-  availableParcels.forEach((parcel) => {
-    const pointId = parcel.originPointId;
-    if (!parcelsByPoint[pointId]) {
-      parcelsByPoint[pointId] = [];
-    }
-    parcelsByPoint[pointId].push(parcel);
-  });
+  const handleCreateRequest = async () => {
+    if (!token || selectedShipmentIds.length === 0) return;
 
-  const totalWeight = availableParcels
-    .filter((p) => selectedParcels.includes(p.id))
-    .reduce((sum, p) => sum + p.weight, 0);
+    setSubmitting(true);
+
+    try {
+      await createTransmissionRequest(token, {
+        shipmentIds: selectedShipmentIds,
+        note: note.trim() || undefined,
+      });
+
+      toast({
+        title: 'Demande envoyee',
+        description: `${selectedShipmentIds.length} colis transmis au collecteur pour validation.`,
+      });
+      setIsConfirmOpen(false);
+      resetSelection();
+      await loadShipments();
+    } catch (err) {
+      toast({
+        title: 'Demande refusee',
+        description:
+          err instanceof ApiError ? err.message : "Impossible d'envoyer la demande.",
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Nouvelle demande de prise</h2>
-        <p className="text-muted-foreground">
-          Selectionnez les colis a recuperer et envoyez une demande au collecteur
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Nouvelle demande de prise</h2>
+          <p className="text-muted-foreground">
+            Selectionnez les colis prets au transport et envoyez une demande au collecteur.
+          </p>
+        </div>
+        <Button variant="outline" className="w-fit gap-2" onClick={() => void loadShipments()}>
+          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          Actualiser
+        </Button>
       </div>
 
-      {/* Success Message */}
-      {requestSent && (
-        <div className="flex items-center gap-3 rounded-xl bg-success/20 p-4">
-          <Check className="h-5 w-5 text-success" />
-          <div>
-            <p className="font-medium text-foreground">Demande envoyee avec succes!</p>
-            <p className="text-sm text-muted-foreground">
-              Le collecteur va valider votre demande de transfert
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Selection Summary */}
-      {selectedParcels.length > 0 && !requestSent && (
+      {selectedShipmentIds.length > 0 && (
         <Card className="border-primary bg-card">
           <CardContent className="p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="font-medium text-foreground">
-                  {selectedParcels.length} colis selectionne(s)
+                  {selectedShipmentIds.length} colis selectionne(s)
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Poids total: {totalWeight.toFixed(1)} kg
-                </p>
+                <p className="text-sm text-muted-foreground">{selectedOriginName}</p>
               </div>
-              <Button
-                className="gap-2"
-                onClick={() => setIsConfirmDialogOpen(true)}
-                disabled={!selectedPoint}
-              >
-                <Send className="h-4 w-4" />
-                Envoyer la demande
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={resetSelection} disabled={submitting}>
+                  Reinitialiser
+                </Button>
+                <Button className="gap-2" onClick={() => setIsConfirmOpen(true)}>
+                  <Send className="h-4 w-4" />
+                  Envoyer la demande
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Collection Points with Parcels */}
-      <div className="space-y-6">
-        {Object.entries(parcelsByPoint).map(([pointId, pointParcels]) => {
-          const point = collectionPoints.find((p) => p.id === pointId);
-          const isPointSelected = selectedPoint === pointId;
-          const selectedInPoint = pointParcels.filter((p) => selectedParcels.includes(p.id)).length;
-
-          return (
-            <Card
-              key={pointId}
-              className={cn(
-                'border-border bg-card transition-all',
-                isPointSelected && 'border-primary'
-              )}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-lg',
-                        isPointSelected ? 'bg-primary text-primary-foreground' : 'bg-primary/20'
-                      )}
-                    >
-                      <MapPin className={cn('h-5 w-5', !isPointSelected && 'text-primary')} />
-                    </div>
-                    <div>
-                      <CardTitle className="text-foreground">{point?.name}</CardTitle>
-                      <CardDescription>
-                        {point
-                          ? `${getCollectionPointLocationLabel(point, zones, cities, countries)} - ${pointParcels.length} colis disponibles`
-                          : `${pointParcels.length} colis disponibles`}
-                        {selectedInPoint > 0 && ` (${selectedInPoint} selectionne(s))`}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Button
-                    variant={isPointSelected ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedPoint(isPointSelected ? null : pointId)}
-                  >
-                    {isPointSelected ? 'Selectionne' : 'Selectionner'}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead className="text-muted-foreground">N° Suivi</TableHead>
-                      <TableHead className="text-muted-foreground">
-                        {getSenderColumnLabel('TRANSPORTER')}
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">Poids</TableHead>
-                      <TableHead className="text-muted-foreground">
-                        {getRecipientColumnLabel('TRANSPORTER')}
-                      </TableHead>
-                      <TableHead className="text-muted-foreground">Statut</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pointParcels.map((parcel) => {
-                      const isSelected = selectedParcels.includes(parcel.id);
-
-                      return (
-                        <TableRow
-                          key={parcel.id}
-                          className={cn(
-                            'cursor-pointer border-border transition-colors',
-                            isSelected && 'bg-primary/10'
-                          )}
-                          onClick={() => {
-                            toggleParcel(parcel.id);
-                            if (!selectedPoint) setSelectedPoint(pointId);
-                          }}
-                        >
-                          <TableCell>
-                            <div
-                              className={cn(
-                                'flex h-5 w-5 items-center justify-center rounded border',
-                                isSelected
-                                  ? 'border-primary bg-primary text-primary-foreground'
-                                  : 'border-border'
-                              )}
-                            >
-                              {isSelected && <Check className="h-3 w-3" />}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Package className="h-4 w-4 text-primary" />
-                              <span className="font-mono font-medium text-foreground">{parcel.trackingNumber}</span>
-                              <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {getSenderDisplayName(parcel.senderName, 'TRANSPORTER')}
-                          </TableCell>
-                          <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {getRecipientDisplayName(parcel.recipientName, 'TRANSPORTER')}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                'inline-block rounded px-2 py-0.5 text-xs font-medium',
-                                getStatusColor(parcel.status)
-                              )}
-                            >
-                              {getStatusLabel(parcel.status)}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {availableParcels.length === 0 && (
+      {error ? (
+        <Card className="border-destructive/30 bg-card">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button variant="outline" onClick={() => void loadShipments()}>
+              Reessayer
+            </Button>
+          </CardContent>
+        </Card>
+      ) : loading ? (
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : shipmentsByOrigin.length === 0 ? (
         <Card className="border-border bg-card">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center py-14 text-center">
             <Package className="h-12 w-12 text-muted-foreground" />
             <p className="mt-4 text-lg font-medium text-foreground">Aucun colis disponible</p>
             <p className="text-sm text-muted-foreground">
-              Tous les colis sont deja en transit ou livres
+              Les colis prets au transport apparaitront ici apres validation par le collecteur.
             </p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="space-y-5">
+          {shipmentsByOrigin.map((group) => {
+            const selectedInGroup = group.items.filter((shipment) =>
+              selectedShipmentIds.includes(shipment.shipmentId),
+            ).length;
+            const isLockedByOtherOrigin =
+              selectedOriginId != null && selectedOriginId !== group.originId;
+
+            return (
+              <Card
+                key={group.originId}
+                className={cn(
+                  'border-border bg-card',
+                  selectedInGroup > 0 && 'border-primary',
+                  isLockedByOtherOrigin && 'opacity-60',
+                )}
+              >
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                        <MapPin className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="truncate text-base">{group.originName}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {group.items.length} colis disponible(s)
+                          {selectedInGroup > 0 ? `, ${selectedInGroup} selectionne(s)` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    {isLockedByOtherOrigin && (
+                      <Badge variant="outline">Selection active sur un autre point</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border hover:bg-transparent">
+                          <TableHead className="w-12" />
+                          <TableHead className="text-muted-foreground">Reference</TableHead>
+                          <TableHead className="text-muted-foreground">Client</TableHead>
+                          <TableHead className="text-muted-foreground">Destination</TableHead>
+                          <TableHead className="text-muted-foreground">Statut</TableHead>
+                          <TableHead className="text-muted-foreground">Cree le</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.map((shipment) => {
+                          const isSelected = selectedShipmentIds.includes(shipment.shipmentId);
+
+                          return (
+                            <TableRow
+                              key={shipment.shipmentId}
+                              className={cn(
+                                'cursor-pointer border-border',
+                                isSelected && 'bg-primary/10',
+                              )}
+                              onClick={() => toggleShipment(shipment)}
+                            >
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    'flex h-5 w-5 items-center justify-center rounded border',
+                                    isSelected
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : 'border-border',
+                                  )}
+                                >
+                                  {isSelected && <Check className="h-3 w-3" />}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-primary" />
+                                  <span className="font-mono text-sm font-medium text-foreground">
+                                    {shipment.reference}
+                                  </span>
+                                  <CopyTrackingNumberButton trackingNumber={shipment.reference} />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {shipment.parcelTypeName ?? 'Type non renseigne'}
+                                  {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
+                                </p>
+                              </TableCell>
+                              <TableCell>
+                                <p className="text-sm font-medium text-foreground">
+                                  {shipment.senderFullName ?? 'Expediteur non renseigne'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  vers {shipment.receiverFullName ?? 'destinataire non renseigne'}
+                                </p>
+                              </TableCell>
+                              <TableCell className="text-sm text-foreground">
+                                {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  {shipment.status && (
+                                    <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
+                                      {getShipmentStatusLabel(shipment.status)}
+                                    </Badge>
+                                  )}
+                                  {shipment.priority && (
+                                    <Badge variant="outline">
+                                      {SHIPMENT_PRIORITY_LABELS[shipment.priority]}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatShipmentDate(shipment.createdAt)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
-      {/* Confirm Dialog */}
-      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent className="bg-card border-border">
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Confirmer la demande</DialogTitle>
             <DialogDescription>
-              Vous allez envoyer une demande de prise en charge pour {selectedParcels.length} colis.
+              Le collecteur du point devra approuver cette demande avant embarquement.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg bg-secondary p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Point de collecte:</span>
-              <span className="font-medium text-foreground">
-                {collectionPoints.find((p) => p.id === selectedPoint)?.name}
-              </span>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-secondary p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Point origine</span>
+                <span className="text-right text-sm font-medium text-foreground">
+                  {selectedOriginName}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">Colis</span>
+                <span className="text-sm font-medium text-foreground">
+                  {selectedShipmentIds.length}
+                </span>
+              </div>
             </div>
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Nombre de colis:</span>
-              <span className="font-medium text-foreground">{selectedParcels.length}</span>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Note au collecteur</label>
+              <Textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Exemple: passage prevu a 15h30"
+                className="min-h-[100px] bg-secondary"
+                disabled={submitting}
+              />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Poids total:</span>
-              <span className="font-medium text-foreground">{totalWeight.toFixed(1)} kg</span>
+            <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border p-3">
+              {selectedShipments.map((shipment) => (
+                <div
+                  key={shipment.shipmentId}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-secondary px-3 py-2"
+                >
+                  <span className="font-mono text-sm text-foreground">{shipment.reference}</span>
+                  <span className="truncate text-sm text-muted-foreground">
+                    {shipment.destinationCollectionPointName}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleSendRequest} className="gap-2">
-              <Send className="h-4 w-4" />
-              Envoyer
+            <Button variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={submitting}>
+              Annuler
+            </Button>
+            <Button onClick={() => void handleCreateRequest()} disabled={submitting} className="gap-2">
+              {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {submitting ? 'Envoi...' : 'Envoyer'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -10,6 +10,7 @@ import { AdminDashboard } from '@/components/views/admin-dashboard';
 import { CollectorDashboard } from '@/components/views/collector-dashboard';
 import { FleetManagement } from '@/components/views/fleet-management';
 import { PricingEngine } from '@/components/views/pricing-engine';
+import { DeliveryEstimatesView } from '@/components/views/delivery-estimates';
 import { BillingSubscriptionView } from '@/components/views/billing-subscription';
 import { CommissionManagement } from '@/components/views/commission-management';
 import { TeamManagement } from '@/components/views/team-management';
@@ -26,6 +27,7 @@ import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
 import { SuperAdminManagement } from '@/components/views/super-admin-management';
 import { CatalogManagement } from '@/components/views/catalog-management';
+import { PlatformFinanceSettings } from '@/components/views/platform-finance-settings';
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
@@ -124,6 +126,8 @@ export default function DashboardPage() {
         return <FleetManagement />;
       case 'pricing':
         return <PricingEngine />;
+      case 'delivery-estimates':
+        return isAdminLikeRole(currentRole) ? <DeliveryEstimatesView /> : <AdminDashboard />;
       case 'billing':
         return isAdminLikeRole(currentRole) ? <BillingSubscriptionView /> : <AdminDashboard />;
       case 'commissions':
@@ -141,27 +145,37 @@ export default function DashboardPage() {
       case 'points-map':
         return <CollectionPointsMap currentRole={currentRole} currentUser={currentUser} />;
       case 'tracking':
-        return <ParcelManagement currentRole={currentRole} currentUser={currentUser} />;
+        return currentRole === 'TRANSPORTER' ? (
+          <TransporterDashboard currentUser={currentUser} />
+        ) : (
+          <ParcelManagement currentRole={currentRole} currentUser={currentUser} />
+        );
       case 'transfer-requests':
-        return <TransferRequests currentRole={currentRole} currentUser={currentUser} />;
+        return currentRole === 'COLLECTOR' || currentRole === 'TRANSPORTER' ? (
+          <TransferRequests currentRole={currentRole} />
+        ) : (
+          <AdminDashboard />
+        );
 
       // Collector sections
       case 'reception':
         return <CollectorReception />;
       case 'local-stock':
-        return <LocalStock currentUser={currentUser} />;
+        return <LocalStock />;
 
       // Transporter sections
       case 'my-tour':
-        return <TransporterTour currentUser={currentUser} />;
+        return <TransporterTour />;
       case 'pickup-request':
-        return <PickupRequest currentUser={currentUser} />;
+        return <PickupRequest />;
 
       // Super Admin
       case 'super-admin':
         return <SuperAdminManagement />;
       case 'catalog':
         return <CatalogManagement />;
+      case 'platform-finance':
+        return <PlatformFinanceSettings />;
 
       case 'announcements':
         return <CompanyAnnouncements />;

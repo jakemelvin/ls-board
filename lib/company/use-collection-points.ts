@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCompanyEmployees } from '@/lib/admin/api';
 import { ApiError } from '@/lib/api-client';
 import {
+  activateCollectionPoint,
   assignCollectionPointResponsible,
   createCollectionPoint,
   createZone,
@@ -263,6 +264,24 @@ export function useCollectionPointsManager({
     [token, companyId, loadPoints],
   );
 
+  const activatePoint = useCallback(
+    async (pointId: number) => {
+      if (!token) {
+        throw new Error('Session expiree');
+      }
+
+      setActionPointId(pointId);
+      try {
+        const response = await activateCollectionPoint(token, companyId, pointId);
+        await loadPoints();
+        return response;
+      } finally {
+        setActionPointId(null);
+      }
+    },
+    [token, companyId, loadPoints],
+  );
+
   return {
     loading,
     error,
@@ -280,5 +299,6 @@ export function useCollectionPointsManager({
     removePoint,
     togglePointAvailability,
     deactivatePoint,
+    activatePoint,
   };
 }
