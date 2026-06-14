@@ -63,6 +63,8 @@
       "pickupRequest": "New request",
       "platformFinance": "Platform finance",
       "platformFinanceShort": "Finance",
+      "platformShipments": "Platform shipments",
+      "platformShipmentsShort": "Shipments",
       "pointsMap": "Points map",
       "pointsMapShort": "Map",
       "pricing": "Pricing engine",
@@ -410,6 +412,134 @@
       "deleteTitle": "Delete user",
       "empty": "No users found"
     }
+  },
+  "superAdminShipments": {
+    "collectionModes": {
+      "COLLECTION_POINT": "Collection point",
+      "PLATFORM": "Platform"
+    },
+    "detail": {
+      "back": "Back",
+      "characteristics": "Characteristics",
+      "company": "Company",
+      "companyPrice": "Company price",
+      "createdAt": "Created",
+      "destination": "Destination",
+      "eyebrow": "Shipment detail",
+      "fallbackTitle": "Shipment #{{id}}",
+      "fee": "Fee",
+      "location": "City / country",
+      "name": "Name",
+      "notProvided": "Not provided",
+      "origin": "Origin",
+      "parcelType": "Parcel type",
+      "phone": "Phone",
+      "price": "Final price",
+      "receiver": "Receiver",
+      "sender": "Sender",
+      "subtitle": "Complete lifecycle and operational data for the shipment.",
+      "transportMode": "Transport mode",
+      "updatedAt": "Last update",
+      "volume": "Volume",
+      "weight": "Weight"
+    },
+    "errors": {
+      "detail": "Unable to load shipment detail.",
+      "load": "Unable to load shipments."
+    },
+    "filters": {
+      "allCompanies": "All companies",
+      "allStatuses": "All statuses",
+      "company": "Company",
+      "from": "From",
+      "reset": "Reset",
+      "search": "Search",
+      "searchPlaceholder": "Reference, company, sender...",
+      "status": "Status",
+      "to": "To"
+    },
+    "history": {
+      "actor": "Changed by {{actor}}",
+      "empty": "No history available.",
+      "subtitle": "Events emitted by the backend for this shipment.",
+      "title": "Backend history",
+      "transition": "{{from}} -> {{to}}"
+    },
+    "lifecycle": {
+      "descriptions": {
+        "ARRIVED_DESTINATION_POINT": "The shipment is confirmed at the destination point.",
+        "AWAITING_DROP_OFF": "The client must drop off the parcel at the origin point.",
+        "CANCELLED": "The shipment is cancelled before the end of the cycle.",
+        "CREATED": "The shipment exists on the platform.",
+        "DELIVERED": "The receiver has picked up the parcel.",
+        "IN_TRANSIT": "The shipment is loaded with a transporter.",
+        "PAID": "Payment or payment intent is registered.",
+        "READY_FOR_PICKUP": "The receiver can pick up the parcel.",
+        "READY_FOR_TRANSPORT": "The parcel is ready for a pickup request.",
+        "RECEIVED_AT_COLLECTION_POINT": "The origin collector has validated reception.",
+        "RETURNED": "The shipment is returned after a delivery incident."
+      },
+      "states": {
+        "completed": "Completed",
+        "current": "Current",
+        "pending": "Pending"
+      },
+      "subtitle": "All expected steps, with the current status highlighted.",
+      "title": "Complete lifecycle"
+    },
+    "list": {
+      "columns": {
+        "actions": "Actions",
+        "company": "Company",
+        "createdAt": "Created",
+        "parties": "Sender / receiver",
+        "reference": "Reference",
+        "route": "Route",
+        "status": "Status"
+      },
+      "count": "{{count}} shipment(s)",
+      "empty": "No shipment found.",
+      "openDetail": "Open shipment {{reference}} detail",
+      "page": "Page {{page}} / {{total}}",
+      "to": "to",
+      "view": "View detail"
+    },
+    "metrics": {
+      "delivered": "Delivered",
+      "exceptions": "Exceptions",
+      "inTransit": "In transit",
+      "total": "Filtered total"
+    },
+    "pagination": {
+      "current": "{{page}} / {{total}}",
+      "next": "Next page",
+      "previous": "Previous page",
+      "total": "{{count}} result(s)"
+    },
+    "paymentStatuses": {
+      "PAID": "Paid",
+      "PAYMENT_AT_COLLECTION_POINT": "Payment at point",
+      "UNPAID": "Unpaid"
+    },
+    "priorities": {
+      "EXPRESS": "Express",
+      "STANDARD": "Standard"
+    },
+    "statuses": {
+      "ARRIVED_DESTINATION_POINT": "Arrived at destination point",
+      "AWAITING_DROP_OFF": "Awaiting drop-off",
+      "CANCELLED": "Cancelled",
+      "CREATED": "Created",
+      "DELIVERED": "Delivered",
+      "IN_TRANSIT": "In transit",
+      "PAID": "Paid",
+      "READY_FOR_PICKUP": "Ready for pickup",
+      "READY_FOR_TRANSPORT": "Ready for transport",
+      "RECEIVED_AT_COLLECTION_POINT": "Received at point",
+      "RETURNED": "Returned"
+    },
+    "subtitle": "Global view of every shipment completed on the platform, with filters and pagination.",
+    "title": "Platform shipments"
   },
   "platformFinance": {
     "delete": {

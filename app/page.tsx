@@ -27,6 +27,7 @@ import { TransporterDashboard } from '@/components/views/transporter-dashboard';
 import { PickupRequest } from '@/components/views/pickup-request';
 import { TransferRequests } from '@/components/views/transfer-requests';
 import { SuperAdminManagement } from '@/components/views/super-admin-management';
+import { SuperAdminShipmentsView } from '@/components/views/super-admin-shipments';
 import { CatalogManagement } from '@/components/views/catalog-management';
 import { PlatformFinanceSettings } from '@/components/views/platform-finance-settings';
 import { CompanyAnnouncements } from '@/components/views/announcements';
@@ -175,6 +176,8 @@ export default function DashboardPage() {
       // Super Admin
       case 'super-admin':
         return <SuperAdminManagement />;
+      case 'super-admin-shipments':
+        return <SuperAdminShipmentsView />;
       case 'catalog':
         return <CatalogManagement />;
       case 'platform-finance':

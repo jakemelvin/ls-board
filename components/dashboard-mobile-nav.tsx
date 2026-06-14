@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Boxes, CreditCard, LayoutDashboard, Map, Menu, ShieldCheck } from 'lucide-react';
+import { Boxes, CreditCard, LayoutDashboard, Map, Menu, PackageSearch, ShieldCheck } from 'lucide-react';
 
 import { SIDEBAR_ITEMS } from '@/components/dashboard-sidebar';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ const primaryItems = [
 const SUPER_ADMIN_ITEMS = [
   { id: 'super-admin', labelKey: 'shell.sections.administration', icon: ShieldCheck },
   { id: 'catalog', labelKey: 'shell.sections.catalog', icon: Boxes },
+  { id: 'super-admin-shipments', labelKey: 'shell.sections.platformShipmentsShort', icon: PackageSearch },
   { id: 'platform-finance', labelKey: 'shell.sections.platformFinanceShort', icon: CreditCard },
 ];
 

@@ -63,6 +63,8 @@
       "pickupRequest": "Nouvelle demande",
       "platformFinance": "Finance plateforme",
       "platformFinanceShort": "Finance",
+      "platformShipments": "Shipments plateforme",
+      "platformShipmentsShort": "Shipments",
       "pointsMap": "Carte des points",
       "pointsMapShort": "Carte",
       "pricing": "Moteur de tarification",
@@ -410,6 +412,134 @@
       "deleteTitle": "Supprimer l'utilisateur",
       "empty": "Aucun utilisateur trouvé"
     }
+  },
+  "superAdminShipments": {
+    "collectionModes": {
+      "COLLECTION_POINT": "Point de collecte",
+      "PLATFORM": "Plateforme"
+    },
+    "detail": {
+      "back": "Retour",
+      "characteristics": "Caracteristiques",
+      "company": "Entreprise",
+      "companyPrice": "Prix entreprise",
+      "createdAt": "Creation",
+      "destination": "Destination",
+      "eyebrow": "Detail shipment",
+      "fallbackTitle": "Shipment #{{id}}",
+      "fee": "Frais",
+      "location": "Ville / pays",
+      "name": "Nom",
+      "notProvided": "Non renseigne",
+      "origin": "Origine",
+      "parcelType": "Type de colis",
+      "phone": "Telephone",
+      "price": "Prix final",
+      "receiver": "Destinataire",
+      "sender": "Expediteur",
+      "subtitle": "Cycle de vie complet et donnees operationnelles du shipment.",
+      "transportMode": "Mode de transport",
+      "updatedAt": "Derniere mise a jour",
+      "volume": "Volume",
+      "weight": "Poids"
+    },
+    "errors": {
+      "detail": "Impossible de charger le detail du shipment.",
+      "load": "Impossible de charger les shipments."
+    },
+    "filters": {
+      "allCompanies": "Toutes les entreprises",
+      "allStatuses": "Tous les statuts",
+      "company": "Entreprise",
+      "from": "Du",
+      "reset": "Reinitialiser",
+      "search": "Recherche",
+      "searchPlaceholder": "Reference, entreprise, expediteur...",
+      "status": "Statut",
+      "to": "Au"
+    },
+    "history": {
+      "actor": "Modifie par {{actor}}",
+      "empty": "Aucun historique disponible.",
+      "subtitle": "Evenements emis par le backend pour ce shipment.",
+      "title": "Historique backend",
+      "transition": "{{from}} -> {{to}}"
+    },
+    "lifecycle": {
+      "descriptions": {
+        "ARRIVED_DESTINATION_POINT": "Le shipment est confirme au point de destination.",
+        "AWAITING_DROP_OFF": "Le client doit remettre le colis au point origine.",
+        "CANCELLED": "Le shipment est annule avant la fin du cycle.",
+        "CREATED": "Le shipment existe dans la plateforme.",
+        "DELIVERED": "Le destinataire a retire le colis.",
+        "IN_TRANSIT": "Le shipment est embarque par un transporteur.",
+        "PAID": "Le paiement ou l'intention de paiement est enregistre.",
+        "READY_FOR_PICKUP": "Le destinataire peut retirer le colis.",
+        "READY_FOR_TRANSPORT": "Le colis est pret pour une demande de prise.",
+        "RECEIVED_AT_COLLECTION_POINT": "Le collecteur origine a valide la reception.",
+        "RETURNED": "Le shipment est retourne apres incident."
+      },
+      "states": {
+        "completed": "Termine",
+        "current": "Actuel",
+        "pending": "A venir"
+      },
+      "subtitle": "Toutes les etapes attendues, avec le statut courant mis en avant.",
+      "title": "Cycle de vie complet"
+    },
+    "list": {
+      "columns": {
+        "actions": "Actions",
+        "company": "Entreprise",
+        "createdAt": "Creation",
+        "parties": "Expediteur / destinataire",
+        "reference": "Reference",
+        "route": "Route",
+        "status": "Statut"
+      },
+      "count": "{{count}} shipment(s)",
+      "empty": "Aucun shipment trouve.",
+      "openDetail": "Voir le detail du shipment {{reference}}",
+      "page": "Page {{page}} / {{total}}",
+      "to": "vers",
+      "view": "Voir le detail"
+    },
+    "metrics": {
+      "delivered": "Livres",
+      "exceptions": "Exceptions",
+      "inTransit": "En transit",
+      "total": "Total filtre"
+    },
+    "pagination": {
+      "current": "{{page}} / {{total}}",
+      "next": "Page suivante",
+      "previous": "Page precedente",
+      "total": "{{count}} resultat(s)"
+    },
+    "paymentStatuses": {
+      "PAID": "Paye",
+      "PAYMENT_AT_COLLECTION_POINT": "Paiement au point",
+      "UNPAID": "Non paye"
+    },
+    "priorities": {
+      "EXPRESS": "Express",
+      "STANDARD": "Standard"
+    },
+    "statuses": {
+      "ARRIVED_DESTINATION_POINT": "Arrive au point destination",
+      "AWAITING_DROP_OFF": "En attente de depot",
+      "CANCELLED": "Annule",
+      "CREATED": "Cree",
+      "DELIVERED": "Livre",
+      "IN_TRANSIT": "En transit",
+      "PAID": "Paye",
+      "READY_FOR_PICKUP": "Pret au retrait",
+      "READY_FOR_TRANSPORT": "Pret au transport",
+      "RECEIVED_AT_COLLECTION_POINT": "Recu au point",
+      "RETURNED": "Retourne"
+    },
+    "subtitle": "Vision globale de tous les shipments realises sur la plateforme, avec filtres et pagination.",
+    "title": "Shipments plateforme"
   },
   "platformFinance": {
     "delete": {

@@ -43,7 +43,7 @@ type I18nContextValue = {
 }
 
 const STORAGE_KEY = 'sendam_locale'
-const I18N_ASSET_VERSION = '2026-06-14-announcements-api'
+const I18N_ASSET_VERSION = '2026-06-14-super-admin-shipments'
 
 const bundledResources: Record<Locale, TranslationResources> = {
   fr: {
