@@ -58,6 +58,7 @@ import type {
   PromoCodeResponse,
   ShipmentFeeResponse,
 } from '@/lib/platform-finance/types';
+import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 type TabId = 'fees' | 'promos' | 'payments';
@@ -92,10 +93,10 @@ type PaymentModeForm = {
   active: boolean;
 };
 
-const TABS: { id: TabId; label: string; icon: ElementType }[] = [
-  { id: 'fees', label: 'Frais shipment', icon: HandCoins },
-  { id: 'promos', label: 'Codes promo', icon: BadgePercent },
-  { id: 'payments', label: 'Modes paiement', icon: CreditCard },
+const TABS: { id: TabId; labelKey: string; icon: ElementType }[] = [
+  { id: 'fees', labelKey: 'platformFinance.tabs.fees', icon: HandCoins },
+  { id: 'promos', labelKey: 'platformFinance.tabs.promos', icon: BadgePercent },
+  { id: 'payments', labelKey: 'platformFinance.tabs.payments', icon: CreditCard },
 ];
 
 const EMPTY_FEE: FeeForm = { originCountryId: '', amount: '', active: true };
@@ -150,22 +151,24 @@ function parsePositiveNumber(value: string, label: string, allowZero = true) {
 }
 
 function StatusBadge({ active }: { active?: boolean }) {
+  const { t } = useTranslation('dashboard');
   return active ? (
-    <Badge className="bg-success/15 text-success">Actif</Badge>
+    <Badge className="bg-success/15 text-success">{t('platformFinance.status.active')}</Badge>
   ) : (
-    <Badge className="bg-muted text-muted-foreground">Inactif</Badge>
+    <Badge className="bg-muted text-muted-foreground">{t('platformFinance.status.inactive')}</Badge>
   );
 }
 
 function ActiveToggle({
   checked,
   onChange,
-  label = 'Actif',
+  label,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
       <input
@@ -174,7 +177,7 @@ function ActiveToggle({
         onChange={(event) => onChange(event.target.checked)}
         className="h-4 w-4 accent-primary"
       />
-      {label}
+      {label ?? t('platformFinance.status.active')}
     </label>
   );
 }
@@ -188,9 +191,10 @@ function ActionButtons({
   onDelete: () => void;
   deleteDisabled?: boolean;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="flex justify-end gap-1.5">
-      <Button type="button" size="icon" variant="ghost" onClick={onEdit} title="Modifier">
+      <Button type="button" size="icon" variant="ghost" onClick={onEdit} title={t('common.edit')}>
         <Pencil className="h-4 w-4" />
       </Button>
       <Button
@@ -199,7 +203,7 @@ function ActionButtons({
         variant="ghost"
         onClick={onDelete}
         disabled={deleteDisabled}
-        title={deleteDisabled ? 'Mode systeme non supprimable' : 'Supprimer'}
+        title={deleteDisabled ? t('platformFinance.payments.systemNotDeletable') : t('common.delete')}
         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
       >
         <Trash2 className="h-4 w-4" />
@@ -209,6 +213,7 @@ function ActionButtons({
 }
 
 export function PlatformFinanceSettings() {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
   const { toast, success, error: showError } = useToastSimple();
@@ -294,8 +299,8 @@ export function PlatformFinanceSettings() {
       <StatusState
         icon={Shield}
         tone="warning"
-        title="Acces restreint"
-        description="Ces parametres financiers sont reserves aux super administrateurs."
+        title={t('superAdmin.restricted.title')}
+        description={t('platformFinance.restrictedDescription')}
       />
     );
   }
@@ -318,7 +323,7 @@ export function PlatformFinanceSettings() {
         action={
           <Button variant="outline" onClick={() => void load()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Reessayer
+            {t('common.retry')}
           </Button>
         }
       />
@@ -462,9 +467,9 @@ export function PlatformFinanceSettings() {
       <ToastBar toast={toast} />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Confirmer la suppression"
-        description="Cette action appelle directement le backend et ne peut pas etre annulee depuis le tableau de bord."
-        confirmLabel="Supprimer"
+        title={t('platformFinance.delete.title')}
+        description={t('platformFinance.delete.description')}
+        confirmLabel={t('common.delete')}
         destructive
         loading={saving !== null}
         onConfirm={() => void handleDelete()}
@@ -472,24 +477,24 @@ export function PlatformFinanceSettings() {
       />
 
       <SectionHeader
-        title="Parametres financiers plateforme"
-        subtitle="Gestion reelle des frais shipment, codes promo et modes de paiement."
+        title={t('platformFinance.title')}
+        subtitle={t('platformFinance.subtitle')}
         action={
           <Button variant="outline" onClick={() => void load()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Actualiser
+            {t('common.refresh')}
           </Button>
         }
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Metric icon={Globe2} label="Pays factures" value={activeFees.length} />
-        <Metric icon={BadgePercent} label="Promos actives" value={activePromos.length} />
-        <Metric icon={CreditCard} label="Paiements actifs" value={activePayments.length} />
+        <Metric icon={Globe2} label={t('platformFinance.metrics.countries')} value={activeFees.length} />
+        <Metric icon={BadgePercent} label={t('platformFinance.metrics.promos')} value={activePromos.length} />
+        <Metric icon={CreditCard} label={t('platformFinance.metrics.payments')} value={activePayments.length} />
       </div>
 
       <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-grid sm:grid-cols-3">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -505,7 +510,7 @@ export function PlatformFinanceSettings() {
             )}
           >
             <Icon className="h-4 w-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -568,6 +573,7 @@ function Metric({
   label: string;
   value: number;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <Card className="border-border bg-card">
       <CardContent className="flex items-center gap-3 p-4">
@@ -609,18 +615,18 @@ function FeesPanel({
       <Card ref={formRef} className="scroll-mt-4 border-border bg-card md:scroll-mt-6">
         <CardHeader>
           <CardTitle className="text-base">
-            {form.id ? 'Modifier le frais' : 'Nouveau frais'}
+            {form.id ? t('platformFinance.fees.form.editTitle') : t('platformFinance.fees.form.createTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Pays origine</Label>
+            <Label>{t('platformFinance.fees.form.country')}</Label>
             <select
               value={form.originCountryId}
               onChange={(event) => onFormChange({ ...form, originCountryId: event.target.value })}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">Selectionner un pays</option>
+              <option value="">{t('platformFinance.fees.form.selectCountry')}</option>
               {countries.map((country) => (
                 <option key={country.countryId} value={country.countryId}>
                   {country.countryName}
@@ -629,7 +635,7 @@ function FeesPanel({
             </select>
           </div>
           <div className="space-y-2">
-            <Label>Montant</Label>
+            <Label>{t('platformFinance.fees.form.amount')}</Label>
             <Input
               type="number"
               min="0"
@@ -646,11 +652,11 @@ function FeesPanel({
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button onClick={onSave} disabled={saving} className="gap-2">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Enregistrer
+              {t('common.save')}
             </Button>
             <Button variant="outline" onClick={() => onFormChange(EMPTY_FEE)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Nouveau
+              {t('common.new')}
             </Button>
           </div>
         </CardContent>
@@ -658,12 +664,12 @@ function FeesPanel({
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base">Frais configures</CardTitle>
+          <CardTitle className="text-base">{t('platformFinance.fees.listTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {fees.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-              Aucun frais shipment configure.
+              {t('platformFinance.fees.empty')}
             </p>
           ) : (
             fees.map((item) => (
@@ -720,24 +726,25 @@ function PromosPanel({
   onSave: () => void;
   onDelete: (item: PromoCodeResponse) => void;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card ref={formRef} className="scroll-mt-4 border-border bg-card md:scroll-mt-6">
         <CardHeader>
           <CardTitle className="text-base">
-            {form.id ? 'Modifier le code' : 'Nouveau code promo'}
+            {form.id ? t('platformFinance.promos.form.editTitle') : t('platformFinance.promos.form.createTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
-              label="Code"
+              label={t('platformFinance.promos.form.code')}
               value={form.code}
               onChange={(code) => onFormChange({ ...form, code })}
               placeholder="FREE5000"
             />
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t('platformFinance.promos.form.type')}</Label>
               <select
                 value={form.discountType}
                 onChange={(event) =>
@@ -745,27 +752,27 @@ function PromosPanel({
                 }
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="FIXED_AMOUNT">Montant fixe</option>
-                <option value="PERCENTAGE">Pourcentage</option>
+                <option value="FIXED_AMOUNT">{t('platformFinance.promos.discountTypes.fixed')}</option>
+                <option value="PERCENTAGE">{t('platformFinance.promos.discountTypes.percentage')}</option>
               </select>
             </div>
           </div>
           <Field
-            label="Description"
+            label={t('platformFinance.promos.form.description')}
             value={form.description}
             onChange={(description) => onFormChange({ ...form, description })}
             placeholder="Remise campagne"
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
-              label="Valeur"
+              label={t('platformFinance.promos.form.value')}
               type="number"
               value={form.discountValue}
               onChange={(discountValue) => onFormChange({ ...form, discountValue })}
               placeholder="5000"
             />
             <Field
-              label="Plafond"
+              label={t('platformFinance.promos.form.maxDiscount')}
               type="number"
               value={form.maxDiscountAmount}
               onChange={(maxDiscountAmount) => onFormChange({ ...form, maxDiscountAmount })}
@@ -773,7 +780,7 @@ function PromosPanel({
             />
           </div>
           <Field
-            label="Expiration"
+            label={t('platformFinance.promos.form.expiration')}
             type="datetime-local"
             value={form.expiresAt}
             onChange={(expiresAt) => onFormChange({ ...form, expiresAt })}
@@ -786,7 +793,7 @@ function PromosPanel({
             <ActiveToggle
               checked={form.multiUse}
               onChange={(multiUse) => onFormChange({ ...form, multiUse })}
-              label="Multi usage"
+              label={t('platformFinance.promos.form.multiUse')}
             />
             <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
               <input
@@ -795,17 +802,17 @@ function PromosPanel({
                 onChange={(event) => onFormChange({ ...form, multiUser: event.target.checked })}
                 className="h-4 w-4 accent-primary"
               />
-              Multi user
+              {t('platformFinance.promos.form.multiUser')}
             </label>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button onClick={onSave} disabled={saving} className="gap-2">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Enregistrer
+              {t('common.save')}
             </Button>
             <Button variant="outline" onClick={() => onFormChange(EMPTY_PROMO)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Nouveau
+              {t('common.new')}
             </Button>
           </div>
         </CardContent>
@@ -813,12 +820,12 @@ function PromosPanel({
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base">Codes existants</CardTitle>
+          <CardTitle className="text-base">{t('platformFinance.promos.listTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 lg:grid-cols-2">
           {promos.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground lg:col-span-2">
-              Aucun code promo configure.
+              {t('platformFinance.promos.empty')}
             </p>
           ) : (
             promos.map((item) => (
@@ -889,17 +896,18 @@ function PaymentsPanel({
   onSave: () => void;
   onDelete: (item: PaymentModeResponse) => void;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
       <Card ref={formRef} className="scroll-mt-4 border-border bg-card md:scroll-mt-6">
         <CardHeader>
           <CardTitle className="text-base">
-            {form.id ? 'Modifier le mode' : 'Nouveau mode de paiement'}
+            {form.id ? t('platformFinance.payments.form.editTitle') : t('platformFinance.payments.form.createTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Field
-            label="Nom"
+            label={t('platformFinance.payments.form.name')}
             value={form.name}
             onChange={(name) => onFormChange({ ...form, name })}
             placeholder="MOBILE MONEY"
@@ -911,11 +919,11 @@ function PaymentsPanel({
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button onClick={onSave} disabled={saving} className="gap-2">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Enregistrer
+              {t('common.save')}
             </Button>
             <Button variant="outline" onClick={() => onFormChange(EMPTY_PAYMENT)} className="gap-2">
               <Plus className="h-4 w-4" />
-              Nouveau
+              {t('common.new')}
             </Button>
           </div>
         </CardContent>
@@ -923,7 +931,7 @@ function PaymentsPanel({
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base">Modes disponibles</CardTitle>
+          <CardTitle className="text-base">{t('platformFinance.payments.listTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           {payments.map((item) => (

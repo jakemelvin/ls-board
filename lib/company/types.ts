@@ -236,6 +236,27 @@ export interface CompanyPricingRouteResponse {
   destinationCollectionPointName: string;
 }
 
+// Route exceptions
+
+export interface CompanyRouteExceptionRequest {
+  originCollectionPointId: number;
+  destinationCollectionPointId: number;
+  reason?: string;
+}
+
+export interface CompanyRouteExceptionResponse {
+  id: number;
+  companyId: number;
+  originCollectionPointId: number;
+  originCollectionPointName: string;
+  destinationCollectionPointId: number;
+  destinationCollectionPointName: string;
+  reason?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CompanyPricingRangeRuleResponse {
   id: number;
   minValue: number;

@@ -2,61 +2,62 @@
 
 import type { ElementType } from 'react';
 import {
-  LayoutDashboard,
-  Package,
-  Truck,
-  CreditCard,
-  HandCoins,
-  MapPin,
-  Map,
-  Users,
-  Settings,
-  DollarSign,
-  Warehouse,
   ArrowRightLeft,
-  Route,
-  PackageCheck,
-  ShieldCheck,
-  Megaphone,
+  Ban,
   Boxes,
-  Waypoints,
   Clock3,
+  CreditCard,
+  DollarSign,
+  HandCoins,
+  LayoutDashboard,
+  Map,
+  MapPin,
+  Megaphone,
+  Package,
+  PackageCheck,
+  Route,
+  Settings,
+  ShieldCheck,
+  Truck,
+  Users,
+  Warehouse,
+  Waypoints,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { UserRole } from '@/lib/mock-data';
-import { ADMIN_LIKE_ROLES } from '@/lib/roles';
+
 import { SendamLogo } from '@/components/sendam-logo';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
+import type { UserRole } from '@/lib/mock-data';
+import { ADMIN_LIKE_ROLES } from '@/lib/roles';
+import { cn } from '@/lib/utils';
 
 interface SidebarItem {
   id: string;
-  label: string;
+  labelKey: string;
   icon: ElementType;
   roles: UserRole[];
 }
 
 export const SIDEBAR_ITEMS: SidebarItem[] = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'points-map', label: 'Carte des Points', icon: Map, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'parcels', label: 'Gestion des Colis', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
-  { id: 'transfer-requests', label: 'Demandes de Prise', icon: ArrowRightLeft, roles: ['COLLECTOR', 'TRANSPORTER'] },
-  { id: 'fleet', label: 'Gestion de Flotte', icon: Truck, roles: ADMIN_LIKE_ROLES },
-  { id: 'collection-points', label: 'Gestion Territoriale', icon: MapPin, roles: ADMIN_LIKE_ROLES },
-  { id: 'parcel-types', label: 'Types de Colis', icon: Boxes, roles: ADMIN_LIKE_ROLES },
-  { id: 'transport-modes', label: 'Modes de Transport', icon: Waypoints, roles: ADMIN_LIKE_ROLES },
-  { id: 'pricing', label: 'Moteur de Tarification', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
-  { id: 'delivery-estimates', label: 'Delais de Livraison', icon: Clock3, roles: ADMIN_LIKE_ROLES },
-  { id: 'billing', label: 'Facturation', icon: CreditCard, roles: ADMIN_LIKE_ROLES },
-  { id: 'commissions', label: 'Commissions', icon: HandCoins, roles: ADMIN_LIKE_ROLES },
-  { id: 'team', label: 'Gestion d\'Équipe', icon: Users, roles: ADMIN_LIKE_ROLES },
-  // Collector specific
-  { id: 'reception', label: 'Flux de Réception', icon: PackageCheck, roles: ['COLLECTOR'] },
-  { id: 'local-stock', label: 'Stock Local', icon: Warehouse, roles: ['COLLECTOR'] },
-  // Transporter specific
-  { id: 'my-tour', label: 'Ma Tournée', icon: Route, roles: ['TRANSPORTER'] },
-  { id: 'pickup-request', label: 'Nouvelle Demande', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
-  // Admin/Employee specific
-  { id: 'announcements', label: 'Annonces de Départ', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
+  { id: 'dashboard', labelKey: 'shell.sections.dashboard', icon: LayoutDashboard, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'points-map', labelKey: 'shell.sections.pointsMap', icon: Map, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'parcels', labelKey: 'shell.sections.parcels', icon: Package, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR'] },
+  { id: 'transfer-requests', labelKey: 'shell.sections.transferRequests', icon: ArrowRightLeft, roles: ['COLLECTOR', 'TRANSPORTER'] },
+  { id: 'fleet', labelKey: 'shell.sections.fleet', icon: Truck, roles: ADMIN_LIKE_ROLES },
+  { id: 'collection-points', labelKey: 'shell.sections.collectionPoints', icon: MapPin, roles: ADMIN_LIKE_ROLES },
+  { id: 'parcel-types', labelKey: 'shell.sections.parcelTypes', icon: Boxes, roles: ADMIN_LIKE_ROLES },
+  { id: 'transport-modes', labelKey: 'shell.sections.transportModes', icon: Waypoints, roles: ADMIN_LIKE_ROLES },
+  { id: 'pricing', labelKey: 'shell.sections.pricing', icon: DollarSign, roles: ADMIN_LIKE_ROLES },
+  { id: 'delivery-estimates', labelKey: 'shell.sections.deliveryEstimates', icon: Clock3, roles: ADMIN_LIKE_ROLES },
+  { id: 'route-exceptions', labelKey: 'shell.sections.routeExceptions', icon: Ban, roles: ADMIN_LIKE_ROLES },
+  { id: 'billing', labelKey: 'shell.sections.billing', icon: CreditCard, roles: ADMIN_LIKE_ROLES },
+  { id: 'commissions', labelKey: 'shell.sections.commissions', icon: HandCoins, roles: ADMIN_LIKE_ROLES },
+  { id: 'team', labelKey: 'shell.sections.team', icon: Users, roles: ADMIN_LIKE_ROLES },
+  { id: 'reception', labelKey: 'shell.sections.reception', icon: PackageCheck, roles: ['COLLECTOR'] },
+  { id: 'local-stock', labelKey: 'shell.sections.localStock', icon: Warehouse, roles: ['COLLECTOR'] },
+  { id: 'my-tour', labelKey: 'shell.sections.myTour', icon: Route, roles: ['TRANSPORTER'] },
+  { id: 'pickup-request', labelKey: 'shell.sections.pickupRequest', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
+  { id: 'announcements', labelKey: 'shell.sections.announcements', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
 ];
 
 interface DashboardSidebarProps {
@@ -73,16 +74,15 @@ export function DashboardSidebar({
   className,
 }: DashboardSidebarProps) {
   const authRole = useAuthStore((s) => s.role);
+  const { t } = useTranslation('dashboard');
   const filteredItems = SIDEBAR_ITEMS.filter((item) => item.roles.includes(currentRole));
 
   return (
     <aside className={cn('flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar', className)}>
-      {/* Logo */}
       <div className="flex h-20 items-center border-b border-sidebar-border px-5">
         <SendamLogo />
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {filteredItems.map((item) => {
           const Icon = item.icon;
@@ -96,18 +96,17 @@ export function DashboardSidebar({
                 'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-primary'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
               )}
             >
               <Icon className="h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </button>
           );
         })}
       </nav>
 
-      {/* Settings + Super Admin */}
-      <div className="border-t border-sidebar-border p-4 space-y-1">
+      <div className="space-y-1 border-t border-sidebar-border p-4">
         {(authRole === 'SUPER_ADMIN' || currentRole === 'SUPER_ADMIN') && (
           <>
             <button
@@ -120,7 +119,7 @@ export function DashboardSidebar({
               )}
             >
               <ShieldCheck className="h-5 w-5" />
-              Administration
+              {t('shell.sections.administration')}
             </button>
             <button
               onClick={() => onSectionChange('catalog')}
@@ -132,7 +131,7 @@ export function DashboardSidebar({
               )}
             >
               <Boxes className="h-5 w-5" />
-              Catalogue
+              {t('shell.sections.catalog')}
             </button>
             <button
               onClick={() => onSectionChange('platform-finance')}
@@ -144,13 +143,13 @@ export function DashboardSidebar({
               )}
             >
               <CreditCard className="h-5 w-5" />
-              Finance plateforme
+              {t('shell.sections.platformFinance')}
             </button>
           </>
         )}
         <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
           <Settings className="h-5 w-5" />
-          Paramètres
+          {t('shell.sections.settings')}
         </button>
       </div>
     </aside>

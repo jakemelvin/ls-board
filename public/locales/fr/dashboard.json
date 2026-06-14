@@ -1,0 +1,487 @@
+{
+  "title": "Tableau de bord",
+  "common": {
+    "add": "Ajouter",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "genericError": "Une erreur est survenue.",
+    "loadError": "Erreur de chargement",
+    "noResults": "Aucun résultat",
+    "new": "Nouveau",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "tryAnotherSearch": "Essayez un autre terme de recherche."
+  },
+  "roles": {
+    "adminCompany": "Admin Entreprise",
+    "collector": "Collecteur",
+    "employee": "Employé",
+    "superAdmin": "Super Admin",
+    "transporter": "Transporteur"
+  },
+  "sections": {
+    "administration": "Administration",
+    "announcements": "Annonces",
+    "billing": "Facturation",
+    "catalog": "Catalogue",
+    "collectionPoints": "Points de collecte",
+    "commissions": "Commissions",
+    "dashboard": "Tableau de bord",
+    "fleet": "Flotte",
+    "parcels": "Colis",
+    "pricing": "Tarification",
+    "routeExceptions": "Exceptions de route",
+    "team": "Équipe"
+  },
+  "shell": {
+    "demoMode": "Mode démo :",
+    "logout": "Se déconnecter",
+    "mobile": {
+      "description": "Accès rapide aux sections disponibles pour votre rôle.",
+      "menu": "Menu",
+      "title": "Navigation"
+    },
+    "sections": {
+      "administration": "Administration",
+      "announcements": "Annonces de départ",
+      "billing": "Facturation",
+      "catalog": "Catalogue",
+      "collectionPoints": "Gestion territoriale",
+      "commissions": "Commissions",
+      "dashboard": "Tableau de bord",
+      "dashboardShort": "Dashboard",
+      "deliveryEstimates": "Délais de livraison",
+      "fleet": "Gestion de flotte",
+      "localStock": "Stock local",
+      "myTour": "Ma tournée",
+      "parcelTypes": "Types de colis",
+      "parcels": "Gestion des colis",
+      "pickupRequest": "Nouvelle demande",
+      "platformFinance": "Finance plateforme",
+      "platformFinanceShort": "Finance",
+      "pointsMap": "Carte des points",
+      "pointsMapShort": "Carte",
+      "pricing": "Moteur de tarification",
+      "reception": "Flux de réception",
+      "routeExceptions": "Exceptions de route",
+      "settings": "Paramètres",
+      "team": "Gestion d'équipe",
+      "transferRequests": "Demandes de prise",
+      "transportModes": "Modes de transport"
+    }
+  },
+  "adminDashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Analyse opérationnelle filtrée par période pour suivre l'activité de l'entreprise.",
+    "metrics": {
+      "deliveryRate": {
+        "description": "{{delivered}}/{{total}} colis livrés",
+        "title": "Taux de livraison"
+      },
+      "parcels": {
+        "description": "Données issues des colis créés",
+        "title": "Colis sur la période"
+      },
+      "revenue": {
+        "description": "Base : prix d'expédition estimé",
+        "title": "Chiffre d'affaires"
+      },
+      "saturation": {
+        "title": "Saturation points"
+      }
+    },
+    "charts": {
+      "revenue": {
+        "description": "Chiffre d'affaires par jour sur la période",
+        "title": "Revenus",
+        "tooltip": "Revenus"
+      },
+      "volume": {
+        "description": "Évolution sur la période sélectionnée",
+        "title": "Volume de colis"
+      }
+    },
+    "collectionPoints": {
+      "description": "Saturation actuelle par point",
+      "title": "Points de collecte"
+    },
+    "quickStats": {
+      "activeVehicles": {
+        "description": "En circulation",
+        "title": "Véhicules actifs"
+      },
+      "description": "Ressources et alertes sur la période",
+      "rejectedParcels": {
+        "description": "Sur la période",
+        "title": "Colis rejetés"
+      },
+      "teamMembers": {
+        "description": "Total équipe",
+        "title": "Membres d'équipe"
+      },
+      "title": "Aperçu rapide"
+    },
+    "readiness": {
+      "button": "Operational readiness",
+      "empty": "Aucune entreprise n'est associée à ce compte.",
+      "errors": {
+        "companyResolveFailed": "Impossible de résoudre l'entreprise pour lancer le contrôle.",
+        "loadFailed": "Impossible de charger le diagnostic readiness.",
+        "sessionExpired": "Session expirée."
+      },
+      "forbidden": "Votre compte ne permet pas de résoudre une entreprise."
+    },
+    "status": {
+      "arrived": "Arrivé",
+      "created": "Créé",
+      "delivered": "Livré",
+      "received": "Reçu",
+      "rejected": "Rejeté",
+      "transit": "Transit"
+    },
+    "statusDistribution": {
+      "description": "Répartition des colis sur la période",
+      "title": "Distribution des statuts"
+    }
+  },
+  "catalog": {
+    "common": {
+      "globalCatalogSubtitle": "Catalogue global proposé à toutes les entreprises."
+    },
+    "crud": {
+      "actions": {
+        "rename": "Renommer",
+        "systemEntry": "Entrée système, non supprimable"
+      },
+      "dialogs": {
+        "createTitle": "Nouveau {{itemLabel}}",
+        "deleteDescription": "Êtes-vous sûr de vouloir supprimer « {{name}} » ? Les entreprises qui l'utilisent le perdront.",
+        "deleteTitle": "Supprimer le {{itemLabel}}",
+        "renameTitle": "Renommer le {{itemLabel}}"
+      },
+      "emptyDescription": "Créez votre premier {{itemLabel}}.",
+      "emptyTitle": "Catalogue vide",
+      "errors": {
+        "create": "Création impossible",
+        "delete": "Suppression impossible",
+        "load": "Erreur lors du chargement",
+        "update": "Mise à jour impossible"
+      },
+      "fields": {
+        "name": "Nom"
+      },
+      "messages": {
+        "created": "« {{name}} » créé",
+        "deleted": "« {{name}} » supprimé",
+        "updated": "« {{name}} » mis à jour"
+      },
+      "placeholders": {
+        "name": "Ex : Express"
+      },
+      "searchPlaceholder": "Rechercher un {{itemLabel}}...",
+      "system": "Système",
+      "systemCount": "{{count}} système",
+      "totalCount": "{{count}} au total"
+    },
+    "assignment": {
+      "actions": {
+        "activate": "Activer",
+        "remove": "Retirer"
+      },
+      "activeCount": "{{assigned}} / {{total}} actif(s)",
+      "confirmDeactivate": "Confirmer la désactivation",
+      "emptyDescription": "Aucun {{itemLabel}} n'est disponible dans le catalogue.",
+      "errors": {
+        "action": "Action impossible",
+        "load": "Erreur lors du chargement"
+      },
+      "messages": {
+        "activated": "« {{name}} » activé",
+        "removed": "« {{name}} » retiré"
+      },
+      "searchPlaceholder": "Rechercher un {{itemLabel}}..."
+    },
+    "itemLabels": {
+      "parcelType": "type de colis",
+      "transportMode": "mode de transport"
+    },
+    "subtitle": "Référentiel global des types de colis et modes de transport proposés aux entreprises.",
+    "tabs": {
+      "parcelTypes": "Types de colis",
+      "transportModes": "Modes de transport"
+    },
+    "title": "Catalogue"
+  },
+  "routeExceptions": {
+    "delete": {
+      "description": "Supprimer l'exception « {{route}} » ? Cette route redeviendra disponible pour les opérations.",
+      "title": "Supprimer l'exception"
+    },
+    "empty": {
+      "description": "Ajoutez une exception pour bloquer une liaison entre deux points de collecte.",
+      "title": "Aucune exception configurée"
+    },
+    "errors": {
+      "delete": "Suppression impossible",
+      "load": "Impossible de charger les exceptions de route.",
+      "save": "Enregistrement impossible"
+    },
+    "form": {
+      "createAction": "Créer l'exception",
+      "createTitle": "Nouvelle exception",
+      "destination": "Destination",
+      "editTitle": "Modifier l'exception",
+      "notEnoughPoints": "Configurez au moins deux points de collecte actifs avant de créer une exception.",
+      "origin": "Origine",
+      "reason": "Motif",
+      "reasonPlaceholder": "Ex : liaison suspendue pour maintenance, fermeture temporaire, restriction opérationnelle...",
+      "selectPoint": "Sélectionner un point"
+    },
+    "list": {
+      "activeBadge": "Routes bloquées",
+      "title": "Exceptions configurées",
+      "columns": {
+        "actions": "Actions",
+        "reason": "Motif",
+        "route": "Route",
+        "updatedAt": "Mise à jour"
+      },
+      "count": "{{count}} exception(s)",
+      "noReason": "Aucun motif renseigné",
+      "searchPlaceholder": "Rechercher une route, un motif..."
+    },
+    "messages": {
+      "created": "Exception de route créée",
+      "deleted": "Exception de route supprimée",
+      "updated": "Exception de route mise à jour"
+    },
+    "subtitle": "Routes indisponibles pour {{companyName}} entre deux points de collecte.",
+    "title": "Exceptions de route",
+    "validation": {
+      "destinationRequired": "Sélectionnez un point de destination.",
+      "duplicate": "Une exception existe déjà pour cette route.",
+      "originRequired": "Sélectionnez un point d'origine.",
+      "reasonTooLong": "Le motif ne peut pas dépasser 500 caractères.",
+      "sameRoute": "L'origine et la destination doivent être différentes."
+    }
+  },
+  "announcements": {
+    "actions": {
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "new": "Nouvelle annonce"
+    },
+    "dates": {
+      "deadline": "Limite dépôt",
+      "shipment": "Départ",
+      "validity": "Validité"
+    },
+    "delete": {
+      "description": "Supprimer définitivement « {{title}} » ? Cette action est irréversible.",
+      "title": "Supprimer l'annonce"
+    },
+    "empty": {
+      "action": "Créer la première annonce",
+      "description": "Les annonces de départ apparaîtront ici dès qu'elles seront publiées.",
+      "title": "Aucune annonce de départ"
+    },
+    "errors": {
+      "delete": "Erreur lors de la suppression.",
+      "load": "Impossible de charger les annonces.",
+      "renew": "Renouvellement impossible.",
+      "save": "Enregistrement impossible.",
+      "supportData": "Erreur lors du chargement des données du formulaire.",
+      "toggle": "Erreur lors du changement de statut."
+    },
+    "form": {
+      "active": "Active immédiatement",
+      "allCollectionPoints": "Tous les points",
+      "allParcelTypes": "Tous les types",
+      "allTransportModes": "Tous les modes",
+      "collectionPointUnavailable": "Point indisponible",
+      "collectionPoints": "Points de collecte",
+      "content": "Contenu",
+      "contentPlaceholder": "Décrivez les détails utiles aux équipes et clients...",
+      "createAction": "Créer l'annonce",
+      "createTitle": "Nouvelle annonce de départ",
+      "editTitle": "Modifier l'annonce",
+      "endDate": "Fin de validité",
+      "generalTargetHint": "Laissez vide pour une annonce générale.",
+      "operationalDates": "Dates opérationnelles",
+      "operationalDatesHint": "Facultatif, mais la limite de réception et la date de départ doivent être renseignées ensemble.",
+      "parcelReceptionDeadline": "Limite de réception colis",
+      "parcelTypes": "Types de colis",
+      "renewable": "Renouvelable",
+      "shipmentDate": "Date de départ",
+      "startDate": "Début de validité",
+      "title": "Titre",
+      "titlePlaceholder": "Ex : Départ vers Dakar lundi",
+      "transportModes": "Modes de transport"
+    },
+    "general": "Annonce générale",
+    "messages": {
+      "activated": "Annonce activée",
+      "created": "Annonce créée",
+      "deactivated": "Annonce désactivée",
+      "deleted": "Annonce supprimée",
+      "renewed": "Annonce renouvelée",
+      "updated": "Annonce mise à jour"
+    },
+    "moreItems": "{{names}} +{{count}}",
+    "notScheduled": "Non renseigné",
+    "renew": {
+      "action": "Renouveler",
+      "description": "Définissez les nouvelles dates de validité et, si besoin, les dates opérationnelles.",
+      "title": "Renouveler l'annonce"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expirée",
+      "inactive": "Inactive",
+      "renewable": "Renouvelable"
+    },
+    "subtitle": "Gérez les annonces de départ de {{companyName}} pour informer vos équipes et clients.",
+    "title": "Annonces de départ",
+    "toggle": {
+      "activateDescription": "Cette annonce redeviendra visible pour vos équipes et clients.",
+      "activateTitle": "Activer l'annonce",
+      "deactivateDescription": "Cette annonce ne sera plus visible. Vous pourrez la réactiver à tout moment.",
+      "deactivateTitle": "Désactiver l'annonce"
+    },
+    "validation": {
+      "operationalDatesOrder": "La date de départ doit être après la limite de réception.",
+      "operationalDatesPair": "Renseignez les deux dates opérationnelles ou laissez-les vides.",
+      "required": "Champ requis",
+      "validityOrder": "La fin de validité doit être après le début."
+    }
+  },
+  "superAdmin": {
+    "createCompany": {
+      "backToCompany": "← Entreprise",
+      "creating": "Création...",
+      "goToAdmin": "Administrateur →",
+      "submit": "Créer l'entreprise",
+      "tabs": {
+        "admin": "Administrateur",
+        "company": "Entreprise"
+      },
+      "title": "Créer une entreprise"
+    },
+    "createUser": {
+      "creating": "Création...",
+      "submit": "Créer l'utilisateur",
+      "title": "Créer un utilisateur"
+    },
+    "restricted": {
+      "description": "Cette section est réservée aux super administrateurs.",
+      "title": "Accès restreint"
+    },
+    "roles": {
+      "client": "Client"
+    },
+    "status": {
+      "active": "Actif",
+      "deleted": "Supprimé",
+      "inactive": "Inactif",
+      "suspended": "Suspendu"
+    },
+    "subtitle": "Gestion des entreprises et utilisateurs de la plateforme",
+    "tabs": {
+      "companies": "Entreprises",
+      "users": "Utilisateurs"
+    },
+    "title": "Administration",
+    "users": {
+      "columns": {
+        "actions": "Actions",
+        "commission": "Commission",
+        "contact": "Contact",
+        "role": "Rôle",
+        "status": "Statut",
+        "user": "Utilisateur"
+      },
+      "count": "{{count}} utilisateur(s)",
+      "createButton": "Créer un utilisateur",
+      "deleteDescription": "Êtes-vous sûr de vouloir supprimer \"{{username}}\" ? Cette action est irréversible.",
+      "deleteTitle": "Supprimer l'utilisateur",
+      "empty": "Aucun utilisateur trouvé"
+    }
+  },
+  "platformFinance": {
+    "delete": {
+      "description": "Cette action appelle directement le backend et ne peut pas être annulée depuis le tableau de bord.",
+      "title": "Confirmer la suppression"
+    },
+    "fees": {
+      "empty": "Aucun frais shipment configuré.",
+      "form": {
+        "amount": "Montant",
+        "country": "Pays origine",
+        "createTitle": "Nouveau frais",
+        "editTitle": "Modifier le frais",
+        "selectCountry": "Sélectionner un pays"
+      },
+      "listTitle": "Frais configurés"
+    },
+    "metrics": {
+      "countries": "Pays facturés",
+      "payments": "Paiements actifs",
+      "promos": "Promos actives"
+    },
+    "payments": {
+      "form": {
+        "createTitle": "Nouveau mode de paiement",
+        "editTitle": "Modifier le mode",
+        "name": "Nom"
+      },
+      "listTitle": "Modes disponibles",
+      "systemNotDeletable": "Mode système non supprimable"
+    },
+    "promos": {
+      "discountTypes": {
+        "fixed": "Montant fixe",
+        "percentage": "Pourcentage"
+      },
+      "empty": "Aucun code promo configuré.",
+      "form": {
+        "code": "Code",
+        "createTitle": "Nouveau code promo",
+        "description": "Description",
+        "editTitle": "Modifier le code",
+        "expiration": "Expiration",
+        "maxDiscount": "Plafond",
+        "multiUse": "Multi usage",
+        "multiUser": "Multi utilisateur",
+        "type": "Type",
+        "value": "Valeur"
+      },
+      "listTitle": "Codes existants"
+    },
+    "restrictedDescription": "Ces paramètres financiers sont réservés aux super administrateurs.",
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "subtitle": "Gestion réelle des frais shipment, codes promo et modes de paiement.",
+    "tabs": {
+      "fees": "Frais shipment",
+      "payments": "Modes paiement",
+      "promos": "Codes promo"
+    },
+    "title": "Paramètres financiers plateforme"
+  },
+  "companyGuard": {
+    "empty": {
+      "description": "Aucune entreprise n'est encore enregistrée.",
+      "title": "Aucune entreprise"
+    },
+    "notFound": {
+      "description": "Impossible de déterminer votre entreprise avec ce compte.",
+      "title": "Entreprise introuvable"
+    }
+  }
+}

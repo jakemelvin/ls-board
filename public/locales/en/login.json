@@ -1,0 +1,34 @@
+{
+  "title": "Sign in",
+  "subtitle": "Access your SENDAMhub dashboard",
+  "fields": {
+    "username": "Username",
+    "password": "Password"
+  },
+  "placeholders": {
+    "username": "john.doe",
+    "password": "••••••••"
+  },
+  "password": {
+    "hide": "Hide password",
+    "show": "Show password"
+  },
+  "actions": {
+    "submit": "Sign in",
+    "submitting": "Signing in..."
+  },
+  "messages": {
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "accessDenied": "Access denied. This application is reserved for delivery professionals.",
+    "invalidCredentials": "Invalid credentials. Please try again.",
+    "unexpectedError": "An unexpected error occurred."
+  },
+  "register": {
+    "prompt": "No account yet?",
+    "link": "Create a company"
+  },
+  "validation": {
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required"
+  }
+}

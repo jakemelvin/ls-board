@@ -1,0 +1,487 @@
+{
+  "title": "Dashboard",
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "genericError": "An error occurred.",
+    "loadError": "Loading error",
+    "noResults": "No results",
+    "new": "New",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving...",
+    "tryAnotherSearch": "Try another search term."
+  },
+  "roles": {
+    "adminCompany": "Company Admin",
+    "collector": "Collector",
+    "employee": "Employee",
+    "superAdmin": "Super Admin",
+    "transporter": "Transporter"
+  },
+  "sections": {
+    "administration": "Administration",
+    "announcements": "Announcements",
+    "billing": "Billing",
+    "catalog": "Catalog",
+    "collectionPoints": "Collection points",
+    "commissions": "Commissions",
+    "dashboard": "Dashboard",
+    "fleet": "Fleet",
+    "parcels": "Parcels",
+    "pricing": "Pricing",
+    "routeExceptions": "Route exceptions",
+    "team": "Team"
+  },
+  "shell": {
+    "demoMode": "Demo mode:",
+    "logout": "Log out",
+    "mobile": {
+      "description": "Quick access to the sections available for your role.",
+      "menu": "Menu",
+      "title": "Navigation"
+    },
+    "sections": {
+      "administration": "Administration",
+      "announcements": "Departure announcements",
+      "billing": "Billing",
+      "catalog": "Catalog",
+      "collectionPoints": "Territory management",
+      "commissions": "Commissions",
+      "dashboard": "Dashboard",
+      "dashboardShort": "Dashboard",
+      "deliveryEstimates": "Delivery times",
+      "fleet": "Fleet management",
+      "localStock": "Local stock",
+      "myTour": "My tour",
+      "parcelTypes": "Parcel types",
+      "parcels": "Parcel management",
+      "pickupRequest": "New request",
+      "platformFinance": "Platform finance",
+      "platformFinanceShort": "Finance",
+      "pointsMap": "Points map",
+      "pointsMapShort": "Map",
+      "pricing": "Pricing engine",
+      "reception": "Reception flow",
+      "routeExceptions": "Route exceptions",
+      "settings": "Settings",
+      "team": "Team management",
+      "transferRequests": "Pickup requests",
+      "transportModes": "Transport modes"
+    }
+  },
+  "adminDashboard": {
+    "title": "Dashboard",
+    "subtitle": "Operational analysis filtered by period to track company activity.",
+    "metrics": {
+      "deliveryRate": {
+        "description": "{{delivered}}/{{total}} parcels delivered",
+        "title": "Delivery rate"
+      },
+      "parcels": {
+        "description": "Based on created parcels",
+        "title": "Parcels in period"
+      },
+      "revenue": {
+        "description": "Based on estimated shipment price",
+        "title": "Revenue"
+      },
+      "saturation": {
+        "title": "Point saturation"
+      }
+    },
+    "charts": {
+      "revenue": {
+        "description": "Daily revenue over the period",
+        "title": "Revenue",
+        "tooltip": "Revenue"
+      },
+      "volume": {
+        "description": "Evolution over the selected period",
+        "title": "Parcel volume"
+      }
+    },
+    "collectionPoints": {
+      "description": "Current saturation by point",
+      "title": "Collection points"
+    },
+    "quickStats": {
+      "activeVehicles": {
+        "description": "On the road",
+        "title": "Active vehicles"
+      },
+      "description": "Resources and alerts over the period",
+      "rejectedParcels": {
+        "description": "Over the period",
+        "title": "Rejected parcels"
+      },
+      "teamMembers": {
+        "description": "Total team",
+        "title": "Team members"
+      },
+      "title": "Quick overview"
+    },
+    "readiness": {
+      "button": "Operational readiness",
+      "empty": "No company is associated with this account.",
+      "errors": {
+        "companyResolveFailed": "Unable to resolve the company to start the check.",
+        "loadFailed": "Unable to load the readiness diagnostic.",
+        "sessionExpired": "Session expired."
+      },
+      "forbidden": "Your account cannot resolve a company."
+    },
+    "status": {
+      "arrived": "Arrived",
+      "created": "Created",
+      "delivered": "Delivered",
+      "received": "Received",
+      "rejected": "Rejected",
+      "transit": "Transit"
+    },
+    "statusDistribution": {
+      "description": "Parcel distribution over the period",
+      "title": "Status distribution"
+    }
+  },
+  "catalog": {
+    "common": {
+      "globalCatalogSubtitle": "Global catalog offered to all companies."
+    },
+    "crud": {
+      "actions": {
+        "rename": "Rename",
+        "systemEntry": "System entry, cannot be deleted"
+      },
+      "dialogs": {
+        "createTitle": "New {{itemLabel}}",
+        "deleteDescription": "Are you sure you want to delete \"{{name}}\"? Companies using it will lose it.",
+        "deleteTitle": "Delete {{itemLabel}}",
+        "renameTitle": "Rename {{itemLabel}}"
+      },
+      "emptyDescription": "Create your first {{itemLabel}}.",
+      "emptyTitle": "Empty catalog",
+      "errors": {
+        "create": "Unable to create",
+        "delete": "Unable to delete",
+        "load": "Loading failed",
+        "update": "Unable to update"
+      },
+      "fields": {
+        "name": "Name"
+      },
+      "messages": {
+        "created": "\"{{name}}\" created",
+        "deleted": "\"{{name}}\" deleted",
+        "updated": "\"{{name}}\" updated"
+      },
+      "placeholders": {
+        "name": "Ex: Express"
+      },
+      "searchPlaceholder": "Search for a {{itemLabel}}...",
+      "system": "System",
+      "systemCount": "{{count}} system",
+      "totalCount": "{{count}} total"
+    },
+    "assignment": {
+      "actions": {
+        "activate": "Activate",
+        "remove": "Remove"
+      },
+      "activeCount": "{{assigned}} / {{total}} active",
+      "confirmDeactivate": "Confirm deactivation",
+      "emptyDescription": "No {{itemLabel}} is available in the catalog.",
+      "errors": {
+        "action": "Action failed",
+        "load": "Loading failed"
+      },
+      "messages": {
+        "activated": "\"{{name}}\" activated",
+        "removed": "\"{{name}}\" removed"
+      },
+      "searchPlaceholder": "Search for a {{itemLabel}}..."
+    },
+    "itemLabels": {
+      "parcelType": "parcel type",
+      "transportMode": "transport mode"
+    },
+    "subtitle": "Global reference for parcel types and transport modes offered to companies.",
+    "tabs": {
+      "parcelTypes": "Parcel types",
+      "transportModes": "Transport modes"
+    },
+    "title": "Catalog"
+  },
+  "routeExceptions": {
+    "delete": {
+      "description": "Delete the \"{{route}}\" exception? This route will become available for operations again.",
+      "title": "Delete exception"
+    },
+    "empty": {
+      "description": "Add an exception to block a connection between two collection points.",
+      "title": "No exception configured"
+    },
+    "errors": {
+      "delete": "Unable to delete",
+      "load": "Unable to load route exceptions.",
+      "save": "Unable to save"
+    },
+    "form": {
+      "createAction": "Create exception",
+      "createTitle": "New exception",
+      "destination": "Destination",
+      "editTitle": "Edit exception",
+      "notEnoughPoints": "Configure at least two active collection points before creating an exception.",
+      "origin": "Origin",
+      "reason": "Reason",
+      "reasonPlaceholder": "Ex: route suspended for maintenance, temporary closure, operational restriction...",
+      "selectPoint": "Select a point"
+    },
+    "list": {
+      "activeBadge": "Blocked routes",
+      "title": "Configured exceptions",
+      "columns": {
+        "actions": "Actions",
+        "reason": "Reason",
+        "route": "Route",
+        "updatedAt": "Updated"
+      },
+      "count": "{{count}} exception(s)",
+      "noReason": "No reason provided",
+      "searchPlaceholder": "Search a route or reason..."
+    },
+    "messages": {
+      "created": "Route exception created",
+      "deleted": "Route exception deleted",
+      "updated": "Route exception updated"
+    },
+    "subtitle": "Unavailable routes for {{companyName}} between two collection points.",
+    "title": "Route exceptions",
+    "validation": {
+      "destinationRequired": "Select a destination point.",
+      "duplicate": "An exception already exists for this route.",
+      "originRequired": "Select an origin point.",
+      "reasonTooLong": "The reason cannot exceed 500 characters.",
+      "sameRoute": "Origin and destination must be different."
+    }
+  },
+  "announcements": {
+    "actions": {
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "new": "New announcement"
+    },
+    "dates": {
+      "deadline": "Reception deadline",
+      "shipment": "Departure",
+      "validity": "Validity"
+    },
+    "delete": {
+      "description": "Permanently delete \"{{title}}\"? This action cannot be undone.",
+      "title": "Delete announcement"
+    },
+    "empty": {
+      "action": "Create first announcement",
+      "description": "Departure announcements will appear here once they are published.",
+      "title": "No departure announcements"
+    },
+    "errors": {
+      "delete": "Unable to delete the announcement.",
+      "load": "Unable to load announcements.",
+      "renew": "Unable to renew the announcement.",
+      "save": "Unable to save the announcement.",
+      "supportData": "Unable to load form data.",
+      "toggle": "Unable to change status."
+    },
+    "form": {
+      "active": "Active immediately",
+      "allCollectionPoints": "All points",
+      "allParcelTypes": "All types",
+      "allTransportModes": "All modes",
+      "collectionPointUnavailable": "Point unavailable",
+      "collectionPoints": "Collection points",
+      "content": "Content",
+      "contentPlaceholder": "Describe the useful details for teams and clients...",
+      "createAction": "Create announcement",
+      "createTitle": "New departure announcement",
+      "editTitle": "Edit announcement",
+      "endDate": "Validity end",
+      "generalTargetHint": "Leave empty for a general announcement.",
+      "operationalDates": "Operational dates",
+      "operationalDatesHint": "Optional, but reception deadline and departure date must be filled together.",
+      "parcelReceptionDeadline": "Parcel reception deadline",
+      "parcelTypes": "Parcel types",
+      "renewable": "Renewable",
+      "shipmentDate": "Departure date",
+      "startDate": "Validity start",
+      "title": "Title",
+      "titlePlaceholder": "Ex: Departure to Dakar on Monday",
+      "transportModes": "Transport modes"
+    },
+    "general": "General announcement",
+    "messages": {
+      "activated": "Announcement activated",
+      "created": "Announcement created",
+      "deactivated": "Announcement deactivated",
+      "deleted": "Announcement deleted",
+      "renewed": "Announcement renewed",
+      "updated": "Announcement updated"
+    },
+    "moreItems": "{{names}} +{{count}}",
+    "notScheduled": "Not provided",
+    "renew": {
+      "action": "Renew",
+      "description": "Set the new validity dates and, if needed, the operational dates.",
+      "title": "Renew announcement"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "inactive": "Inactive",
+      "renewable": "Renewable"
+    },
+    "subtitle": "Manage {{companyName}} departure announcements for your teams and clients.",
+    "title": "Departure announcements",
+    "toggle": {
+      "activateDescription": "This announcement will become visible again to your teams and clients.",
+      "activateTitle": "Activate announcement",
+      "deactivateDescription": "This announcement will no longer be visible. You can reactivate it at any time.",
+      "deactivateTitle": "Deactivate announcement"
+    },
+    "validation": {
+      "operationalDatesOrder": "The departure date must be after the reception deadline.",
+      "operationalDatesPair": "Fill both operational dates or leave both empty.",
+      "required": "Required field",
+      "validityOrder": "The validity end must be after the start."
+    }
+  },
+  "superAdmin": {
+    "createCompany": {
+      "backToCompany": "← Company",
+      "creating": "Creating...",
+      "goToAdmin": "Administrator →",
+      "submit": "Create company",
+      "tabs": {
+        "admin": "Administrator",
+        "company": "Company"
+      },
+      "title": "Create company"
+    },
+    "createUser": {
+      "creating": "Creating...",
+      "submit": "Create user",
+      "title": "Create user"
+    },
+    "restricted": {
+      "description": "This section is reserved for super administrators.",
+      "title": "Restricted access"
+    },
+    "roles": {
+      "client": "Client"
+    },
+    "status": {
+      "active": "Active",
+      "deleted": "Deleted",
+      "inactive": "Inactive",
+      "suspended": "Suspended"
+    },
+    "subtitle": "Manage platform companies and users",
+    "tabs": {
+      "companies": "Companies",
+      "users": "Users"
+    },
+    "title": "Administration",
+    "users": {
+      "columns": {
+        "actions": "Actions",
+        "commission": "Commission",
+        "contact": "Contact",
+        "role": "Role",
+        "status": "Status",
+        "user": "User"
+      },
+      "count": "{{count}} user(s)",
+      "createButton": "Create user",
+      "deleteDescription": "Are you sure you want to delete \"{{username}}\"? This action cannot be undone.",
+      "deleteTitle": "Delete user",
+      "empty": "No users found"
+    }
+  },
+  "platformFinance": {
+    "delete": {
+      "description": "This action calls the backend directly and cannot be undone from the dashboard.",
+      "title": "Confirm deletion"
+    },
+    "fees": {
+      "empty": "No shipment fee configured.",
+      "form": {
+        "amount": "Amount",
+        "country": "Origin country",
+        "createTitle": "New fee",
+        "editTitle": "Edit fee",
+        "selectCountry": "Select a country"
+      },
+      "listTitle": "Configured fees"
+    },
+    "metrics": {
+      "countries": "Billed countries",
+      "payments": "Active payments",
+      "promos": "Active promos"
+    },
+    "payments": {
+      "form": {
+        "createTitle": "New payment mode",
+        "editTitle": "Edit mode",
+        "name": "Name"
+      },
+      "listTitle": "Available modes",
+      "systemNotDeletable": "System mode cannot be deleted"
+    },
+    "promos": {
+      "discountTypes": {
+        "fixed": "Fixed amount",
+        "percentage": "Percentage"
+      },
+      "empty": "No promo code configured.",
+      "form": {
+        "code": "Code",
+        "createTitle": "New promo code",
+        "description": "Description",
+        "editTitle": "Edit code",
+        "expiration": "Expiration",
+        "maxDiscount": "Cap",
+        "multiUse": "Multi-use",
+        "multiUser": "Multi-user",
+        "type": "Type",
+        "value": "Value"
+      },
+      "listTitle": "Existing codes"
+    },
+    "restrictedDescription": "These finance settings are reserved for super administrators.",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "subtitle": "Real management of shipment fees, promo codes, and payment modes.",
+    "tabs": {
+      "fees": "Shipment fees",
+      "payments": "Payment modes",
+      "promos": "Promo codes"
+    },
+    "title": "Platform finance settings"
+  },
+  "companyGuard": {
+    "empty": {
+      "description": "No company has been registered yet.",
+      "title": "No company"
+    },
+    "notFound": {
+      "description": "Unable to determine your company with this account.",
+      "title": "Company not found"
+    }
+  }
+}

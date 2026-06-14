@@ -1,0 +1,40 @@
+{
+  "authLayout": {
+    "description": "Gérez vos colis, transporteurs et points de collecte depuis un seul tableau de bord unifié.",
+    "features": {
+      "collectionPoints": "Réseau de points de collecte",
+      "dashboards": "Tableaux de bord opérationnels",
+      "parcels": "Gestion des colis en temps réel"
+    },
+    "headline": {
+      "highlight": "nouvelle génération",
+      "prefix": "La plateforme logistique"
+    },
+    "legal": "© {{year}} SENDAMhub. Tous droits réservés."
+  },
+  "actions": {
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "continue": "Continuer",
+    "create": "Créer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "search": "Rechercher"
+  },
+  "feedback": {
+    "error": "Erreur",
+    "loading": "Chargement",
+    "success": "Succès"
+  },
+  "language": {
+    "change": "Changer de langue",
+    "english": "Anglais",
+    "french": "Français"
+  },
+  "navigation": {
+    "back": "Retour",
+    "logout": "Se déconnecter"
+  }
+}

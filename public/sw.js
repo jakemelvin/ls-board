@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sendam-pwa-v1';
+const CACHE_VERSION = 'sendam-pwa-v2';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const STATIC_ASSETS = [
   '/',
@@ -44,6 +44,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (requestUrl.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith('/locales/')) {
+    event.respondWith(fetch(request));
     return;
   }
 

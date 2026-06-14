@@ -26,6 +26,8 @@ import type {
   CompanyDeliveryEstimateRequest,
   CompanyDeliveryEstimateResponse,
   CompanyDeliveryEstimateRequirementsResponse,
+  CompanyRouteExceptionRequest,
+  CompanyRouteExceptionResponse,
   MessageResponse,
 } from './types';
 
@@ -592,6 +594,54 @@ export function deleteCompanyDeliveryEstimate(
 ): Promise<MessageResponse> {
   return apiClient.delete<MessageResponse>(
     `/api/delivery/companies/${companyId}/delivery-estimates/${transportModeId}/routes/${originCollectionPointId}/${destinationCollectionPointId}/parcel-types/${parcelTypeId}`,
+    token,
+  );
+}
+
+// Route exceptions
+
+export function getCompanyRouteExceptions(
+  token: string,
+  companyId: number,
+): Promise<CompanyRouteExceptionResponse[]> {
+  return apiClient.get<CompanyRouteExceptionResponse[]>(
+    `/api/delivery/companies/${companyId}/route-exceptions`,
+    token,
+  );
+}
+
+export function createCompanyRouteException(
+  token: string,
+  companyId: number,
+  payload: CompanyRouteExceptionRequest,
+): Promise<CompanyRouteExceptionResponse> {
+  return apiClient.post<CompanyRouteExceptionResponse>(
+    `/api/delivery/companies/${companyId}/route-exceptions`,
+    payload,
+    token,
+  );
+}
+
+export function updateCompanyRouteException(
+  token: string,
+  companyId: number,
+  exceptionId: number,
+  payload: CompanyRouteExceptionRequest,
+): Promise<CompanyRouteExceptionResponse> {
+  return apiClient.put<CompanyRouteExceptionResponse>(
+    `/api/delivery/companies/${companyId}/route-exceptions/${exceptionId}`,
+    payload,
+    token,
+  );
+}
+
+export function deleteCompanyRouteException(
+  token: string,
+  companyId: number,
+  exceptionId: number,
+): Promise<MessageResponse> {
+  return apiClient.delete<MessageResponse>(
+    `/api/delivery/companies/${companyId}/route-exceptions/${exceptionId}`,
     token,
   );
 }

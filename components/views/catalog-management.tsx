@@ -2,41 +2,42 @@
 
 import { useState } from 'react';
 import { Boxes, Waypoints } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { CatalogCrudManager } from '@/components/company/catalog-crud-manager';
+import { useTranslation } from '@/lib/i18n';
 import {
-  getParcelTypes,
   createParcelType,
-  updateParcelType,
-  deleteParcelType,
-  getTransportModes,
   createTransportMode,
-  updateTransportMode,
+  deleteParcelType,
   deleteTransportMode,
+  getParcelTypes,
+  getTransportModes,
+  updateParcelType,
+  updateTransportMode,
 } from '@/lib/company/api';
 import { getTransportModeIcon } from '@/lib/transport-mode-icons';
+import { cn } from '@/lib/utils';
 
 type CatalogTab = 'parcel-types' | 'transport-modes';
 
-const TABS: { id: CatalogTab; label: string; icon: React.ElementType }[] = [
-  { id: 'parcel-types', label: 'Types de colis', icon: Boxes },
-  { id: 'transport-modes', label: 'Modes de transport', icon: Waypoints },
+const TABS: { id: CatalogTab; labelKey: string; icon: React.ElementType }[] = [
+  { id: 'parcel-types', labelKey: 'catalog.tabs.parcelTypes', icon: Boxes },
+  { id: 'transport-modes', labelKey: 'catalog.tabs.transportModes', icon: Waypoints },
 ];
 
 export function CatalogManagement() {
+  const { t } = useTranslation('dashboard');
   const [tab, setTab] = useState<CatalogTab>('parcel-types');
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-foreground sm:text-2xl">Catalogue</h1>
-        <p className="text-sm text-muted-foreground">
-          Référentiel global des types de colis et modes de transport, proposés aux entreprises.
-        </p>
+        <h1 className="text-xl font-bold text-foreground sm:text-2xl">{t('catalog.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('catalog.subtitle')}</p>
       </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl bg-secondary p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -48,16 +49,16 @@ export function CatalogManagement() {
             )}
           >
             <Icon className="h-4 w-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
 
       {tab === 'parcel-types' ? (
         <CatalogCrudManager
-          title="Types de colis"
-          subtitle="Catalogue global proposé à toutes les entreprises."
-          itemLabel="type de colis"
+          title={t('catalog.tabs.parcelTypes')}
+          subtitle={t('catalog.common.globalCatalogSubtitle')}
+          itemLabel={t('catalog.itemLabels.parcelType')}
           icon={Boxes}
           load={getParcelTypes}
           create={createParcelType}
@@ -66,9 +67,9 @@ export function CatalogManagement() {
         />
       ) : (
         <CatalogCrudManager
-          title="Modes de transport"
-          subtitle="Catalogue global proposé à toutes les entreprises."
-          itemLabel="mode de transport"
+          title={t('catalog.tabs.transportModes')}
+          subtitle={t('catalog.common.globalCatalogSubtitle')}
+          itemLabel={t('catalog.itemLabels.transportMode')}
           icon={Waypoints}
           getItemIcon={(item) => getTransportModeIcon(item.name)}
           load={getTransportModes}

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { registerCompany, getCountries } from '@/lib/auth/api';
 import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import type { CountryResponse, CreateCompanyRequest, Gender, PaymentCollectionMode } from '@/lib/auth/types';
 
 // ─── Validation schemas ────────────────────────────────────────────────────
@@ -33,92 +34,95 @@ const phonePattern = /^[0-9+()\-\s]{6,25}$/;
 const urlPattern = /^(https?:\/\/).+$/;
 const usernamePattern = /^[a-zA-Z0-9._-]{3,20}$/;
 
-const companySchema = z.object({
-  name: z.string().min(1, 'Nom requis').max(50, '50 caractères maximum'),
+type RegisterTranslate = ReturnType<typeof useTranslation>['t'];
+
+function createCompanySchema(t: RegisterTranslate) {
+  return z.object({
+  name: z.string().min(1, t('validation.companyNameRequired')).max(50, t('validation.max50')),
   email: z
     .string()
-    .max(100)
+    .max(100, t('validation.max100'))
     .refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
-      message: 'Email invalide',
+      message: t('validation.invalidEmail'),
     })
     .optional()
     .or(z.literal('')),
   phone: z
     .string()
-    .min(1, 'Téléphone requis')
-    .max(20)
-    .regex(phonePattern, 'Format invalide (ex: +237 6 12 34 56 78)'),
+    .min(1, t('validation.phoneRequired'))
+    .max(20, t('validation.max20'))
+    .regex(phonePattern, t('validation.invalidPhoneWithExample')),
   companyUrl: z
     .string()
-    .min(1, 'Site web requis')
-    .max(255)
-    .regex(urlPattern, 'Doit commencer par http:// ou https://'),
+    .min(1, t('validation.websiteRequired'))
+    .max(255, t('validation.max255'))
+    .regex(urlPattern, t('validation.invalidWebsite')),
   countryId: z
-    .number({ invalid_type_error: 'Pays requis' })
+    .number({ invalid_type_error: t('validation.countryRequired') })
     .int()
-    .positive('Pays requis'),
-  city: z.string().min(1, 'Ville requise'),
+    .positive(t('validation.countryRequired')),
+  city: z.string().min(1, t('validation.cityRequired')),
   address: z.string().optional(),
   paymentCollectionMode: z.enum(['PLATFORM', 'COLLECTION_POINT']).optional(),
-});
+  });
+}
 
-const adminSchema = z
-  .object({
-    firstName: z.string().min(1, 'Prénom requis').max(50),
-    lastName: z.string().min(1, 'Nom requis').max(50),
+function createAdminSchema(t: RegisterTranslate) {
+  return z
+    .object({
+    firstName: z.string().min(1, t('validation.firstNameRequired')).max(50, t('validation.max50')),
+    lastName: z.string().min(1, t('validation.lastNameRequired')).max(50, t('validation.max50')),
     username: z
       .string()
-      .min(3, '3 caractères minimum')
-      .max(20, '20 caractères maximum')
-      .regex(usernamePattern, 'Lettres, chiffres, . _ - uniquement'),
+      .min(3, t('validation.min3'))
+      .max(20, t('validation.max20'))
+      .regex(usernamePattern, t('validation.usernameFormat')),
     email: z
       .string()
-      .max(100)
+      .max(100, t('validation.max100'))
       .refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
-        message: 'Email invalide',
+        message: t('validation.invalidEmail'),
       })
       .optional()
       .or(z.literal('')),
     phone: z
       .string()
-      .min(1, 'Téléphone requis')
-      .max(20)
-      .regex(phonePattern, 'Format invalide'),
+      .min(1, t('validation.phoneRequired'))
+      .max(20, t('validation.max20'))
+      .regex(phonePattern, t('validation.invalidPhone')),
     password: z
       .string()
-      .min(8, '8 caractères minimum')
-      .regex(/[A-Z]/, 'Une majuscule requise')
-      .regex(/[0-9]/, 'Un chiffre requis'),
-    confirmPassword: z.string().min(1, 'Confirmation requise'),
-    language: z.string().min(1, 'Langue requise'),
+      .min(8, t('validation.min8'))
+      .regex(/[A-Z]/, t('validation.passwordUppercase'))
+      .regex(/[0-9]/, t('validation.passwordNumber')),
+    confirmPassword: z.string().min(1, t('validation.confirmPasswordRequired')),
+    language: z.string().min(1, t('validation.languageRequired')),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-    idCardNumber: z.string().max(50).optional(),
+    idCardNumber: z.string().max(50, t('validation.max50')).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
-    message: 'Les mots de passe ne correspondent pas',
+    message: t('validation.passwordMismatch'),
     path: ['confirmPassword'],
   });
+}
 
-type CompanyValues = z.infer<typeof companySchema>;
-type AdminValues = z.infer<typeof adminSchema>;
+type CompanyValues = z.infer<ReturnType<typeof createCompanySchema>>;
+type AdminValues = z.infer<ReturnType<typeof createAdminSchema>>;
 
 // ─── Step indicator ────────────────────────────────────────────────────────
 
-const STEPS = [
-  { icon: Building2, label: 'Entreprise' },
-  { icon: User, label: 'Administrateur' },
-  { icon: CheckCircle2, label: 'Confirmation' },
-];
+const STEP_KEYS = ['company', 'admin', 'review'] as const;
+const STEP_ICONS = [Building2, User, CheckCircle2] as const;
 
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, t }: { current: number; t: RegisterTranslate }) {
   return (
     <div className="flex items-center gap-0 w-full max-w-xs mx-auto mb-8">
-      {STEPS.map((step, i) => {
-        const Icon = step.icon;
+      {STEP_KEYS.map((stepKey, i) => {
+        const Icon = STEP_ICONS[i];
         const done = i < current;
         const active = i === current;
         return (
-          <div key={step.label} className="flex items-center flex-1 last:flex-none">
+          <div key={stepKey} className="flex items-center flex-1 last:flex-none">
             <div className="flex flex-col items-center gap-1.5">
               <div
                 className={cn(
@@ -140,10 +144,10 @@ function StepIndicator({ current }: { current: number }) {
                   active ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                {step.label}
+                {t(`steps.${stepKey}`)}
               </span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < STEP_KEYS.length - 1 && (
               <div
                 className={cn(
                   'h-px flex-1 mx-2 mt-[-14px] transition-colors',
@@ -169,10 +173,10 @@ function passwordStrength(password: string): { score: number; label: string; col
 
   const levels = [
     { score: 0, label: '', color: 'bg-muted' },
-    { score: 1, label: 'Faible', color: 'bg-destructive' },
-    { score: 2, label: 'Moyen', color: 'bg-warning' },
-    { score: 3, label: 'Bon', color: 'bg-chart-2' },
-    { score: 4, label: 'Fort', color: 'bg-success' },
+    { score: 1, label: 'passwordStrength.weak', color: 'bg-destructive' },
+    { score: 2, label: 'passwordStrength.medium', color: 'bg-warning' },
+    { score: 3, label: 'passwordStrength.good', color: 'bg-chart-2' },
+    { score: 4, label: 'passwordStrength.strong', color: 'bg-success' },
   ];
   return levels[score] ?? levels[0];
 }
@@ -186,6 +190,7 @@ function CompanyStep({
   defaultValues,
   logo,
   onLogoChange,
+  t,
 }: {
   onNext: (data: CompanyValues) => void;
   countries: CountryResponse[];
@@ -193,6 +198,7 @@ function CompanyStep({
   defaultValues?: Partial<CompanyValues>;
   logo: File | null;
   onLogoChange: (f: File | null) => void;
+  t: RegisterTranslate;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -203,7 +209,7 @@ function CompanyStep({
     watch,
     formState: { errors },
   } = useForm<CompanyValues>({
-    resolver: zodResolver(companySchema),
+    resolver: zodResolver(createCompanySchema(t)),
     defaultValues: defaultValues ?? {},
   });
 
@@ -213,10 +219,10 @@ function CompanyStep({
     <form onSubmit={handleSubmit(onNext)} className="space-y-5">
       {/* Company name */}
       <div className="space-y-1.5">
-        <Label htmlFor="name">Nom de l'entreprise *</Label>
+        <Label htmlFor="name">{t('fields.companyName')}</Label>
         <Input
           id="name"
-          placeholder="Sendam Express SARL"
+          placeholder={t('placeholders.companyName')}
           {...register('name')}
           className={cn(errors.name && 'border-destructive')}
         />
@@ -226,11 +232,11 @@ function CompanyStep({
       <div className="grid grid-cols-2 gap-4">
         {/* Email */}
         <div className="space-y-1.5">
-          <Label htmlFor="comp-email">Email entreprise</Label>
+          <Label htmlFor="comp-email">{t('fields.companyEmail')}</Label>
           <Input
             id="comp-email"
             type="email"
-            placeholder="contact@sendam.fr"
+            placeholder={t('placeholders.companyEmail')}
             {...register('email')}
             className={cn(errors.email && 'border-destructive')}
           />
@@ -239,10 +245,10 @@ function CompanyStep({
 
         {/* Phone */}
         <div className="space-y-1.5">
-          <Label htmlFor="comp-phone">Téléphone *</Label>
+          <Label htmlFor="comp-phone">{t('fields.phone')}</Label>
           <Input
             id="comp-phone"
-            placeholder="+237 6 12 34 56 78"
+            placeholder={t('placeholders.phone')}
             {...register('phone')}
             className={cn(errors.phone && 'border-destructive')}
           />
@@ -252,10 +258,10 @@ function CompanyStep({
 
       {/* Website */}
       <div className="space-y-1.5">
-        <Label htmlFor="companyUrl">Site web *</Label>
+        <Label htmlFor="companyUrl">{t('fields.website')}</Label>
         <Input
           id="companyUrl"
-          placeholder="https://www.votre-entreprise.com"
+          placeholder={t('placeholders.website')}
           {...register('companyUrl')}
           className={cn(errors.companyUrl && 'border-destructive')}
         />
@@ -265,7 +271,7 @@ function CompanyStep({
       <div className="grid grid-cols-2 gap-4">
         {/* Country */}
         <div className="space-y-1.5">
-          <Label htmlFor="countryId">Pays *</Label>
+          <Label htmlFor="countryId">{t('fields.country')}</Label>
           <select
             id="countryId"
             value={selectedCountryId ?? ''}
@@ -279,7 +285,7 @@ function CompanyStep({
               errors.countryId && 'border-destructive',
             )}
           >
-            <option value="">Sélectionner…</option>
+            <option value="">{t('options.select')}</option>
             {countries.map((c) => (
               <option key={c.countryId} value={c.countryId}>
                 {c.countryName}
@@ -288,9 +294,9 @@ function CompanyStep({
           </select>
           {countriesError && (
             <p className="text-xs text-destructive">
-              Impossible de charger les pays. Vérifiez votre connexion et{' '}
+              {t('messages.countriesLoadFailed')} {' '}
               <button type="button" className="underline" onClick={() => window.location.reload()}>
-                rechargez la page
+                {t('actions.reloadPage')}
               </button>
               .
             </p>
@@ -302,10 +308,10 @@ function CompanyStep({
 
         {/* City */}
         <div className="space-y-1.5">
-          <Label htmlFor="city">Ville *</Label>
+          <Label htmlFor="city">{t('fields.city')}</Label>
           <Input
             id="city"
-            placeholder="Douala"
+            placeholder={t('placeholders.city')}
             {...register('city')}
             className={cn(errors.city && 'border-destructive')}
           />
@@ -315,18 +321,18 @@ function CompanyStep({
 
       {/* Address */}
       <div className="space-y-1.5">
-        <Label htmlFor="address">Adresse</Label>
-        <Input id="address" placeholder="12 Rue de la Paix, Akwa" {...register('address')} />
+        <Label htmlFor="address">{t('fields.address')}</Label>
+        <Input id="address" placeholder={t('placeholders.address')} {...register('address')} />
       </div>
 
       {/* Payment mode */}
       <div className="space-y-1.5">
-        <Label>Mode de collecte des paiements</Label>
+        <Label>{t('fields.paymentCollectionMode')}</Label>
         <div className="grid grid-cols-2 gap-3">
           {(
             [
-              { value: 'PLATFORM', label: 'Via la plateforme' },
-              { value: 'COLLECTION_POINT', label: 'Aux points de collecte' },
+              { value: 'PLATFORM', label: t('paymentModes.platform') },
+              { value: 'COLLECTION_POINT', label: t('paymentModes.collectionPoint') },
             ] as { value: PaymentCollectionMode; label: string }[]
           ).map((opt) => (
             <label
@@ -352,7 +358,7 @@ function CompanyStep({
 
       {/* Logo upload */}
       <div className="space-y-1.5">
-        <Label>Logo de l'entreprise</Label>
+        <Label>{t('fields.companyLogo')}</Label>
         <input
           ref={fileRef}
           type="file"
@@ -388,13 +394,13 @@ function CompanyStep({
             className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border px-4 py-4 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
           >
             <Upload className="h-4 w-4" />
-            Importer un logo (optionnel)
+            {t('actions.uploadLogo')}
           </button>
         )}
       </div>
 
       <Button type="submit" className="w-full mt-2">
-        Suivant
+        {t('actions.next')}
         <ChevronRight className="ml-1 h-4 w-4" />
       </Button>
     </form>
@@ -407,10 +413,12 @@ function AdminStep({
   onNext,
   onBack,
   defaultValues,
+  t,
 }: {
   onNext: (data: AdminValues) => void;
   onBack: () => void;
   defaultValues?: Partial<AdminValues>;
+  t: RegisterTranslate;
 }) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -421,7 +429,7 @@ function AdminStep({
     watch,
     formState: { errors },
   } = useForm<AdminValues>({
-    resolver: zodResolver(adminSchema),
+    resolver: zodResolver(createAdminSchema(t)),
     defaultValues: defaultValues ?? {},
   });
 
@@ -432,20 +440,20 @@ function AdminStep({
     <form onSubmit={handleSubmit(onNext)} className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="firstName">Prénom *</Label>
+          <Label htmlFor="firstName">{t('fields.firstName')}</Label>
           <Input
             id="firstName"
-            placeholder="Jean"
+            placeholder={t('placeholders.firstName')}
             {...register('firstName')}
             className={cn(errors.firstName && 'border-destructive')}
           />
           {errors.firstName && <p className="text-xs text-destructive">{errors.firstName.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="lastName">Nom *</Label>
+          <Label htmlFor="lastName">{t('fields.lastName')}</Label>
           <Input
             id="lastName"
-            placeholder="Dupont"
+            placeholder={t('placeholders.lastName')}
             {...register('lastName')}
             className={cn(errors.lastName && 'border-destructive')}
           />
@@ -454,38 +462,38 @@ function AdminStep({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="username">Nom d'utilisateur *</Label>
+        <Label htmlFor="username">{t('fields.username')}</Label>
         <Input
           id="username"
           autoComplete="username"
-          placeholder="jean.dupont"
+          placeholder={t('placeholders.username')}
           {...register('username')}
           className={cn(errors.username && 'border-destructive')}
         />
         {errors.username ? (
           <p className="text-xs text-destructive">{errors.username.message}</p>
         ) : (
-          <p className="text-xs text-muted-foreground">Lettres, chiffres, . _ - (3–20 caractères)</p>
+          <p className="text-xs text-muted-foreground">{t('help.username')}</p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="admin-email">Email personnel</Label>
+          <Label htmlFor="admin-email">{t('fields.personalEmail')}</Label>
           <Input
             id="admin-email"
             type="email"
-            placeholder="jean@email.com"
+            placeholder={t('placeholders.personalEmail')}
             {...register('email')}
             className={cn(errors.email && 'border-destructive')}
           />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="admin-phone">Téléphone *</Label>
+          <Label htmlFor="admin-phone">{t('fields.phone')}</Label>
           <Input
             id="admin-phone"
-            placeholder="+237 6 12 34 56 78"
+            placeholder={t('placeholders.phone')}
             {...register('phone')}
             className={cn(errors.phone && 'border-destructive')}
           />
@@ -495,13 +503,13 @@ function AdminStep({
 
       {/* Password */}
       <div className="space-y-1.5">
-        <Label htmlFor="password">Mot de passe *</Label>
+        <Label htmlFor="password">{t('fields.password')}</Label>
         <div className="relative">
           <Input
             id="password"
             type={showPass ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="••••••••"
+            placeholder={t('placeholders.password')}
             {...register('password')}
             className={cn('pr-10', errors.password && 'border-destructive')}
           />
@@ -529,7 +537,7 @@ function AdminStep({
             </div>
             {strength.label && (
               <p className="text-xs text-muted-foreground">
-                Force : <span className="font-medium text-foreground">{strength.label}</span>
+                {t('passwordStrength.label')} <span className="font-medium text-foreground">{t(strength.label)}</span>
               </p>
             )}
           </div>
@@ -539,13 +547,13 @@ function AdminStep({
 
       {/* Confirm password */}
       <div className="space-y-1.5">
-        <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
+        <Label htmlFor="confirmPassword">{t('fields.confirmPassword')}</Label>
         <div className="relative">
           <Input
             id="confirmPassword"
             type={showConfirm ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="••••••••"
+            placeholder={t('placeholders.password')}
             {...register('confirmPassword')}
             className={cn('pr-10', errors.confirmPassword && 'border-destructive')}
           />
@@ -566,7 +574,7 @@ function AdminStep({
       <div className="grid grid-cols-2 gap-4">
         {/* Language */}
         <div className="space-y-1.5">
-          <Label htmlFor="language">Langue *</Label>
+          <Label htmlFor="language">{t('fields.language')}</Label>
           <select
             id="language"
             {...register('language')}
@@ -576,35 +584,35 @@ function AdminStep({
               errors.language && 'border-destructive',
             )}
           >
-            <option value="">Choisir…</option>
-            <option value="fr">Français</option>
-            <option value="en">English</option>
+            <option value="">{t('options.choose')}</option>
+            <option value="fr">{t('options.french')}</option>
+            <option value="en">{t('options.english')}</option>
           </select>
           {errors.language && <p className="text-xs text-destructive">{errors.language.message}</p>}
         </div>
 
         {/* Gender */}
         <div className="space-y-1.5">
-          <Label htmlFor="gender">Genre</Label>
+          <Label htmlFor="gender">{t('fields.gender')}</Label>
           <select
             id="gender"
             {...register('gender')}
             className="flex h-10 w-full rounded-xl border border-input bg-input px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Non précisé</option>
-            <option value="MALE">Homme</option>
-            <option value="FEMALE">Femme</option>
-            <option value="OTHER">Autre</option>
+            <option value="">{t('options.unspecified')}</option>
+            <option value="MALE">{t('options.male')}</option>
+            <option value="FEMALE">{t('options.female')}</option>
+            <option value="OTHER">{t('options.other')}</option>
           </select>
         </div>
       </div>
 
       {/* ID card */}
       <div className="space-y-1.5">
-        <Label htmlFor="idCardNumber">Numéro de pièce d'identité</Label>
+        <Label htmlFor="idCardNumber">{t('fields.idCardNumber')}</Label>
         <Input
           id="idCardNumber"
-          placeholder="AB123456789"
+          placeholder={t('placeholders.idCardNumber')}
           {...register('idCardNumber')}
           className={cn(errors.idCardNumber && 'border-destructive')}
         />
@@ -613,10 +621,10 @@ function AdminStep({
       <div className="flex gap-3 mt-2">
         <Button type="button" variant="outline" className="flex-1" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Retour
+          {t('actions.back')}
         </Button>
         <Button type="submit" className="flex-1">
-          Suivant
+          {t('actions.next')}
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
@@ -635,6 +643,7 @@ function ReviewStep({
   onSubmit,
   isSubmitting,
   serverError,
+  t,
 }: {
   company: CompanyValues;
   admin: AdminValues;
@@ -644,9 +653,10 @@ function ReviewStep({
   onSubmit: () => void;
   isSubmitting: boolean;
   serverError: string | null;
+  t: RegisterTranslate;
 }) {
   const countryName =
-    countries.find((c) => c.countryId === company.countryId)?.countryName ?? '—';
+    countries.find((c) => c.countryId === company.countryId)?.countryName ?? t('common.notAvailable');
 
   const Row = ({ label, value }: { label: string; value?: string }) =>
     value ? (
@@ -669,7 +679,7 @@ function ReviewStep({
       <div className="rounded-xl border border-border bg-card p-4 space-y-1">
         <div className="flex items-center gap-2 mb-3">
           <Building2 className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Entreprise</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('sections.company')}</h3>
         </div>
         {logo && (
           <div className="flex items-center gap-3 pb-2 mb-2 border-b border-border">
@@ -682,20 +692,20 @@ function ReviewStep({
           </div>
         )}
         <div className="divide-y divide-border">
-          <Row label="Nom" value={company.name} />
-          <Row label="Email" value={company.email || undefined} />
-          <Row label="Téléphone" value={company.phone} />
-          <Row label="Site web" value={company.companyUrl} />
-          <Row label="Pays" value={countryName} />
-          <Row label="Ville" value={company.city} />
-          <Row label="Adresse" value={company.address} />
+          <Row label={t('review.name')} value={company.name} />
+          <Row label={t('review.email')} value={company.email || undefined} />
+          <Row label={t('review.phone')} value={company.phone} />
+          <Row label={t('review.website')} value={company.companyUrl} />
+          <Row label={t('review.country')} value={countryName} />
+          <Row label={t('review.city')} value={company.city} />
+          <Row label={t('review.address')} value={company.address} />
           <Row
-            label="Paiements"
+            label={t('review.payments')}
             value={
               company.paymentCollectionMode === 'PLATFORM'
-                ? 'Via la plateforme'
+                ? t('paymentModes.platform')
                 : company.paymentCollectionMode === 'COLLECTION_POINT'
-                ? 'Aux points de collecte'
+                ? t('paymentModes.collectionPoint')
                 : undefined
             }
           />
@@ -706,48 +716,46 @@ function ReviewStep({
       <div className="rounded-xl border border-border bg-card p-4 space-y-1">
         <div className="flex items-center gap-2 mb-3">
           <User className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Administrateur</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t('sections.admin')}</h3>
         </div>
         <div className="divide-y divide-border">
-          <Row label="Nom complet" value={`${admin.firstName} ${admin.lastName}`} />
-          <Row label="Identifiant" value={admin.username} />
-          <Row label="Email" value={admin.email || undefined} />
-          <Row label="Téléphone" value={admin.phone} />
-          <Row label="Langue" value={admin.language === 'fr' ? 'Français' : 'English'} />
+          <Row label={t('review.fullName')} value={`${admin.firstName} ${admin.lastName}`} />
+          <Row label={t('review.username')} value={admin.username} />
+          <Row label={t('review.email')} value={admin.email || undefined} />
+          <Row label={t('review.phone')} value={admin.phone} />
+          <Row label={t('review.language')} value={admin.language === 'fr' ? t('options.french') : t('options.english')} />
           <Row
-            label="Genre"
+            label={t('review.gender')}
             value={
               admin.gender === 'MALE'
-                ? 'Homme'
+                ? t('options.male')
                 : admin.gender === 'FEMALE'
-                ? 'Femme'
+                ? t('options.female')
                 : admin.gender === 'OTHER'
-                ? 'Autre'
+                ? t('options.other')
                 : undefined
             }
           />
-          <Row label="Pièce d'identité" value={admin.idCardNumber} />
+          <Row label={t('review.idCardNumber')} value={admin.idCardNumber} />
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground text-center leading-relaxed">
-        En soumettant, vous acceptez que votre demande soit examinée par notre équipe.
-        Vous recevrez une notification dès l'approbation de votre compte.
+        {t('messages.reviewConsent')}
       </p>
 
       <div className="flex gap-3">
         <Button type="button" variant="outline" className="flex-1" onClick={onBack} disabled={isSubmitting}>
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Retour
+          {t('actions.back')}
         </Button>
         <Button className="flex-1" onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             <span className="flex items-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Envoi…
-            </span>
+              {t('actions.submitting')}</span>
           ) : (
-            'Soumettre la demande'
+            t('actions.submitRequest')
           )}
         </Button>
       </div>
@@ -759,6 +767,7 @@ function ReviewStep({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useTranslation('register');
   const [step, setStep] = useState(0);
   const [countries, setCountries] = useState<CountryResponse[]>([]);
   const [logo, setLogo] = useState<File | null>(null);
@@ -825,16 +834,16 @@ export default function RegisterPage() {
       if (err instanceof ApiError) {
         setServerError(err.message);
       } else {
-        setServerError('Une erreur inattendue est survenue. Veuillez réessayer.');
+        setServerError(t('messages.unexpectedError'));
       }
       setIsSubmitting(false);
     }
   };
 
   const titles = [
-    "Informations de l'entreprise",
-    'Compte administrateur',
-    'Récapitulatif',
+    t('titles.company'),
+    t('titles.admin'),
+    t('titles.review'),
   ];
 
   return (
@@ -843,13 +852,13 @@ export default function RegisterPage() {
       <div className="space-y-1 mb-6">
         <h2 className="text-2xl font-bold tracking-tight text-foreground">{titles[step]}</h2>
         <p className="text-sm text-muted-foreground">
-          {step === 0 && "Renseignez les informations de votre entreprise de livraison."}
-          {step === 1 && "Créez le compte de l'administrateur principal."}
-          {step === 2 && "Vérifiez vos informations avant de soumettre votre demande."}
+          {step === 0 && t('subtitles.company')}
+          {step === 1 && t('subtitles.admin')}
+          {step === 2 && t('subtitles.review')}
         </p>
       </div>
 
-      <StepIndicator current={step} />
+      <StepIndicator current={step} t={t} />
 
       {step === 0 && (
         <CompanyStep
@@ -859,6 +868,7 @@ export default function RegisterPage() {
           defaultValues={companyData ?? undefined}
           logo={logo}
           onLogoChange={setLogo}
+          t={t}
         />
       )}
       {step === 1 && (
@@ -866,6 +876,7 @@ export default function RegisterPage() {
           onNext={handleAdminNext}
           onBack={() => setStep(0)}
           defaultValues={adminData ?? undefined}
+          t={t}
         />
       )}
       {step === 2 && companyData && adminData && (
@@ -878,13 +889,14 @@ export default function RegisterPage() {
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           serverError={serverError}
+          t={t}
         />
       )}
 
       <p className="text-center text-sm text-muted-foreground pt-4">
-        Déjà un compte ?{' '}
+        {t('login.prompt')}{' '}
         <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-          Se connecter
+          {t('login.link')}
         </Link>
       </p>
     </div>

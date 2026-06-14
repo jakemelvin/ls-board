@@ -53,8 +53,10 @@ import {
 } from '@/lib/dashboard-period';
 import type { Parcel } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
+import { useTranslation } from '@/lib/i18n';
 
 export function AdminDashboard() {
+  const { t } = useTranslation('dashboard');
   const { parcels, collectionPoints, vehicles, users } = useStore();
   const referenceDate = useMemo(() => getLatestParcelDate(parcels), [parcels]);
   const [periodPreset, setPeriodPreset] = useState<DashboardPeriodPreset>('CURRENT_MONTH');
@@ -92,20 +94,20 @@ export function AdminDashboard() {
   );
 
   const statusDistribution = [
-    { name: 'Cree', value: filteredParcels.filter((p) => p.status === 'CREATED').length, color: 'var(--muted)' },
+    { name: t('adminDashboard.status.created'), value: filteredParcels.filter((p) => p.status === 'CREATED').length, color: 'var(--muted)' },
     {
-      name: 'Recu',
+      name: t('adminDashboard.status.received'),
       value: filteredParcels.filter((p) => p.status === 'RECEIVED_AT_COLLECTION_POINT').length,
       color: 'var(--chart-1)',
     },
-    { name: 'Transit', value: filteredParcels.filter((p) => p.status === 'IN_TRANSIT').length, color: 'var(--warning)' },
+    { name: t('adminDashboard.status.transit'), value: filteredParcels.filter((p) => p.status === 'IN_TRANSIT').length, color: 'var(--warning)' },
     {
-      name: 'Arrive',
+      name: t('adminDashboard.status.arrived'),
       value: filteredParcels.filter((p) => p.status === 'ARRIVED_AT_DESTINATION').length,
       color: 'var(--chart-2)',
     },
-    { name: 'Livre', value: deliveredParcels, color: 'var(--success)' },
-    { name: 'Rejete', value: rejectedParcels, color: 'var(--destructive)' },
+    { name: t('adminDashboard.status.delivered'), value: deliveredParcels, color: 'var(--success)' },
+    { name: t('adminDashboard.status.rejected'), value: rejectedParcels, color: 'var(--destructive)' },
   ];
 
   const handlePeriodChange = (preset: DashboardPeriodPreset, range: DateRange) => {
@@ -117,9 +119,9 @@ export function AdminDashboard() {
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Tableau de bord</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('adminDashboard.title')}</h2>
           <p className="text-muted-foreground">
-            Analyse operationnelle filtree par periode pour suivre l'activite de l'entreprise.
+            {t('adminDashboard.subtitle')}
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
@@ -138,45 +140,47 @@ export function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Colis sur la periode</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.parcels.title')}</CardTitle>
             <Package className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{totalParcels}</div>
             <p className="mt-1 flex items-center text-xs text-muted-foreground">
               <TrendingUp className="mr-1 h-3 w-3" />
-              Donnees issues des colis crees
+              {t('adminDashboard.metrics.parcels.description')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chiffre d'affaires</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.revenue.title')}</CardTitle>
             <DollarSign className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{formatMoney(revenue)}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Base: prix d'expedition estime</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('adminDashboard.metrics.revenue.description')}</p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Taux de livraison</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.deliveryRate.title')}</CardTitle>
             <Truck className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{deliveryRate}%</div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {deliveredParcels}/{totalParcels} colis livres
+              {t('adminDashboard.metrics.deliveryRate.description', {
+                values: { delivered: deliveredParcels, total: totalParcels },
+              })}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Saturation Points</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.saturation.title')}</CardTitle>
             <MapPin className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
@@ -194,8 +198,8 @@ export function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Volume de Colis</CardTitle>
-            <CardDescription>Evolution sur la periode selectionnee</CardDescription>
+            <CardTitle className="text-foreground">{t('adminDashboard.charts.volume.title')}</CardTitle>
+            <CardDescription>{t('adminDashboard.charts.volume.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[250px]">
@@ -233,8 +237,8 @@ export function AdminDashboard() {
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Revenus</CardTitle>
-            <CardDescription>Chiffre d'affaires par jour sur la periode</CardDescription>
+            <CardTitle className="text-foreground">{t('adminDashboard.charts.revenue.title')}</CardTitle>
+            <CardDescription>{t('adminDashboard.charts.revenue.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[220px] sm:h-[250px]">
@@ -250,7 +254,7 @@ export function AdminDashboard() {
                       borderRadius: '8px',
                     }}
                     labelStyle={{ color: 'var(--foreground)' }}
-                    formatter={(value) => [formatMoney(Number(value)), 'Revenus']}
+                    formatter={(value) => [formatMoney(Number(value)), t('adminDashboard.charts.revenue.tooltip')]}
                   />
                   <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -263,8 +267,8 @@ export function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Distribution des Statuts</CardTitle>
-            <CardDescription>Repartition des colis sur la periode</CardDescription>
+            <CardTitle className="text-foreground">{t('adminDashboard.statusDistribution.title')}</CardTitle>
+            <CardDescription>{t('adminDashboard.statusDistribution.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[200px]">
@@ -306,8 +310,8 @@ export function AdminDashboard() {
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Points de Collecte</CardTitle>
-            <CardDescription>Saturation actuelle par point</CardDescription>
+            <CardTitle className="text-foreground">{t('adminDashboard.collectionPoints.title')}</CardTitle>
+            <CardDescription>{t('adminDashboard.collectionPoints.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -338,30 +342,30 @@ export function AdminDashboard() {
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Apercu Rapide</CardTitle>
-            <CardDescription>Ressources et alertes sur la periode</CardDescription>
+            <CardTitle className="text-foreground">{t('adminDashboard.quickStats.title')}</CardTitle>
+            <CardDescription>{t('adminDashboard.quickStats.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <QuickStat
                 icon={Truck}
                 iconClassName="bg-primary/20 text-primary"
-                title="Vehicules actifs"
-                description="En circulation"
+                title={t('adminDashboard.quickStats.activeVehicles.title')}
+                description={t('adminDashboard.quickStats.activeVehicles.description')}
                 value={activeVehicles}
               />
               <QuickStat
                 icon={Users}
                 iconClassName="bg-chart-2/20 text-chart-2"
-                title="Membres d'equipe"
-                description="Total equipe"
+                title={t('adminDashboard.quickStats.teamMembers.title')}
+                description={t('adminDashboard.quickStats.teamMembers.description')}
                 value={users.length}
               />
               <QuickStat
                 icon={AlertTriangle}
                 iconClassName="bg-destructive/20 text-destructive"
-                title="Colis rejetes"
-                description="Sur la periode"
+                title={t('adminDashboard.quickStats.rejectedParcels.title')}
+                description={t('adminDashboard.quickStats.rejectedParcels.description')}
                 value={rejectedParcels}
               />
             </div>
@@ -402,6 +406,7 @@ function QuickStat({
 }
 
 function OperationalReadinessButton() {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const { status, company, error: companyError, retry } = useCompanyContext();
   const [loading, setLoading] = useState(false);
@@ -410,13 +415,13 @@ function OperationalReadinessButton() {
 
   const handleOpen = useCallback(async () => {
     if (!token) {
-      setError('Session expiree.');
+      setError(t('adminDashboard.readiness.errors.sessionExpired'));
       return;
     }
 
     if (status === 'error') {
       retry();
-      setError(companyError ?? "Impossible de resoudre l'entreprise pour lancer le controle.");
+      setError(companyError ?? t('adminDashboard.readiness.errors.companyResolveFailed'));
       return;
     }
 
@@ -431,11 +436,11 @@ function OperationalReadinessButton() {
       const readiness = await getCompanyOperationalReadiness(token, company.id);
       setDialogData(readiness);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impossible de charger le diagnostic readiness.');
+      setError(err instanceof ApiError ? err.message : t('adminDashboard.readiness.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [company, companyError, retry, status, token]);
+  }, [company, companyError, retry, status, t, token]);
 
   const disabled = loading || status === 'loading' || status === 'empty' || status === 'forbidden';
 
@@ -451,9 +456,9 @@ function OperationalReadinessButton() {
           disabled={disabled}
           title={
             status === 'forbidden'
-              ? 'Votre compte ne permet pas de resoudre une entreprise.'
+              ? t('adminDashboard.readiness.forbidden')
               : status === 'empty'
-                ? "Aucune entreprise n'est associee a ce compte."
+                ? t('adminDashboard.readiness.empty')
                 : undefined
           }
         >
@@ -462,7 +467,7 @@ function OperationalReadinessButton() {
           ) : (
             <ShieldCheck className="h-4 w-4" />
           )}
-          <span>Operational readiness</span>
+          <span>{t('adminDashboard.readiness.button')}</span>
           {!loading && status === 'resolved' && <Eye className="h-4 w-4" />}
         </Button>
 

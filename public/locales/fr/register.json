@@ -1,0 +1,142 @@
+{
+  "title": "Créer une entreprise",
+  "subtitle": "Inscrivez votre organisation sur SENDAMhub",
+  "titles": {
+    "company": "Informations de l'entreprise",
+    "admin": "Compte administrateur",
+    "review": "Récapitulatif"
+  },
+  "subtitles": {
+    "company": "Renseignez les informations de votre entreprise de livraison.",
+    "admin": "Créez le compte de l'administrateur principal.",
+    "review": "Vérifiez vos informations avant de soumettre votre demande."
+  },
+  "steps": {
+    "company": "Entreprise",
+    "admin": "Administrateur",
+    "review": "Confirmation"
+  },
+  "sections": {
+    "company": "Entreprise",
+    "admin": "Administrateur"
+  },
+  "fields": {
+    "companyName": "Nom de l'entreprise *",
+    "companyEmail": "Email entreprise",
+    "phone": "Téléphone *",
+    "website": "Site web *",
+    "country": "Pays *",
+    "city": "Ville *",
+    "address": "Adresse",
+    "paymentCollectionMode": "Mode de collecte des paiements",
+    "companyLogo": "Logo de l'entreprise",
+    "firstName": "Prénom *",
+    "lastName": "Nom *",
+    "username": "Nom d'utilisateur *",
+    "personalEmail": "Email personnel",
+    "password": "Mot de passe *",
+    "confirmPassword": "Confirmer le mot de passe *",
+    "language": "Langue *",
+    "gender": "Genre",
+    "idCardNumber": "Numéro de pièce d'identité"
+  },
+  "placeholders": {
+    "companyName": "Sendam Express SARL",
+    "companyEmail": "contact@sendam.fr",
+    "phone": "+237 6 12 34 56 78",
+    "website": "https://www.votre-entreprise.com",
+    "city": "Douala",
+    "address": "12 Rue de la Paix, Akwa",
+    "firstName": "Jean",
+    "lastName": "Dupont",
+    "username": "jean.dupont",
+    "personalEmail": "jean@email.com",
+    "password": "••••••••",
+    "idCardNumber": "AB123456789"
+  },
+  "options": {
+    "select": "Sélectionner…",
+    "choose": "Choisir…",
+    "french": "Français",
+    "english": "English",
+    "unspecified": "Non précisé",
+    "male": "Homme",
+    "female": "Femme",
+    "other": "Autre"
+  },
+  "paymentModes": {
+    "platform": "Via la plateforme",
+    "collectionPoint": "Aux points de collecte"
+  },
+  "passwordStrength": {
+    "label": "Force :",
+    "weak": "Faible",
+    "medium": "Moyen",
+    "good": "Bon",
+    "strong": "Fort"
+  },
+  "help": {
+    "username": "Lettres, chiffres, . _ - (3-20 caractères)"
+  },
+  "review": {
+    "name": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "website": "Site web",
+    "country": "Pays",
+    "city": "Ville",
+    "address": "Adresse",
+    "payments": "Paiements",
+    "fullName": "Nom complet",
+    "username": "Identifiant",
+    "language": "Langue",
+    "gender": "Genre",
+    "idCardNumber": "Pièce d'identité"
+  },
+  "common": {
+    "notAvailable": "—"
+  },
+  "actions": {
+    "submit": "Créer le compte",
+    "submitting": "Envoi…",
+    "next": "Suivant",
+    "back": "Retour",
+    "submitRequest": "Soumettre la demande",
+    "uploadLogo": "Importer un logo (optionnel)",
+    "reloadPage": "rechargez la page"
+  },
+  "messages": {
+    "countriesLoadFailed": "Impossible de charger les pays. Vérifiez votre connexion et",
+    "reviewConsent": "En soumettant, vous acceptez que votre demande soit examinée par notre équipe. Vous recevrez une notification dès l'approbation de votre compte.",
+    "unexpectedError": "Une erreur inattendue est survenue. Veuillez réessayer."
+  },
+  "validation": {
+    "companyNameRequired": "Nom requis",
+    "firstNameRequired": "Prénom requis",
+    "lastNameRequired": "Nom requis",
+    "phoneRequired": "Téléphone requis",
+    "websiteRequired": "Site web requis",
+    "countryRequired": "Pays requis",
+    "cityRequired": "Ville requise",
+    "languageRequired": "Langue requise",
+    "confirmPasswordRequired": "Confirmation requise",
+    "invalidEmail": "Email invalide",
+    "invalidPhone": "Format invalide",
+    "invalidPhoneWithExample": "Format invalide (ex: +237 6 12 34 56 78)",
+    "invalidWebsite": "Doit commencer par http:// ou https://",
+    "usernameFormat": "Lettres, chiffres, . _ - uniquement",
+    "passwordUppercase": "Une majuscule requise",
+    "passwordNumber": "Un chiffre requis",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "min3": "3 caractères minimum",
+    "min8": "8 caractères minimum",
+    "max20": "20 caractères maximum",
+    "max50": "50 caractères maximum",
+    "max100": "100 caractères maximum",
+    "max255": "255 caractères maximum"
+  },
+  "login": {
+    "prompt": "Déjà un compte ?",
+    "link": "Se connecter"
+  }
+}

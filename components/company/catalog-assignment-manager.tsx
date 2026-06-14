@@ -19,6 +19,7 @@ import {
   ToastBar,
   useToastSimple,
 } from '@/components/company/company-shared';
+import { useTranslation } from '@/lib/i18n';
 
 interface RemovalConfirmationConfig {
   title: string;
@@ -57,6 +58,7 @@ export function CatalogAssignmentManager({
   getRemovalConfirmation,
 }: CatalogAssignmentConfig) {
   const token = useAuthStore((state) => state.token);
+  const { t } = useTranslation('dashboard');
   const { toast, success, error: showError } = useToastSimple();
 
   const [catalog, setCatalog] = useState<CatalogItemResponse[]>([]);
@@ -206,12 +208,12 @@ export function CatalogAssignmentManager({
       <StatusState
         icon={Icon}
         tone="destructive"
-        title="Erreur de chargement"
+        title={t('common.loadError')}
         description={loadError}
         action={
           <Button variant="outline" onClick={load} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Reessayer
+            {t('common.retry')}
           </Button>
         }
       />
@@ -223,9 +225,9 @@ export function CatalogAssignmentManager({
       <ToastBar toast={toast} />
       <ConfirmDialog
         open={!!confirmRemoveItem && !!removalConfirmation}
-        title={removalConfirmation?.title ?? 'Confirmer la desactivation'}
+        title={removalConfirmation?.title ?? t('catalog.assignment.confirmDeactivate')}
         description={removalConfirmation?.description ?? ''}
-        confirmLabel={removalConfirmation?.confirmLabel ?? 'Confirmer'}
+        confirmLabel={removalConfirmation?.confirmLabel ?? t('common.confirm')}
         destructive={removalConfirmation?.destructive ?? false}
         loading={confirmRemoveItem ? pending.has(confirmRemoveItem.id) : false}
         onCancel={() => setConfirmRemoveItem(null)}
@@ -240,7 +242,9 @@ export function CatalogAssignmentManager({
         action={
           <Badge className="self-start bg-primary/15 text-primary sm:self-auto">
             <Icon className="h-3.5 w-3.5" />
-            {assignedIds.size} / {catalog.length} active{assignedIds.size > 1 ? 's' : ''}
+            {t('catalog.assignment.activeCount', {
+              values: { assigned: assignedIds.size, total: catalog.length },
+            })}
           </Badge>
         }
       />
@@ -250,7 +254,7 @@ export function CatalogAssignmentManager({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={`Rechercher un ${itemLabel}...`}
+          placeholder={t('catalog.assignment.searchPlaceholder', { values: { itemLabel } })}
           className="bg-secondary pl-9"
         />
       </div>
@@ -258,11 +262,11 @@ export function CatalogAssignmentManager({
       {filtered.length === 0 ? (
         <StatusState
           icon={Icon}
-          title={catalog.length === 0 ? 'Catalogue vide' : 'Aucun resultat'}
+          title={catalog.length === 0 ? t('catalog.crud.emptyTitle') : t('common.noResults')}
           description={
             catalog.length === 0
-              ? `Aucun ${itemLabel} n'est disponible dans le catalogue.`
-              : 'Essayez un autre terme de recherche.'
+              ? t('catalog.assignment.emptyDescription', { values: { itemLabel } })
+              : t('common.tryAnotherSearch')
           }
         />
       ) : (
@@ -295,7 +299,7 @@ export function CatalogAssignmentManager({
                     {item.systemDefined && (
                       <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Lock className="h-3 w-3" />
-                        Systeme
+                        {t('catalog.crud.system')}
                       </span>
                     )}
                   </div>
@@ -308,7 +312,7 @@ export function CatalogAssignmentManager({
                       onCheckedChange={(next) => {
                         void toggle(item, next);
                       }}
-                      aria-label={`${isOn ? 'Retirer' : 'Activer'} ${item.name}`}
+                      aria-label={`${isOn ? t('catalog.assignment.actions.remove') : t('catalog.assignment.actions.activate')} ${item.name}`}
                     />
                   )}
                 </CardContent>

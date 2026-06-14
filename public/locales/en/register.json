@@ -1,0 +1,142 @@
+{
+  "title": "Create a company",
+  "subtitle": "Register your organization on SENDAMhub",
+  "titles": {
+    "company": "Company information",
+    "admin": "Administrator account",
+    "review": "Review"
+  },
+  "subtitles": {
+    "company": "Enter your delivery company's information.",
+    "admin": "Create the primary administrator account.",
+    "review": "Review your information before submitting your request."
+  },
+  "steps": {
+    "company": "Company",
+    "admin": "Administrator",
+    "review": "Confirmation"
+  },
+  "sections": {
+    "company": "Company",
+    "admin": "Administrator"
+  },
+  "fields": {
+    "companyName": "Company name *",
+    "companyEmail": "Company email",
+    "phone": "Phone *",
+    "website": "Website *",
+    "country": "Country *",
+    "city": "City *",
+    "address": "Address",
+    "paymentCollectionMode": "Payment collection mode",
+    "companyLogo": "Company logo",
+    "firstName": "First name *",
+    "lastName": "Last name *",
+    "username": "Username *",
+    "personalEmail": "Personal email",
+    "password": "Password *",
+    "confirmPassword": "Confirm password *",
+    "language": "Language *",
+    "gender": "Gender",
+    "idCardNumber": "ID card number"
+  },
+  "placeholders": {
+    "companyName": "Sendam Express LLC",
+    "companyEmail": "contact@sendam.com",
+    "phone": "+237 6 12 34 56 78",
+    "website": "https://www.your-company.com",
+    "city": "Douala",
+    "address": "12 Peace Street, Akwa",
+    "firstName": "John",
+    "lastName": "Doe",
+    "username": "john.doe",
+    "personalEmail": "john@email.com",
+    "password": "••••••••",
+    "idCardNumber": "AB123456789"
+  },
+  "options": {
+    "select": "Select…",
+    "choose": "Choose…",
+    "french": "Français",
+    "english": "English",
+    "unspecified": "Unspecified",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other"
+  },
+  "paymentModes": {
+    "platform": "Via the platform",
+    "collectionPoint": "At collection points"
+  },
+  "passwordStrength": {
+    "label": "Strength:",
+    "weak": "Weak",
+    "medium": "Medium",
+    "good": "Good",
+    "strong": "Strong"
+  },
+  "help": {
+    "username": "Letters, numbers, . _ - (3-20 characters)"
+  },
+  "review": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website",
+    "country": "Country",
+    "city": "City",
+    "address": "Address",
+    "payments": "Payments",
+    "fullName": "Full name",
+    "username": "Username",
+    "language": "Language",
+    "gender": "Gender",
+    "idCardNumber": "ID card"
+  },
+  "common": {
+    "notAvailable": "—"
+  },
+  "actions": {
+    "submit": "Create account",
+    "submitting": "Submitting…",
+    "next": "Next",
+    "back": "Back",
+    "submitRequest": "Submit request",
+    "uploadLogo": "Upload a logo (optional)",
+    "reloadPage": "reload the page"
+  },
+  "messages": {
+    "countriesLoadFailed": "Unable to load countries. Check your connection and",
+    "reviewConsent": "By submitting, you agree that your request will be reviewed by our team. You will receive a notification once your account is approved.",
+    "unexpectedError": "An unexpected error occurred. Please try again."
+  },
+  "validation": {
+    "companyNameRequired": "Name is required",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "phoneRequired": "Phone is required",
+    "websiteRequired": "Website is required",
+    "countryRequired": "Country is required",
+    "cityRequired": "City is required",
+    "languageRequired": "Language is required",
+    "confirmPasswordRequired": "Confirmation is required",
+    "invalidEmail": "Invalid email",
+    "invalidPhone": "Invalid format",
+    "invalidPhoneWithExample": "Invalid format (ex: +237 6 12 34 56 78)",
+    "invalidWebsite": "Must start with http:// or https://",
+    "usernameFormat": "Letters, numbers, . _ - only",
+    "passwordUppercase": "One uppercase letter required",
+    "passwordNumber": "One number required",
+    "passwordMismatch": "Passwords do not match",
+    "min3": "3 characters minimum",
+    "min8": "8 characters minimum",
+    "max20": "20 characters maximum",
+    "max50": "50 characters maximum",
+    "max100": "100 characters maximum",
+    "max255": "255 characters maximum"
+  },
+  "login": {
+    "prompt": "Already have an account?",
+    "link": "Sign in"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "authLayout": {
+    "description": "Manage parcels, transporters, and collection points from one unified dashboard.",
+    "features": {
+      "collectionPoints": "Collection point network",
+      "dashboards": "Operational dashboards",
+      "parcels": "Real-time parcel management"
+    },
+    "headline": {
+      "highlight": "next generation",
+      "prefix": "The logistics platform"
+    },
+    "legal": "© {{year}} SENDAMhub. All rights reserved."
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "retry": "Retry",
+    "save": "Save",
+    "search": "Search"
+  },
+  "feedback": {
+    "error": "Error",
+    "loading": "Loading",
+    "success": "Success"
+  },
+  "language": {
+    "change": "Change language",
+    "english": "English",
+    "french": "French"
+  },
+  "navigation": {
+    "back": "Back",
+    "logout": "Log out"
+  }
+}

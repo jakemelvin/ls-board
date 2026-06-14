@@ -1,0 +1,34 @@
+{
+  "title": "Connexion",
+  "subtitle": "Accédez à votre tableau de bord SENDAMhub",
+  "fields": {
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe"
+  },
+  "placeholders": {
+    "username": "jean.dupont",
+    "password": "••••••••"
+  },
+  "password": {
+    "hide": "Masquer le mot de passe",
+    "show": "Afficher le mot de passe"
+  },
+  "actions": {
+    "submit": "Se connecter",
+    "submitting": "Connexion..."
+  },
+  "messages": {
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "accessDenied": "Accès refusé. Cette application est réservée aux professionnels de la livraison.",
+    "invalidCredentials": "Identifiants incorrects. Veuillez réessayer.",
+    "unexpectedError": "Une erreur inattendue est survenue."
+  },
+  "register": {
+    "prompt": "Pas encore de compte ?",
+    "link": "Créer une entreprise"
+  },
+  "validation": {
+    "usernameRequired": "Nom d'utilisateur requis",
+    "passwordRequired": "Mot de passe requis"
+  }
+}

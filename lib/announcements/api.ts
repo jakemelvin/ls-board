@@ -19,6 +19,12 @@ export function getAnnouncements(
   return apiClient.get<AnnouncementResponse[]>(`${base(companyId)}/announcements`, token);
 }
 
+export function getActiveAnnouncementsForClient(
+  token: string,
+): Promise<AnnouncementResponse[]> {
+  return apiClient.get<AnnouncementResponse[]>('/api/delivery/announcements/active', token);
+}
+
 export function getAnnouncement(
   token: string,
   companyId: number,
@@ -110,12 +116,32 @@ export function getCompanyCollectionPoints(
   companyId: number,
 ): Promise<CollectionPointOption[]> {
   return apiClient
-    .get<{ id: number; name: string; reference: string }[]>(
+    .get<
+      {
+        id: number;
+        name: string;
+        reference?: string;
+        active?: boolean;
+        manuallyClosed?: boolean;
+        mobileAvailability?: boolean;
+        city?: { cityName?: string };
+        countryName?: string;
+      }[]
+    >(
       `${base(companyId)}/collection-points`,
       token,
     )
     .then((list) =>
-      list.map((p) => ({ id: p.id, name: p.name, reference: p.reference })),
+      list.map((p) => ({
+        id: p.id,
+        name: p.name,
+        reference: p.reference,
+        active: p.active,
+        manuallyClosed: p.manuallyClosed,
+        mobileAvailability: p.mobileAvailability,
+        cityName: p.city?.cityName,
+        countryName: p.countryName,
+      })),
     );
 }
 

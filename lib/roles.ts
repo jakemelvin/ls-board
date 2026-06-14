@@ -8,6 +8,7 @@ export const ROLE_CONFIG: Record<
   UserRole,
   {
     label: string;
+    translationKey: string;
     icon: React.ElementType;
     color: string;
     badgeColor: string;
@@ -16,6 +17,7 @@ export const ROLE_CONFIG: Record<
 > = {
   SUPER_ADMIN: {
     label: 'Super Admin',
+    translationKey: 'roles.superAdmin',
     icon: ShieldCheck,
     color: 'bg-violet-600 text-white',
     badgeColor: 'bg-violet-600/20 text-violet-400',
@@ -23,6 +25,7 @@ export const ROLE_CONFIG: Record<
   },
   ADMIN: {
     label: 'Admin Entreprise',
+    translationKey: 'roles.adminCompany',
     icon: Shield,
     color: 'bg-primary text-primary-foreground',
     badgeColor: 'bg-primary/20 text-primary',
@@ -30,6 +33,7 @@ export const ROLE_CONFIG: Record<
   },
   EMPLOYEE: {
     label: 'Employe',
+    translationKey: 'roles.employee',
     icon: Briefcase,
     color: 'bg-chart-1 text-foreground',
     badgeColor: 'bg-chart-1/20 text-chart-1',
@@ -37,6 +41,7 @@ export const ROLE_CONFIG: Record<
   },
   COLLECTOR: {
     label: 'Collecteur',
+    translationKey: 'roles.collector',
     icon: MapPin,
     color: 'bg-chart-2 text-foreground',
     badgeColor: 'bg-chart-2/20 text-chart-2',
@@ -44,6 +49,7 @@ export const ROLE_CONFIG: Record<
   },
   TRANSPORTER: {
     label: 'Transporteur',
+    translationKey: 'roles.transporter',
     icon: Truck,
     color: 'bg-warning text-warning-foreground',
     badgeColor: 'bg-warning/20 text-warning',

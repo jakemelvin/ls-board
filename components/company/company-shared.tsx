@@ -1,18 +1,14 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  ShieldAlert,
-  XCircle,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, ShieldAlert, XCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/utils';
-import { useCompanyContext } from '@/lib/company/use-company';
 import type { CompanyResponse } from '@/lib/admin/types';
+import { useCompanyContext } from '@/lib/company/use-company';
+import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 export function Badge({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -73,7 +69,7 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirmer',
+  confirmLabel,
   destructive = false,
   loading = false,
   onConfirm,
@@ -88,7 +84,10 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
+
   if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={loading ? undefined : onCancel} />
@@ -109,16 +108,16 @@ export function ConfirmDialog({
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onCancel} disabled={loading}>
-            Annuler
+            {t('common.cancel')}
           </Button>
           <Button variant={destructive ? 'destructive' : 'default'} onClick={onConfirm} disabled={loading}>
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {confirmLabel}
+                {confirmLabel ?? t('common.confirm')}
               </span>
             ) : (
-              confirmLabel
+              confirmLabel ?? t('common.confirm')
             )}
           </Button>
         </div>
@@ -146,6 +145,7 @@ export function StatusState({
       : tone === 'destructive'
         ? 'bg-destructive/10 text-destructive'
         : 'bg-muted text-muted-foreground';
+
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-16 text-center">
       <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl', toneCls)}>
@@ -180,15 +180,12 @@ export function SectionHeader({
   );
 }
 
-/**
- * Resolves the active company and only renders `children` once a single company
- * is known. Handles loading, forbidden and empty states.
- */
 export function CompanyGuard({
   children,
 }: {
   children: (ctx: { companyId: number; company: CompanyResponse }) => ReactNode;
 }) {
+  const { t } = useTranslation('dashboard');
   const { status, company, error, retry } = useCompanyContext();
 
   if (status === 'loading') {
@@ -204,8 +201,8 @@ export function CompanyGuard({
       <StatusState
         icon={ShieldAlert}
         tone="warning"
-        title="Entreprise introuvable"
-        description={error ?? "Impossible de déterminer votre entreprise avec ce compte."}
+        title={t('companyGuard.notFound.title')}
+        description={error ?? t('companyGuard.notFound.description')}
       />
     );
   }
@@ -214,8 +211,8 @@ export function CompanyGuard({
     return (
       <StatusState
         icon={Info}
-        title="Aucune entreprise"
-        description="Aucune entreprise n'est encore enregistrée."
+        title={t('companyGuard.empty.title')}
+        description={t('companyGuard.empty.description')}
       />
     );
   }
@@ -225,11 +222,11 @@ export function CompanyGuard({
       <StatusState
         icon={XCircle}
         tone="destructive"
-        title="Erreur de chargement"
-        description={error ?? 'Une erreur est survenue.'}
+        title={t('common.loadError')}
+        description={error ?? t('common.genericError')}
         action={
           <Button variant="outline" onClick={retry}>
-            Réessayer
+            {t('common.retry')}
           </Button>
         }
       />

@@ -44,6 +44,7 @@ import {
   getCompanyOperationalReadiness,
 } from '@/lib/admin/api';
 import { getCountries, registerCompany } from '@/lib/auth/api';
+import { useTranslation } from '@/lib/i18n';
 import type {
   Page,
   CompanyOperationalReadiness,
@@ -54,20 +55,20 @@ import type { CountryResponse, ApiRole, Gender, PaymentCollectionMode, CreateCom
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-const ROLE_LABELS: Record<string, string> = {
-  CLIENT: 'Client',
-  COLLECTOR: 'Collecteur',
-  TRANSPORTER: 'Transporteur',
-  ADMIN_COMPANY: 'Admin Entreprise',
-  EMPLOYEE_COMPANY: 'Employé Entreprise',
-  SUPER_ADMIN: 'Super Admin',
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  CLIENT: 'superAdmin.roles.client',
+  COLLECTOR: 'roles.collector',
+  TRANSPORTER: 'roles.transporter',
+  ADMIN_COMPANY: 'roles.adminCompany',
+  EMPLOYEE_COMPANY: 'roles.employee',
+  SUPER_ADMIN: 'roles.superAdmin',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  ACTIVE: { label: 'Actif', color: 'bg-success/20 text-success' },
-  INACTIVE: { label: 'Inactif', color: 'bg-muted text-muted-foreground' },
-  SUSPENDED: { label: 'Suspendu', color: 'bg-destructive/20 text-destructive' },
-  DELETED: { label: 'Supprimé', color: 'bg-muted text-muted-foreground' },
+const STATUS_CONFIG: Record<string, { labelKey: string; color: string }> = {
+  ACTIVE: { labelKey: 'superAdmin.status.active', color: 'bg-success/20 text-success' },
+  INACTIVE: { labelKey: 'superAdmin.status.inactive', color: 'bg-muted text-muted-foreground' },
+  SUSPENDED: { labelKey: 'superAdmin.status.suspended', color: 'bg-destructive/20 text-destructive' },
+  DELETED: { labelKey: 'superAdmin.status.deleted', color: 'bg-muted text-muted-foreground' },
 };
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -100,12 +101,13 @@ function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirmer',
+  confirmLabel,
   destructive = false,
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('dashboard');
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -127,7 +129,7 @@ function ConfirmDialog({
         </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onCancel} disabled={loading} className="w-full sm:w-auto">
-            Annuler
+            {t('common.cancel')}
           </Button>
           <Button
             variant={destructive ? 'destructive' : 'default'}
@@ -138,10 +140,10 @@ function ConfirmDialog({
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {confirmLabel}
+                {confirmLabel ?? t('common.confirm')}
               </span>
             ) : (
-              confirmLabel
+              confirmLabel ?? t('common.confirm')
             )}
           </Button>
         </div>
@@ -448,6 +450,7 @@ function CreateCompanyDialog({
   onCreated: (company: CompanyResponse) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
   const [tab, setTab] = useState<CompanyTab>('company');
   const [form, setForm] = useState<CreateCompanyForm>(emptyCompanyForm());
   const [errors, setErrors] = useState<CreateCompanyErrors>({});
@@ -568,7 +571,7 @@ function CreateCompanyDialog({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Building2 className="h-4 w-4" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Créer une entreprise</h2>
+            <h2 className="text-base font-semibold text-foreground">{t('superAdmin.createCompany.title')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -581,9 +584,9 @@ function CreateCompanyDialog({
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border px-6 pt-3">
           {([
-            { id: 'company' as CompanyTab, label: 'Entreprise', hasError: companyTabHasError },
-            { id: 'admin' as CompanyTab, label: 'Administrateur', hasError: adminTabHasError },
-          ] as const).map(({ id, label, hasError }) => (
+            { id: 'company' as CompanyTab, labelKey: 'superAdmin.createCompany.tabs.company', hasError: companyTabHasError },
+            { id: 'admin' as CompanyTab, labelKey: 'superAdmin.createCompany.tabs.admin', hasError: adminTabHasError },
+          ] as const).map(({ id, labelKey, hasError }) => (
             <button
               key={id}
               onClick={() => (id === 'admin' ? goToAdminTab() : setTab(id))}
@@ -594,7 +597,7 @@ function CreateCompanyDialog({
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              {label}
+              {t(labelKey)}
               {hasError && (
                 <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
               )}
@@ -843,17 +846,17 @@ function CreateCompanyDialog({
             </button>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} disabled={submitting}>Annuler</Button>
+            <Button variant="outline" onClick={onClose} disabled={submitting}>{t('common.cancel')}</Button>
             <Button onClick={handleSubmit} disabled={submitting}>
               {submitting ? (
                 <span className="flex items-center gap-2">
                   <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Création…
+                  {t('superAdmin.createCompany.creating')}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Créer l'entreprise
+                  {t('superAdmin.createCompany.submit')}
                 </span>
               )}
             </Button>
@@ -867,6 +870,7 @@ function CreateCompanyDialog({
 // ─── Companies tab ─────────────────────────────────────────────────────────
 
 function CompaniesTab({ token }: { token: string }) {
+  const { t } = useTranslation('dashboard');
   const { success, error: showError, toast } = useToastSimple();
   const [data, setData] = useState<Page<CompanyResponse> | null>(null);
   const [page, setPage] = useState(0);
@@ -985,7 +989,7 @@ function CompaniesTab({ token }: { token: string }) {
         open={!!confirmDelete}
         title="Supprimer l'entreprise"
         description={`Êtes-vous sûr de vouloir supprimer "${confirmDelete?.name}" ? Cette action est irréversible.`}
-        confirmLabel="Supprimer"
+        confirmLabel={t('common.delete')}
         destructive
         loading={actionLoading === confirmDelete?.id}
         onConfirm={handleDelete}
@@ -1049,7 +1053,7 @@ function CompaniesTab({ token }: { token: string }) {
 
             <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('superAdmin.users.columns.contact')}</p>
                 <p className="break-words text-foreground">{company.phone || '—'}</p>
                 {company.email && <p className="break-words text-xs text-muted-foreground">{company.email}</p>}
               </div>
@@ -1121,11 +1125,11 @@ function CompaniesTab({ token }: { token: string }) {
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-3">Entreprise</th>
-              <th className="px-4 py-3">Contact</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.contact')}</th>
               <th className="px-4 py-3">Pays · Ville</th>
               <th className="px-4 py-3">Admin</th>
-              <th className="px-4 py-3">Statut</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.status')}</th>
+              <th className="px-4 py-3 text-right">{t('superAdmin.users.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -1335,6 +1339,7 @@ function CreateUserDialog({
   onCreated: (user: UserResponse) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
   const [form, setForm] = useState<CreateUserForm>(emptyCreateForm());
   const [errors, setErrors] = useState<CreateUserErrors>({});
   const [countries, setCountries] = useState<CountryResponse[]>([]);
@@ -1418,7 +1423,7 @@ function CreateUserDialog({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <UserPlus className="h-4 w-4" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Créer un utilisateur</h2>
+            <h2 className="text-base font-semibold text-foreground">{t('superAdmin.createUser.title')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -1567,17 +1572,17 @@ function CreateUserDialog({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? (
               <span className="flex items-center gap-2">
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Création…
+                {t('superAdmin.createUser.creating')}
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
-                Créer l'utilisateur
+                {t('superAdmin.createUser.submit')}
               </span>
             )}
           </Button>
@@ -1592,6 +1597,7 @@ function CreateUserDialog({
 type UserAction = 'phone' | 'password' | 'commission' | 'delete' | null;
 
 function UsersTab({ token }: { token: string }) {
+  const { t } = useTranslation('dashboard');
   const { success, error: showError, toast } = useToastSimple();
   const [data, setData] = useState<Page<UserResponse> | null>(null);
   const [page, setPage] = useState(0);
@@ -1810,9 +1816,11 @@ function UsersTab({ token }: { token: string }) {
       {/* Delete confirm */}
       <ConfirmDialog
         open={action === 'delete'}
-        title="Supprimer l'utilisateur"
-        description={`Êtes-vous sûr de vouloir supprimer "${selectedUser?.username}" ? Cette action est irréversible.`}
-        confirmLabel="Supprimer"
+        title={t('superAdmin.users.deleteTitle')}
+        description={t('superAdmin.users.deleteDescription', {
+          values: { username: selectedUser?.username ?? '' },
+        })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={actionLoading === selectedUser?.id}
         onConfirm={handleDelete}
@@ -1821,18 +1829,18 @@ function UsersTab({ token }: { token: string }) {
 
       <div className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          {data?.totalElements ?? 0} utilisateur{(data?.totalElements ?? 0) !== 1 ? 's' : ''}
+          {t('superAdmin.users.count', { values: { count: data?.totalElements ?? 0 } })}
         </p>
         <Button size="sm" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           <UserPlus className="mr-2 h-4 w-4" />
-          Créer un utilisateur
+          {t('superAdmin.users.createButton')}
         </Button>
       </div>
 
       <div className="space-y-3 md:hidden">
         {data?.content.length === 0 && (
           <div className="rounded-xl border border-border py-10 text-center text-sm text-muted-foreground">
-            Aucun utilisateur trouvé
+            {t('superAdmin.users.empty')}
           </div>
         )}
         {data?.content.map((user) => {
@@ -1847,23 +1855,23 @@ function UsersTab({ token }: { token: string }) {
                   <p className="break-words text-xs text-muted-foreground">@{user.username}</p>
                   {user.email && <p className="break-words text-xs text-muted-foreground">{user.email}</p>}
                 </div>
-                <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                <Badge className={statusCfg.color}>{t(statusCfg.labelKey)}</Badge>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rôle</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('superAdmin.users.columns.role')}</p>
                   <Badge className="bg-secondary text-secondary-foreground">
-                    {ROLE_LABELS[user.role] ?? user.role}
+                    {t(ROLE_LABEL_KEYS[user.role] ?? user.role)}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Contact</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('superAdmin.users.columns.contact')}</p>
                   <p className="break-words text-foreground">{user.phone}</p>
                   {user.city && <p className="text-xs text-muted-foreground">{user.city}</p>}
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Commission</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('superAdmin.users.columns.commission')}</p>
                   {user.commissionPercentage != null ? (
                     <p className="font-medium text-foreground">{user.commissionPercentage}%</p>
                   ) : (
@@ -1934,19 +1942,19 @@ function UsersTab({ token }: { token: string }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-3">Utilisateur</th>
-              <th className="px-4 py-3">Rôle</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Commission</th>
-              <th className="px-4 py-3">Statut</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.user')}</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.role')}</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.contact')}</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.commission')}</th>
+              <th className="px-4 py-3">{t('superAdmin.users.columns.status')}</th>
+              <th className="px-4 py-3 text-right">{t('superAdmin.users.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data?.content.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-muted-foreground">
-                  Aucun utilisateur trouvé
+                  {t('superAdmin.users.empty')}
                 </td>
               </tr>
             )}
@@ -1967,7 +1975,7 @@ function UsersTab({ token }: { token: string }) {
                   </td>
                   <td className="px-4 py-3">
                     <Badge className="bg-secondary text-secondary-foreground">
-                      {ROLE_LABELS[user.role] ?? user.role}
+                      {t(ROLE_LABEL_KEYS[user.role] ?? user.role)}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
@@ -1984,7 +1992,7 @@ function UsersTab({ token }: { token: string }) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                    <Badge className={statusCfg.color}>{t(statusCfg.labelKey)}</Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
@@ -2080,12 +2088,13 @@ function UsersTab({ token }: { token: string }) {
 
 type TabId = 'companies' | 'users';
 
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'companies', label: 'Entreprises', icon: Building2 },
-  { id: 'users', label: 'Utilisateurs', icon: Users },
+const TABS: { id: TabId; labelKey: string; icon: React.ElementType }[] = [
+  { id: 'companies', labelKey: 'superAdmin.tabs.companies', icon: Building2 },
+  { id: 'users', labelKey: 'superAdmin.tabs.users', icon: Users },
 ];
 
 export function SuperAdminManagement() {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
   const [activeTab, setActiveTab] = useState<TabId>('companies');
@@ -2097,9 +2106,9 @@ export function SuperAdminManagement() {
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
           <Shield className="h-8 w-8" />
         </div>
-        <p className="text-lg font-semibold text-foreground">Accès restreint</p>
+        <p className="text-lg font-semibold text-foreground">{t('superAdmin.restricted.title')}</p>
         <p className="text-sm text-muted-foreground">
-          Cette section est réservée aux super administrateurs.
+          {t('superAdmin.restricted.description')}
         </p>
       </div>
     );
@@ -2112,9 +2121,9 @@ export function SuperAdminManagement() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-foreground sm:text-2xl">Administration</h1>
+          <h1 className="text-xl font-bold text-foreground sm:text-2xl">{t('superAdmin.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gestion des entreprises et utilisateurs de la plateforme
+            {t('superAdmin.subtitle')}
           </p>
         </div>
         <Button
@@ -2124,13 +2133,13 @@ export function SuperAdminManagement() {
           className="w-full shrink-0 sm:w-auto"
         >
           <RefreshCw className="mr-2 h-3.5 w-3.5" />
-          Actualiser
+          {t('common.refresh')}
         </Button>
       </div>
 
       {/* Tabs */}
       <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:flex sm:w-fit">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -2142,7 +2151,7 @@ export function SuperAdminManagement() {
             )}
           >
             <Icon className="h-4 w-4" />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>

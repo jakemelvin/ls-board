@@ -11,6 +11,7 @@ import { CollectorDashboard } from '@/components/views/collector-dashboard';
 import { FleetManagement } from '@/components/views/fleet-management';
 import { PricingEngine } from '@/components/views/pricing-engine';
 import { DeliveryEstimatesView } from '@/components/views/delivery-estimates';
+import { RouteExceptionsView } from '@/components/views/route-exceptions';
 import { BillingSubscriptionView } from '@/components/views/billing-subscription';
 import { CommissionManagement } from '@/components/views/commission-management';
 import { TeamManagement } from '@/components/views/team-management';
@@ -128,6 +129,8 @@ export default function DashboardPage() {
         return <PricingEngine />;
       case 'delivery-estimates':
         return isAdminLikeRole(currentRole) ? <DeliveryEstimatesView /> : <AdminDashboard />;
+      case 'route-exceptions':
+        return isAdminLikeRole(currentRole) ? <RouteExceptionsView /> : <AdminDashboard />;
       case 'billing':
         return isAdminLikeRole(currentRole) ? <BillingSubscriptionView /> : <AdminDashboard />;
       case 'commissions':

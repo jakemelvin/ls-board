@@ -1,285 +1,466 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
 import {
-  Megaphone,
-  Plus,
-  RefreshCw,
-  Pencil,
-  Trash2,
-  RotateCcw,
-  PowerOff,
-  Power,
+  AlertCircle,
+  Bike,
   Calendar,
   CalendarCheck,
-  MapPin,
-  Truck,
-  Plane,
-  Ship,
-  Bike,
-  Train,
+  Check,
+  Megaphone,
   Package,
-  // Truck est utilisé comme valeur par défaut dans getTransportIcon
-  AlertCircle,
-  CheckCircle2,
+  Pencil,
+  Plane,
+  Plus,
+  Power,
+  PowerOff,
+  RefreshCw,
+  RotateCcw,
+  Ship,
+  Train,
+  Trash2,
+  Truck,
   X,
-  ChevronDown,
   type LucideProps,
 } from 'lucide-react';
-import type { ElementType } from 'react';
-import { CompanyGuard } from '@/components/company/company-shared';
-import { cn } from '@/lib/utils';
+
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Badge,
+  CompanyGuard,
+  ConfirmDialog,
+  SectionHeader,
+  StatusState,
+  ToastBar,
+  useToastSimple,
+} from '@/components/company/company-shared';
+import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
 import {
-  getAnnouncements,
-  createAnnouncement,
-  updateAnnouncement,
-  deleteAnnouncement,
-  renewAnnouncement,
   activateAnnouncement,
+  createAnnouncement,
   deactivateAnnouncement,
+  deleteAnnouncement,
+  getAnnouncements,
   getCompanyCollectionPoints,
-  getCompanyTransportModes,
   getCompanyParcelTypes,
+  getCompanyTransportModes,
+  renewAnnouncement,
+  updateAnnouncement,
 } from '@/lib/announcements/api';
-import { getCurrentUserCompany } from '@/lib/company/api';
 import type {
-  AnnouncementResponse,
-  AnnouncementRequest,
+  AnnouncementCollectionPoint,
+  AnnouncementOption,
   AnnouncementRenewRequest,
+  AnnouncementRequest,
+  AnnouncementResponse,
   CollectionPointOption,
-  TransportModeOption,
   ParcelTypeOption,
+  TransportModeOption,
 } from '@/lib/announcements/types';
+import { useTranslation } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
-// ─── Transport icon ───────────────────────────────────────────────────────────
-
-function getTransportIcon(name: string): ElementType<LucideProps> {
-  const n = name.toLowerCase();
-  if (/avion|air|aérien|aerien|plane|vol/.test(n)) return Plane;
-  if (/bateau|ship|maritime|mer|marin|naval|boat/.test(n)) return Ship;
-  if (/moto|bike|vélo|velo|deux.roue/.test(n)) return Bike;
-  if (/train|rail|ferroviaire/.test(n)) return Train;
-  return Truck; // camion, van, voiture — défaut
-}
-
-// ─── Toast ───────────────────────────────────────────────────────────────────
-
-interface Toast {
-  id: number;
-  message: string;
-  type: 'success' | 'error';
-}
-
-let toastCounter = 0;
-
-function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const show = useCallback((message: string, type: Toast['type'] = 'success') => {
-    const id = ++toastCounter;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
-
-  return { toasts, show };
-}
-
-function ToastBar({ toasts }: { toasts: Toast[] }) {
-  return (
-    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-50 flex flex-col gap-2 md:bottom-6 md:right-6">
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          className={cn(
-            'flex items-center gap-2 rounded-xl border px-4 py-3 text-sm shadow-lg',
-            t.type === 'success'
-              ? 'border-green-800 bg-green-950 text-green-300'
-              : 'border-red-800 bg-red-950 text-red-300',
-          )}
-        >
-          {t.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 shrink-0" />
-          )}
-          {t.message}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Confirm Dialog ───────────────────────────────────────────────────────────
-
-interface ConfirmDialogProps {
-  open: boolean;
-  title: string;
-  description: string;
-  confirmLabel?: string;
-  variant?: 'danger' | 'default';
-  onConfirm: () => void;
-  onClose: () => void;
-}
-
-function ConfirmDialog({
-  open,
-  title,
-  description,
-  confirmLabel = 'Confirmer',
-  variant = 'default',
-  onConfirm,
-  onClose,
-}: ConfirmDialogProps) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-sm rounded-t-2xl border-t border-border bg-card shadow-xl sm:rounded-2xl sm:border">
-        <div className="flex justify-center pt-3 sm:hidden">
-          <div className="h-1 w-10 rounded-full bg-border" />
-        </div>
-        <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
-          <h3 className="text-base font-semibold text-foreground">{title}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={() => { onConfirm(); onClose(); }}
-              className={cn(
-                'rounded-xl px-4 py-2 text-sm font-medium transition-colors',
-                variant === 'danger'
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90',
-              )}
-            >
-              {confirmLabel}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Select Field ─────────────────────────────────────────────────────────────
-
-interface SelectOption { value: string; label: string }
-
-interface SelectFieldProps {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: SelectOption[];
-  placeholder?: string;
-  error?: string;
-  disabled?: boolean;
-}
-
-function SelectField({ label, value, onChange, options, placeholder, error, disabled }: SelectFieldProps) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className={cn(
-            'w-full appearance-none rounded-xl border bg-input px-3 py-2.5 pr-9 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50',
-            error ? 'border-red-600 focus:ring-red-600' : 'border-border',
-          )}
-        >
-          {placeholder && <option value="">{placeholder}</option>}
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-// ─── Announcement Form Dialog ─────────────────────────────────────────────────
-
-interface FormState {
-  collectionPointId: string;
-  transportModeId: string;
-  parcelTypeId: string;
+type FormState = {
+  collectionPointIds: string[];
+  transportModeIds: string[];
+  parcelTypeIds: string[];
   title: string;
   content: string;
   startDate: string;
   endDate: string;
+  parcelReceptionDeadline: string;
+  shipmentDate: string;
   active: boolean;
   renewable: boolean;
-}
+};
+
+type FormErrors = Partial<Record<keyof FormState | 'form', string>>;
+
+type SelectOption = {
+  value: string;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+};
+
+type TFunction = ReturnType<typeof useTranslation>['t'];
 
 const emptyForm = (): FormState => ({
-  collectionPointId: '',
-  transportModeId: '',
-  parcelTypeId: '',
+  collectionPointIds: [],
+  transportModeIds: [],
+  parcelTypeIds: [],
   title: '',
   content: '',
   startDate: '',
   endDate: '',
+  parcelReceptionDeadline: '',
+  shipmentDate: '',
   active: true,
   renewable: false,
 });
 
-function toFormState(a: AnnouncementResponse): FormState {
+function toDate(value: string) {
+  return new Date(`${value}T00:00:00`);
+}
+
+function formatDate(value: string | undefined, locale: string, fallback: string) {
+  if (!value) return fallback;
+
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(toDate(value));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError || error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function normalizeTransportName(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function getTransportIcon(names: string[]): ElementType<LucideProps> {
+  const value = normalizeTransportName(names.join(' '));
+  if (/avion|air|aerien|plane|vol/.test(value)) return Plane;
+  if (/bateau|ship|maritime|mer|marin|naval|boat/.test(value)) return Ship;
+  if (/moto|bike|velo|deux.roue/.test(value)) return Bike;
+  if (/train|rail|ferroviaire/.test(value)) return Train;
+  return Truck;
+}
+
+function idsFromResponse(
+  items: AnnouncementOption[] | AnnouncementCollectionPoint[] | null | undefined,
+  legacyId?: number,
+) {
+  if (items && items.length > 0) {
+    return items.map((item) => String(item.id));
+  }
+
+  return legacyId ? [String(legacyId)] : [];
+}
+
+function toFormState(announcement: AnnouncementResponse): FormState {
   return {
-    collectionPointId: String(a.collectionPointId),
-    transportModeId: String(a.transportModeId),
-    parcelTypeId: String(a.parcelTypeId),
-    title: a.title,
-    content: a.content,
-    startDate: a.startDate,
-    endDate: a.endDate,
-    active: a.active,
-    renewable: a.renewable,
+    collectionPointIds: idsFromResponse(
+      announcement.collectionPoints,
+      announcement.collectionPointId,
+    ),
+    transportModeIds: idsFromResponse(announcement.transportModes, announcement.transportModeId),
+    parcelTypeIds: idsFromResponse(announcement.parcelTypes, announcement.parcelTypeId),
+    title: announcement.title,
+    content: announcement.content,
+    startDate: announcement.startDate,
+    endDate: announcement.endDate,
+    parcelReceptionDeadline: announcement.parcelReceptionDeadline ?? '',
+    shipmentDate: announcement.shipmentDate ?? '',
+    active: announcement.active,
+    renewable: announcement.renewable,
   };
 }
 
-interface FormErrors {
-  collectionPointId?: string;
-  transportModeId?: string;
-  parcelTypeId?: string;
-  title?: string;
-  content?: string;
-  startDate?: string;
-  endDate?: string;
+function selectedNumbers(values: string[]) {
+  return values.map(Number).filter((value) => Number.isFinite(value) && value > 0);
 }
 
-function validate(form: FormState): FormErrors {
+function validateForm(form: FormState, t: TFunction): FormErrors {
   const errors: FormErrors = {};
-  if (!form.collectionPointId) errors.collectionPointId = 'Champ requis';
-  if (!form.transportModeId) errors.transportModeId = 'Champ requis';
-  if (!form.parcelTypeId) errors.parcelTypeId = 'Champ requis';
-  if (!form.title.trim()) errors.title = 'Champ requis';
-  if (!form.content.trim()) errors.content = 'Champ requis';
-  if (!form.startDate) errors.startDate = 'Champ requis';
-  if (!form.endDate) errors.endDate = 'Champ requis';
-  if (form.startDate && form.endDate && form.endDate <= form.startDate) {
-    errors.endDate = 'Doit être après la date limite de dépôt';
+
+  if (!form.title.trim()) errors.title = t('announcements.validation.required');
+  if (!form.content.trim()) errors.content = t('announcements.validation.required');
+  if (!form.startDate) errors.startDate = t('announcements.validation.required');
+  if (!form.endDate) errors.endDate = t('announcements.validation.required');
+
+  if (form.startDate && form.endDate && toDate(form.endDate) <= toDate(form.startDate)) {
+    errors.endDate = t('announcements.validation.validityOrder');
   }
+
+  const hasDeadline = Boolean(form.parcelReceptionDeadline);
+  const hasShipmentDate = Boolean(form.shipmentDate);
+
+  if (hasDeadline !== hasShipmentDate) {
+    const message = t('announcements.validation.operationalDatesPair');
+    if (!hasDeadline) errors.parcelReceptionDeadline = message;
+    if (!hasShipmentDate) errors.shipmentDate = message;
+  }
+
+  if (
+    hasDeadline &&
+    hasShipmentDate &&
+    toDate(form.shipmentDate) <= toDate(form.parcelReceptionDeadline)
+  ) {
+    errors.shipmentDate = t('announcements.validation.operationalDatesOrder');
+  }
+
   return errors;
 }
 
-interface AnnouncementFormDialogProps {
-  open: boolean;
-  announcement: AnnouncementResponse | null;
-  collectionPoints: CollectionPointOption[];
-  transportModes: TransportModeOption[];
-  parcelTypes: ParcelTypeOption[];
-  loading: boolean;
-  onSave: (data: AnnouncementRequest) => Promise<void>;
-  onClose: () => void;
+function buildRequest(form: FormState): AnnouncementRequest {
+  return {
+    collectionPointIds: selectedNumbers(form.collectionPointIds),
+    transportModeIds: selectedNumbers(form.transportModeIds),
+    parcelTypeIds: selectedNumbers(form.parcelTypeIds),
+    title: form.title.trim(),
+    content: form.content.trim(),
+    startDate: form.startDate,
+    endDate: form.endDate,
+    parcelReceptionDeadline: form.parcelReceptionDeadline || undefined,
+    shipmentDate: form.shipmentDate || undefined,
+    active: form.active,
+    renewable: form.renewable,
+  };
+}
+
+function buildRenewRequest(form: RenewFormState): AnnouncementRenewRequest {
+  return {
+    startDate: form.startDate,
+    endDate: form.endDate,
+    parcelReceptionDeadline: form.parcelReceptionDeadline || undefined,
+    shipmentDate: form.shipmentDate || undefined,
+  };
+}
+
+function legacyOption(name: string | undefined, id: number | undefined): AnnouncementOption[] {
+  return name && id ? [{ id, name }] : [];
+}
+
+function getCollectionPoints(announcement: AnnouncementResponse): AnnouncementCollectionPoint[] {
+  if (announcement.collectionPoints && announcement.collectionPoints.length > 0) {
+    return announcement.collectionPoints;
+  }
+
+  return announcement.collectionPointName && announcement.collectionPointId
+    ? [
+        {
+          id: announcement.collectionPointId,
+          name: announcement.collectionPointName,
+          countryId: announcement.countryId,
+          countryName: announcement.countryName,
+          cityId: announcement.cityId,
+          cityName: announcement.cityName,
+        },
+      ]
+    : [];
+}
+
+function getTransportModes(announcement: AnnouncementResponse): AnnouncementOption[] {
+  return announcement.transportModes && announcement.transportModes.length > 0
+    ? announcement.transportModes
+    : legacyOption(announcement.transportModeName, announcement.transportModeId);
+}
+
+function getParcelTypes(announcement: AnnouncementResponse): AnnouncementOption[] {
+  return announcement.parcelTypes && announcement.parcelTypes.length > 0
+    ? announcement.parcelTypes
+    : legacyOption(announcement.parcelTypeName, announcement.parcelTypeId);
+}
+
+function listNames(items: { name: string }[]) {
+  return items.map((item) => item.name);
+}
+
+function formatListSummary(names: string[], t: TFunction) {
+  if (names.length === 0) return t('announcements.general');
+  if (names.length <= 3) return names.join(', ');
+
+  return t('announcements.moreItems', {
+    values: { names: names.slice(0, 3).join(', '), count: names.length - 3 },
+  });
+}
+
+function formatCollectionPointOption(point: CollectionPointOption) {
+  const parts = [
+    point.reference ? `${point.name} (${point.reference})` : point.name,
+    point.cityName,
+    point.countryName,
+  ].filter(Boolean);
+
+  return parts.join(' - ');
+}
+
+function MultiSelectField({
+  label,
+  emptyLabel,
+  options,
+  value,
+  error,
+  disabled,
+  description,
+  onChange,
+}: {
+  label: string;
+  emptyLabel: string;
+  options: SelectOption[];
+  value: string[];
+  error?: string;
+  disabled?: boolean;
+  description?: string;
+  onChange: (value: string[]) => void;
+}) {
+  const selected = options.filter((option) => value.includes(option.value));
+  const selectedSummary =
+    selected.length === 0 ? emptyLabel : selected.map((option) => option.label).join(', ');
+
+  const toggle = (option: SelectOption) => {
+    if (disabled || option.disabled) return;
+
+    onChange(
+      value.includes(option.value)
+        ? value.filter((current) => current !== option.value)
+        : [...value, option.value],
+    );
+  };
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <div className="grid min-w-0 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-3">
+        <div className="min-w-0">
+          <label className="text-xs font-medium text-muted-foreground">{label}</label>
+          {description && <p className="text-xs text-muted-foreground/80">{description}</p>}
+        </div>
+        <span className="min-w-0 truncate text-xs text-muted-foreground sm:max-w-44 sm:text-right">
+          {selectedSummary}
+        </span>
+      </div>
+      <div
+        className={cn(
+          'max-h-44 min-w-0 space-y-1 overflow-y-auto overflow-x-hidden rounded-xl border bg-input p-2',
+          error ? 'border-destructive' : 'border-border',
+          disabled && 'opacity-60',
+        )}
+      >
+        {options.length === 0 ? (
+          <p className="px-2 py-3 text-sm text-muted-foreground">{emptyLabel}</p>
+        ) : (
+          options.map((option) => {
+            const checked = value.includes(option.value);
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={disabled || option.disabled}
+                onClick={() => toggle(option)}
+                className={cn(
+                  'flex w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors',
+                  checked
+                    ? 'bg-primary/10 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  (disabled || option.disabled) && 'cursor-not-allowed opacity-50',
+                )}
+              >
+                <span
+                  className={cn(
+                    'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                    checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                  )}
+                >
+                  {checked && <Check className="h-3 w-3" />}
+                </span>
+                <span className="min-w-0 flex-1 overflow-hidden">
+                  <span className="block truncate">{option.label}</span>
+                  {option.description && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {option.description}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+      {value.length > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 max-w-full justify-start px-2 text-xs"
+          disabled={disabled}
+          onClick={() => onChange([])}
+        >
+          <X className="h-3.5 w-3.5" />
+          {emptyLabel}
+        </Button>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  error,
+  placeholder,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  error?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50',
+          error ? 'border-destructive focus:ring-destructive' : 'border-border',
+        )}
+      />
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  error,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  error?: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <input
+        type="date"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50',
+          error ? 'border-destructive focus:ring-destructive' : 'border-border',
+        )}
+      />
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
 }
 
 function AnnouncementFormDialog({
@@ -291,38 +472,75 @@ function AnnouncementFormDialog({
   loading,
   onSave,
   onClose,
-}: AnnouncementFormDialogProps) {
+}: {
+  open: boolean;
+  announcement: AnnouncementResponse | null;
+  collectionPoints: CollectionPointOption[];
+  transportModes: TransportModeOption[];
+  parcelTypes: ParcelTypeOption[];
+  loading: boolean;
+  onSave: (data: AnnouncementRequest) => Promise<void>;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation('dashboard');
   const [form, setForm] = useState<FormState>(emptyForm());
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setForm(announcement ? toFormState(announcement) : emptyForm());
-      setErrors({});
-    }
-  }, [open, announcement]);
+    if (!open) return;
 
-  const set = (field: keyof FormState) => (value: string | boolean) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm(announcement ? toFormState(announcement) : emptyForm());
+    setErrors({});
+  }, [announcement, open]);
+
+  const setField =
+    <K extends keyof FormState>(field: K) =>
+    (value: FormState[K]) => {
+      setForm((current) => ({ ...current, [field]: value }));
+      setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    };
+
+  const collectionPointOptions = useMemo<SelectOption[]>(
+    () =>
+      collectionPoints.map((point) => ({
+        value: String(point.id),
+        label: formatCollectionPointOption(point),
+        disabled: point.active === false || point.manuallyClosed === true,
+        description:
+          point.active === false || point.manuallyClosed === true
+            ? t('announcements.form.collectionPointUnavailable')
+            : undefined,
+      })),
+    [collectionPoints, t],
+  );
+
+  const transportModeOptions = useMemo<SelectOption[]>(
+    () => transportModes.map((mode) => ({ value: String(mode.id), label: mode.name })),
+    [transportModes],
+  );
+
+  const parcelTypeOptions = useMemo<SelectOption[]>(
+    () => parcelTypes.map((type) => ({ value: String(type.id), label: type.name })),
+    [parcelTypes],
+  );
 
   const handleSubmit = async () => {
-    const errs = validate(form);
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    const nextErrors = validateForm(form, t);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await onSave({
-        collectionPointId: Number(form.collectionPointId),
-        transportModeId: Number(form.transportModeId),
-        parcelTypeId: Number(form.parcelTypeId),
-        title: form.title.trim(),
-        content: form.content.trim(),
-        startDate: form.startDate,
-        endDate: form.endDate,
-        active: form.active,
-        renewable: form.renewable,
-      });
+      await onSave(buildRequest(form));
       onClose();
+    } catch (error) {
+      setErrors({
+        form: getErrorMessage(error, t('announcements.errors.save')),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -331,206 +549,255 @@ function AnnouncementFormDialog({
   if (!open) return null;
 
   const isEdit = Boolean(announcement);
+  const busy = loading || submitting;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm sm:items-start sm:justify-center sm:overflow-y-auto sm:py-8">
-      <div className="w-full max-h-[90dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-card shadow-xl sm:max-w-xl sm:rounded-2xl sm:border">
-        {/* Drag handle — mobile only */}
+    <div className="fixed inset-0 z-50 flex items-end bg-black/60 p-0 backdrop-blur-sm sm:items-start sm:justify-center sm:overflow-y-auto sm:p-4 sm:py-8">
+      <div className="max-h-[92dvh] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden rounded-t-2xl border-t border-border bg-card shadow-xl sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl sm:border">
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-border" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
-          <h2 className="text-base font-semibold text-foreground">
-            {isEdit ? 'Modifier l\'annonce' : 'Nouvelle annonce de départ'}
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
+          <h2 className="min-w-0 truncate text-base font-semibold text-foreground">
+            {isEdit
+              ? t('announcements.form.editTitle')
+              : t('announcements.form.createTitle')}
           </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted"
-          >
+          <Button variant="ghost" size="icon-sm" onClick={onClose} disabled={busy}>
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
-        {/* Body */}
-        <div className="space-y-4 px-4 py-5 sm:px-6">
+        <div className="min-w-0 space-y-5 px-4 py-5 sm:px-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <Spinner className="h-6 w-6 text-primary" />
             </div>
           ) : (
             <>
-              {/* Title */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Titre</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => set('title')(e.target.value)}
-                  placeholder="Ex : Départ vers Dakar — Lundi"
-                  className={cn(
-                    'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary',
-                    errors.title ? 'border-red-600 focus:ring-red-600' : 'border-border',
-                  )}
-                />
-                {errors.title && <p className="text-xs text-red-500">{errors.title}</p>}
-              </div>
+              {errors.form && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {errors.form}
+                </div>
+              )}
 
-              {/* Content */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Contenu</label>
+              <TextField
+                label={t('announcements.form.title')}
+                value={form.title}
+                error={errors.title}
+                placeholder={t('announcements.form.titlePlaceholder')}
+                disabled={submitting}
+                onChange={setField('title')}
+              />
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('announcements.form.content')}
+                </label>
                 <textarea
                   rows={3}
                   value={form.content}
-                  onChange={(e) => set('content')(e.target.value)}
-                  placeholder="Décrivez les détails de l'annonce de départ…"
+                  disabled={submitting}
+                  placeholder={t('announcements.form.contentPlaceholder')}
+                  onChange={(event) => setField('content')(event.target.value)}
                   className={cn(
-                    'w-full resize-none rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary',
-                    errors.content ? 'border-red-600 focus:ring-red-600' : 'border-border',
+                    'w-full resize-none rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50',
+                    errors.content ? 'border-destructive focus:ring-destructive' : 'border-border',
                   )}
                 />
-                {errors.content && <p className="text-xs text-red-500">{errors.content}</p>}
+                {errors.content && <p className="text-xs text-destructive">{errors.content}</p>}
               </div>
 
-              {/* Collection point */}
-              <SelectField
-                label="Point de collecte"
-                value={form.collectionPointId}
-                onChange={set('collectionPointId')}
-                options={collectionPoints.map((c) => ({
-                  value: String(c.id),
-                  label: `${c.name} (${c.reference})`,
-                }))}
-                placeholder="Sélectionner un point de collecte"
-                error={errors.collectionPointId}
-              />
-
-              {/* Transport mode + Parcel type side by side */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <SelectField
-                  label="Mode de transport"
-                  value={form.transportModeId}
-                  onChange={set('transportModeId')}
-                  options={transportModes.map((t) => ({ value: String(t.id), label: t.name }))}
-                  placeholder="Sélectionner"
-                  error={errors.transportModeId}
+              <div className="space-y-4 rounded-xl border border-border p-3 sm:p-4">
+                <MultiSelectField
+                  label={t('announcements.form.collectionPoints')}
+                  description={t('announcements.form.generalTargetHint')}
+                  emptyLabel={t('announcements.form.allCollectionPoints')}
+                  value={form.collectionPointIds}
+                  options={collectionPointOptions}
+                  disabled={submitting}
+                  onChange={setField('collectionPointIds')}
                 />
-                <SelectField
-                  label="Type de colis"
-                  value={form.parcelTypeId}
-                  onChange={set('parcelTypeId')}
-                  options={parcelTypes.map((p) => ({ value: String(p.id), label: p.name }))}
-                  placeholder="Sélectionner"
-                  error={errors.parcelTypeId}
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Date limite de dépôt de colis</label>
-                  <input
-                    type="date"
-                    value={form.startDate}
-                    onChange={(e) => set('startDate')(e.target.value)}
-                    className={cn(
-                      'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary',
-                      errors.startDate ? 'border-red-600 focus:ring-red-600' : 'border-border',
-                    )}
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+                  <MultiSelectField
+                    label={t('announcements.form.transportModes')}
+                    emptyLabel={t('announcements.form.allTransportModes')}
+                    value={form.transportModeIds}
+                    options={transportModeOptions}
+                    disabled={submitting}
+                    onChange={setField('transportModeIds')}
                   />
-                  {errors.startDate && <p className="text-xs text-red-500">{errors.startDate}</p>}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Date du prochain départ</label>
-                  <input
-                    type="date"
-                    value={form.endDate}
-                    onChange={(e) => set('endDate')(e.target.value)}
-                    className={cn(
-                      'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary',
-                      errors.endDate ? 'border-red-600 focus:ring-red-600' : 'border-border',
-                    )}
+                  <MultiSelectField
+                    label={t('announcements.form.parcelTypes')}
+                    emptyLabel={t('announcements.form.allParcelTypes')}
+                    value={form.parcelTypeIds}
+                    options={parcelTypeOptions}
+                    disabled={submitting}
+                    onChange={setField('parcelTypeIds')}
                   />
-                  {errors.endDate && <p className="text-xs text-red-500">{errors.endDate}</p>}
                 </div>
               </div>
 
-              {/* Toggles */}
-              <div className="flex gap-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <DateField
+                  label={t('announcements.form.startDate')}
+                  value={form.startDate}
+                  error={errors.startDate}
+                  disabled={submitting}
+                  onChange={setField('startDate')}
+                />
+                <DateField
+                  label={t('announcements.form.endDate')}
+                  value={form.endDate}
+                  error={errors.endDate}
+                  disabled={submitting}
+                  onChange={setField('endDate')}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-medium text-foreground">
+                  {t('announcements.form.operationalDates')}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('announcements.form.operationalDatesHint')}
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <DateField
+                    label={t('announcements.form.parcelReceptionDeadline')}
+                    value={form.parcelReceptionDeadline}
+                    error={errors.parcelReceptionDeadline}
+                    disabled={submitting}
+                    onChange={setField('parcelReceptionDeadline')}
+                  />
+                  <DateField
+                    label={t('announcements.form.shipmentDate')}
+                    value={form.shipmentDate}
+                    error={errors.shipmentDate}
+                    disabled={submitting}
+                    onChange={setField('shipmentDate')}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
                 <label className="flex cursor-pointer items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={form.active}
-                    onChange={(e) => set('active')(e.target.checked)}
+                    disabled={submitting}
+                    onChange={(event) => setField('active')(event.target.checked)}
                     className="h-4 w-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">Active immédiatement</span>
+                  <span className="text-sm text-foreground">
+                    {t('announcements.form.active')}
+                  </span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={form.renewable}
-                    onChange={(e) => set('renewable')(e.target.checked)}
+                    disabled={submitting}
+                    onChange={(event) => setField('renewable')(event.target.checked)}
                     className="h-4 w-4 rounded border-border accent-primary"
                   />
-                  <span className="text-sm text-foreground">Renouvelable</span>
+                  <span className="text-sm text-foreground">
+                    {t('announcements.form.renewable')}
+                  </span>
                 </label>
               </div>
             </>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-border px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-4">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || loading}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
+        <div className="flex flex-col-reverse gap-2 border-t border-border px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:pb-4">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={onClose} disabled={busy}>
+            {t('common.cancel')}
+          </Button>
+          <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={busy}>
             {submitting && (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
             )}
-            {isEdit ? 'Enregistrer' : 'Créer l\'annonce'}
-          </button>
+            {isEdit ? t('common.save') : t('announcements.form.createAction')}
+          </Button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Renew Dialog ─────────────────────────────────────────────────────────────
+type RenewFormState = {
+  startDate: string;
+  endDate: string;
+  parcelReceptionDeadline: string;
+  shipmentDate: string;
+};
 
-interface RenewDialogProps {
+const emptyRenewForm = (): RenewFormState => ({
+  startDate: new Date().toISOString().slice(0, 10),
+  endDate: '',
+  parcelReceptionDeadline: '',
+  shipmentDate: '',
+});
+
+function validateRenewForm(form: RenewFormState, t: TFunction): FormErrors {
+  return validateForm(
+    {
+      ...emptyForm(),
+      title: 'renew',
+      content: 'renew',
+      startDate: form.startDate,
+      endDate: form.endDate,
+      parcelReceptionDeadline: form.parcelReceptionDeadline,
+      shipmentDate: form.shipmentDate,
+    },
+    t,
+  );
+}
+
+function RenewDialog({
+  open,
+  onRenew,
+  onClose,
+}: {
   open: boolean;
   onRenew: (data: AnnouncementRenewRequest) => Promise<void>;
   onClose: () => void;
-}
-
-function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState('');
-  const [error, setError] = useState('');
+}) {
+  const { t } = useTranslation('dashboard');
+  const [form, setForm] = useState<RenewFormState>(emptyRenewForm());
+  const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open) { setStartDate(today); setEndDate(''); setError(''); }
+    if (!open) return;
+
+    setForm(emptyRenewForm());
+    setErrors({});
   }, [open]);
 
+  const setField =
+    <K extends keyof RenewFormState>(field: K) =>
+    (value: RenewFormState[K]) => {
+      setForm((current) => ({ ...current, [field]: value }));
+      setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    };
+
   const handleSubmit = async () => {
-    if (!startDate || !endDate) { setError('Les deux dates sont requises'); return; }
-    if (endDate <= startDate) { setError('La date de départ doit être après la date limite de dépôt'); return; }
+    const nextErrors = validateRenewForm(form, t);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await onRenew({ startDate, endDate });
+      await onRenew(buildRenewRequest(form));
       onClose();
+    } catch (error) {
+      setErrors({ form: getErrorMessage(error, t('announcements.errors.renew')) });
     } finally {
       setSubmitting(false);
     }
@@ -540,51 +807,70 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-sm rounded-t-2xl border-t border-border bg-card shadow-xl sm:rounded-2xl sm:border">
+      <div className="w-full max-w-lg rounded-t-2xl border-t border-border bg-card shadow-xl sm:rounded-2xl sm:border">
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-border" />
         </div>
-        <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
-          <h3 className="text-base font-semibold text-foreground">Renouveler l'annonce</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Définissez les nouvelles dates de validité.</p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Limite dépôt</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Date de départ</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+        <div className="space-y-4 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">
+              {t('announcements.renew.title')}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('announcements.renew.description')}
+            </p>
           </div>
-          {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleSubmit}
+
+          {errors.form && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {errors.form}
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DateField
+              label={t('announcements.form.startDate')}
+              value={form.startDate}
+              error={errors.startDate}
               disabled={submitting}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
+              onChange={setField('startDate')}
+            />
+            <DateField
+              label={t('announcements.form.endDate')}
+              value={form.endDate}
+              error={errors.endDate}
+              disabled={submitting}
+              onChange={setField('endDate')}
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DateField
+              label={t('announcements.form.parcelReceptionDeadline')}
+              value={form.parcelReceptionDeadline}
+              error={errors.parcelReceptionDeadline}
+              disabled={submitting}
+              onChange={setField('parcelReceptionDeadline')}
+            />
+            <DateField
+              label={t('announcements.form.shipmentDate')}
+              value={form.shipmentDate}
+              error={errors.shipmentDate}
+              disabled={submitting}
+              onChange={setField('shipmentDate')}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={onClose} disabled={submitting}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
               {submitting && (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               )}
-              Renouveler
-            </button>
+              {t('announcements.renew.action')}
+            </Button>
           </div>
         </div>
       </div>
@@ -592,389 +878,381 @@ function RenewDialog({ open, onRenew, onClose }: RenewDialogProps) {
   );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
 function StatusBadge({ active }: { active: boolean }) {
+  const { t } = useTranslation('dashboard');
+
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+    <Badge
+      className={
         active
-          ? 'bg-green-950 text-green-400 ring-1 ring-green-800'
-          : 'bg-muted text-muted-foreground ring-1 ring-border',
-      )}
+          ? 'bg-success/10 text-success ring-1 ring-success/25'
+          : 'bg-muted text-muted-foreground ring-1 ring-border'
+      }
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-green-400' : 'bg-muted-foreground')} />
-      {active ? 'Active' : 'Inactive'}
-    </span>
+      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-success' : 'bg-muted-foreground')} />
+      {active ? t('announcements.status.active') : t('announcements.status.inactive')}
+    </Badge>
   );
 }
 
-// ─── Announcement Card ────────────────────────────────────────────────────────
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-interface AnnouncementCardProps {
+function AnnouncementCard({
+  announcement,
+  isAdmin,
+  onEdit,
+  onRenew,
+  onToggle,
+  onDelete,
+}: {
   announcement: AnnouncementResponse;
   isAdmin: boolean;
   onEdit: () => void;
   onRenew: () => void;
   onToggle: () => void;
   onDelete: () => void;
-}
-
-function AnnouncementCard({ announcement: a, isAdmin, onEdit, onRenew, onToggle, onDelete }: AnnouncementCardProps) {
-  const isExpired = new Date(a.endDate) < new Date();
-  const TransportIcon = getTransportIcon(a.transportModeName);
+}) {
+  const { locale, t } = useTranslation('dashboard');
+  const collectionPoints = getCollectionPoints(announcement);
+  const transportModes = getTransportModes(announcement);
+  const parcelTypes = getParcelTypes(announcement);
+  const transportNames = listNames(transportModes);
+  const TransportIcon = getTransportIcon(transportNames);
+  const isExpired = toDate(announcement.endDate) < toDate(new Date().toISOString().slice(0, 10));
+  const none = t('announcements.notScheduled');
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">
-      {/* Top row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge active={a.active} />
-            {a.renewable && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-950 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-blue-800">
+            <StatusBadge active={announcement.active} />
+            {announcement.renewable && (
+              <Badge className="bg-primary/10 text-primary ring-1 ring-primary/25">
                 <RotateCcw className="h-3 w-3" />
-                Renouvelable
-              </span>
+                {t('announcements.status.renewable')}
+              </Badge>
             )}
             {isExpired && (
-              <span className="inline-flex items-center rounded-full bg-amber-950 px-2.5 py-0.5 text-xs font-medium text-amber-400 ring-1 ring-amber-800">
-                Expirée
-              </span>
+              <Badge className="bg-warning/10 text-warning ring-1 ring-warning/25">
+                {t('announcements.status.expired')}
+              </Badge>
             )}
           </div>
-          <h3 className="mt-2 text-sm font-semibold text-foreground line-clamp-1">{a.title}</h3>
+          <h3 className="mt-2 line-clamp-1 text-sm font-semibold text-foreground">
+            {announcement.title}
+          </h3>
         </div>
 
-        {/* Actions */}
         {isAdmin && (
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              onClick={onEdit}
-              title="Modifier"
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
+            <Button variant="ghost" size="icon-sm" title={t('common.edit')} onClick={onEdit}>
               <Pencil className="h-4 w-4" />
-            </button>
-            {a.renewable && (
-              <button
+            </Button>
+            {announcement.renewable && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title={t('announcements.renew.action')}
                 onClick={onRenew}
-                title="Renouveler"
-                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-blue-400"
               >
                 <RotateCcw className="h-4 w-4" />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title={
+                announcement.active
+                  ? t('announcements.actions.deactivate')
+                  : t('announcements.actions.activate')
+              }
               onClick={onToggle}
-              title={a.active ? 'Désactiver' : 'Activer'}
-              className={cn(
-                'rounded-lg p-1.5 transition-colors',
-                a.active
-                  ? 'text-muted-foreground hover:bg-muted hover:text-amber-400'
-                  : 'text-muted-foreground hover:bg-muted hover:text-green-400',
+            >
+              {announcement.active ? (
+                <PowerOff className="h-4 w-4" />
+              ) : (
+                <Power className="h-4 w-4" />
               )}
-            >
-              {a.active ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={onDelete}
-              title="Supprimer"
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-red-400"
-            >
+            </Button>
+            <Button variant="ghost" size="icon-sm" title={t('common.delete')} onClick={onDelete}>
               <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <p className="mt-3 text-sm text-muted-foreground line-clamp-2">{a.content}</p>
+      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{announcement.content}</p>
 
-      {/* Meta row */}
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-primary/70" />
-          {a.collectionPointName}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Megaphone className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+          <span className="truncate">
+            {formatListSummary(listNames(collectionPoints), t)}
+          </span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-1.5">
           <TransportIcon className="h-3.5 w-3.5 shrink-0 text-primary/70" />
-          {a.transportModeName}
+          <span className="truncate">{formatListSummary(transportNames, t)}</span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-1.5">
           <Package className="h-3.5 w-3.5 shrink-0 text-primary/70" />
-          {a.parcelTypeName}
+          <span className="truncate">{formatListSummary(listNames(parcelTypes), t)}</span>
         </span>
       </div>
 
-      {/* Dates */}
-      <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
+      <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 shrink-0 text-amber-500/70" />
-          <span>Limite dépôt : <span className="font-medium text-foreground">{formatDate(a.startDate)}</span></span>
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+          <span>
+            {t('announcements.dates.validity')}:{' '}
+            <span className="font-medium text-foreground">
+              {formatDate(announcement.startDate, locale, none)} -{' '}
+              {formatDate(announcement.endDate, locale, none)}
+            </span>
+          </span>
         </span>
         <span className="flex items-center gap-1.5">
-          <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-green-500/70" />
-          <span>Départ : <span className="font-medium text-foreground">{formatDate(a.endDate)}</span></span>
+          <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-success/70" />
+          <span>
+            {t('announcements.dates.deadline')}:{' '}
+            <span className="font-medium text-foreground">
+              {formatDate(announcement.parcelReceptionDeadline, locale, none)}
+            </span>
+          </span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Truck className="h-3.5 w-3.5 shrink-0 text-warning/70" />
+          <span>
+            {t('announcements.dates.shipment')}:{' '}
+            <span className="font-medium text-foreground">
+              {formatDate(announcement.shipmentDate, locale, none)}
+            </span>
+          </span>
         </span>
       </div>
     </div>
   );
 }
 
-// ─── Main View ────────────────────────────────────────────────────────────────
-
 function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: number; companyName: string }) {
   const { token, role } = useAuthStore();
-  const storedCompanyId = useAuthStore((s) => s.companyId);
-  const setCompanyId = useAuthStore((s) => s.setCompanyId);
-  const { toasts, show } = useToast();
-  const [, setLocalCompanyId] = useState<number>(storedCompanyId ?? companyId);
-  const [resolvingCompany, setResolvingCompany] = useState(false);
-
+  const { t } = useTranslation('dashboard');
+  const { toast, success, error: showError } = useToastSimple();
   const [announcements, setAnnouncements] = useState<AnnouncementResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [collectionPoints, setCollectionPoints] = useState<CollectionPointOption[]>([]);
   const [transportModes, setTransportModes] = useState<TransportModeOption[]>([]);
   const [parcelTypes, setParcelTypes] = useState<ParcelTypeOption[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
-
+  const [supportLoaded, setSupportLoaded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AnnouncementResponse | null>(null);
   const [renewTarget, setRenewTarget] = useState<AnnouncementResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementResponse | null>(null);
   const [toggleTarget, setToggleTarget] = useState<AnnouncementResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   const isAdmin = role === 'ADMIN_COMPANY' || role === 'EMPLOYEE_COMPANY';
 
-  // ── Resolve companyId if not yet in store ──
-  useEffect(() => {
-    if (companyId > 0) { setResolvingCompany(false); return; }
+  const loadAnnouncements = useCallback(async () => {
     if (!token) return;
 
-    setResolvingCompany(true);
-    getCurrentUserCompany(token)
-      .then((company) => {
-        if (company.id > 0) {
-          const id = company.id;
-          setLocalCompanyId(id);
-          setCompanyId(id);
-        } else {
-          setError('Aucune entreprise associée à votre compte.');
-        }
-      })
-      .catch(() => setError('Impossible de récupérer l\'entreprise.'))
-      .finally(() => setResolvingCompany(false));
-  }, []);
-
-  // ── Fetch announcements ──
-  const fetchAnnouncements = useCallback(async (cId: number) => {
-    if (!token || cId === 0) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
-      const data = await getAnnouncements(token, cId);
+      const data = await getAnnouncements(token, companyId);
       setAnnouncements(data);
-    } catch {
-      setError('Impossible de charger les annonces.');
+    } catch (error) {
+      setLoadError(getErrorMessage(error, t('announcements.errors.load')));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [companyId, t, token]);
 
   useEffect(() => {
-    if (companyId > 0) fetchAnnouncements(companyId);
-  }, [companyId, fetchAnnouncements]);
+    void loadAnnouncements();
+  }, [loadAnnouncements]);
 
-  // Sync local companyId when store resolves
-  useEffect(() => {
-    if (storedCompanyId && storedCompanyId > 0 && companyId === 0) {
-      setLocalCompanyId(storedCompanyId);
+  const ensureSupportData = useCallback(async () => {
+    if (!token || supportLoaded) return;
+
+    setSupportLoading(true);
+    try {
+      const [points, modes, types] = await Promise.all([
+        getCompanyCollectionPoints(token, companyId),
+        getCompanyTransportModes(token, companyId),
+        getCompanyParcelTypes(token, companyId),
+      ]);
+      setCollectionPoints(points);
+      setTransportModes(modes);
+      setParcelTypes(types);
+      setSupportLoaded(true);
+    } catch (error) {
+      showError(getErrorMessage(error, t('announcements.errors.supportData')));
+    } finally {
+      setSupportLoading(false);
     }
-  }, [storedCompanyId]);
-
-  // ── Fetch support data when form opens ──
-  const supportFetched = useRef(false);
+  }, [companyId, showError, supportLoaded, t, token]);
 
   const openForm = useCallback(
-    async (announcement: AnnouncementResponse | null) => {
+    (announcement: AnnouncementResponse | null) => {
       setEditTarget(announcement);
       setFormOpen(true);
-
-      if (!supportFetched.current && companyId > 0 && token) {
-        setSupportLoading(true);
-        try {
-          const [cp, tm, pt] = await Promise.all([
-            getCompanyCollectionPoints(token, companyId),
-            getCompanyTransportModes(token, companyId),
-            getCompanyParcelTypes(token, companyId),
-          ]);
-          setCollectionPoints(cp);
-          setTransportModes(tm);
-          setParcelTypes(pt);
-          supportFetched.current = true;
-        } catch {
-          show('Erreur lors du chargement des données du formulaire', 'error');
-        } finally {
-          setSupportLoading(false);
-        }
-      }
+      void ensureSupportData();
     },
-    [companyId, token, show],
+    [ensureSupportData],
   );
 
-  // ── CRUD handlers ──
   const handleSave = async (data: AnnouncementRequest) => {
-    if (!token || companyId === 0) return;
-    if (editTarget) {
-      const updated = await updateAnnouncement(token, companyId, editTarget.id, data);
-      setAnnouncements((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-      show('Annonce mise à jour');
-    } else {
-      const created = await createAnnouncement(token, companyId, data);
-      setAnnouncements((prev) => [created, ...prev]);
-      show('Annonce créée');
-    }
+    if (!token) return;
+
+    const saved = editTarget
+      ? await updateAnnouncement(token, companyId, editTarget.id, data)
+      : await createAnnouncement(token, companyId, data);
+
+    setAnnouncements((current) =>
+      editTarget
+        ? current.map((item) => (item.id === saved.id ? saved : item))
+        : [saved, ...current],
+    );
+    success(
+      editTarget
+        ? t('announcements.messages.updated')
+        : t('announcements.messages.created'),
+    );
   };
 
   const handleRenew = async (data: AnnouncementRenewRequest) => {
-    if (!token || !renewTarget || companyId === 0) return;
+    if (!token || !renewTarget) return;
+
     const updated = await renewAnnouncement(token, companyId, renewTarget.id, data);
-    setAnnouncements((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-    show('Annonce renouvelée');
+    setAnnouncements((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    );
     setRenewTarget(null);
+    success(t('announcements.messages.renewed'));
   };
 
   const handleToggle = async () => {
-    if (!token || !toggleTarget || companyId === 0) return;
+    if (!token || !toggleTarget) return;
+
+    setToggling(true);
     try {
-      const fn = toggleTarget.active ? deactivateAnnouncement : activateAnnouncement;
-      const updated = await fn(token, companyId, toggleTarget.id);
-      setAnnouncements((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-      show(toggleTarget.active ? 'Annonce désactivée' : 'Annonce activée');
-    } catch {
-      show('Erreur lors du changement de statut', 'error');
-    } finally {
+      const action = toggleTarget.active ? deactivateAnnouncement : activateAnnouncement;
+      const updated = await action(token, companyId, toggleTarget.id);
+      setAnnouncements((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      success(
+        toggleTarget.active
+          ? t('announcements.messages.deactivated')
+          : t('announcements.messages.activated'),
+      );
       setToggleTarget(null);
+    } catch (error) {
+      showError(getErrorMessage(error, t('announcements.errors.toggle')));
+    } finally {
+      setToggling(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!token || !deleteTarget || companyId === 0) return;
+    if (!token || !deleteTarget) return;
+
+    setDeleting(true);
     try {
       await deleteAnnouncement(token, companyId, deleteTarget.id);
-      setAnnouncements((prev) => prev.filter((a) => a.id !== deleteTarget.id));
-      show('Annonce supprimée');
-    } catch {
-      show('Erreur lors de la suppression', 'error');
-    } finally {
+      setAnnouncements((current) => current.filter((item) => item.id !== deleteTarget.id));
+      success(t('announcements.messages.deleted'));
       setDeleteTarget(null);
+    } catch (error) {
+      showError(getErrorMessage(error, t('announcements.errors.delete')));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  // ── Render ──
-  if (resolvingCompany) {
+  if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center py-24">
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }
 
-  if (error && companyId === 0) {
+  if (loadError) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
-        <AlertCircle className="h-10 w-10 text-red-500" />
-        <p className="text-sm text-muted-foreground">{error}</p>
-      </div>
+      <StatusState
+        icon={AlertCircle}
+        tone="destructive"
+        title={t('common.loadError')}
+        description={loadError}
+        action={
+          <Button variant="outline" onClick={() => void loadAnnouncements()}>
+            <RefreshCw className="h-4 w-4" />
+            {t('common.retry')}
+          </Button>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-xl font-bold text-foreground">
-            <Megaphone className="h-6 w-6 text-primary" />
-            Annonces de départ
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gérez les annonces de départ de {companyName} pour informer vos équipes et clients.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchAnnouncements(companyId)}
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 sm:flex-none sm:py-2"
-          >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Actualiser
-          </button>
-          {isAdmin && (
-            <button
-              onClick={() => openForm(null)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:flex-none sm:py-2"
+      <SectionHeader
+        title={t('announcements.title')}
+        subtitle={t('announcements.subtitle', { values: { companyName } })}
+        action={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void loadAnnouncements()}
+              disabled={loading}
             >
-              <Plus className="h-4 w-4" />
-              Nouvelle annonce
-            </button>
-          )}
-        </div>
-      </div>
+              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+              {t('common.refresh')}
+            </Button>
+            {isAdmin && (
+              <Button onClick={() => openForm(null)}>
+                <Plus className="h-4 w-4" />
+                {t('announcements.actions.new')}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
-      {/* Error banner */}
-      {error && companyId > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-400">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      ) : announcements.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border">
-          <Megaphone className="h-10 w-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Aucune annonce de départ pour le moment.</p>
-          {isAdmin && (
-            <button
-              onClick={() => openForm(null)}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              Créer la première annonce
-            </button>
-          )}
-        </div>
+      {announcements.length === 0 ? (
+        <StatusState
+          icon={Megaphone}
+          title={t('announcements.empty.title')}
+          description={t('announcements.empty.description')}
+          action={
+            isAdmin ? (
+              <Button onClick={() => openForm(null)}>
+                <Plus className="h-4 w-4" />
+                {t('announcements.empty.action')}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {announcements.map((a) => (
+          {announcements.map((announcement) => (
             <AnnouncementCard
-              key={a.id}
-              announcement={a}
+              key={announcement.id}
+              announcement={announcement}
               isAdmin={isAdmin}
-              onEdit={() => openForm(a)}
-              onRenew={() => setRenewTarget(a)}
-              onToggle={() => setToggleTarget(a)}
-              onDelete={() => setDeleteTarget(a)}
+              onEdit={() => openForm(announcement)}
+              onRenew={() => setRenewTarget(announcement)}
+              onToggle={() => setToggleTarget(announcement)}
+              onDelete={() => setDeleteTarget(announcement)}
             />
           ))}
         </div>
       )}
 
-      {/* Dialogs */}
       <AnnouncementFormDialog
         open={formOpen}
         announcement={editTarget}
@@ -983,7 +1261,10 @@ function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: numb
         parcelTypes={parcelTypes}
         loading={supportLoading}
         onSave={handleSave}
-        onClose={() => { setFormOpen(false); setEditTarget(null); }}
+        onClose={() => {
+          setFormOpen(false);
+          setEditTarget(null);
+        }}
       />
 
       <RenewDialog
@@ -994,28 +1275,40 @@ function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: numb
 
       <ConfirmDialog
         open={Boolean(toggleTarget)}
-        title={toggleTarget?.active ? 'Désactiver l\'annonce' : 'Activer l\'annonce'}
+        title={
+          toggleTarget?.active
+            ? t('announcements.toggle.deactivateTitle')
+            : t('announcements.toggle.activateTitle')
+        }
         description={
           toggleTarget?.active
-            ? 'Cette annonce ne sera plus visible. Vous pourrez la réactiver à tout moment.'
-            : 'Cette annonce redeviendra visible pour vos équipes et clients.'
+            ? t('announcements.toggle.deactivateDescription')
+            : t('announcements.toggle.activateDescription')
         }
-        confirmLabel={toggleTarget?.active ? 'Désactiver' : 'Activer'}
+        confirmLabel={
+          toggleTarget?.active
+            ? t('announcements.actions.deactivate')
+            : t('announcements.actions.activate')
+        }
+        loading={toggling}
         onConfirm={handleToggle}
-        onClose={() => setToggleTarget(null)}
+        onCancel={() => setToggleTarget(null)}
       />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Supprimer l'annonce"
-        description={`Supprimer définitivement « ${deleteTarget?.title} » ? Cette action est irréversible.`}
-        confirmLabel="Supprimer"
-        variant="danger"
+        title={t('announcements.delete.title')}
+        description={t('announcements.delete.description', {
+          values: { title: deleteTarget?.title ?? '' },
+        })}
+        confirmLabel={t('common.delete')}
+        destructive
+        loading={deleting}
         onConfirm={handleDelete}
-        onClose={() => setDeleteTarget(null)}
+        onCancel={() => setDeleteTarget(null)}
       />
 
-      <ToastBar toasts={toasts} />
+      <ToastBar toast={toast} />
     </div>
   );
 }
