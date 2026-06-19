@@ -6,9 +6,8 @@ import {
   Bike,
   Calendar,
   CalendarCheck,
-  Check,
+  MapPin,
   Megaphone,
-  Package,
   Pencil,
   Plane,
   Plus,
@@ -44,7 +43,6 @@ import {
   deleteAnnouncement,
   getAnnouncements,
   getCompanyCollectionPoints,
-  getCompanyParcelTypes,
   getCompanyTransportModes,
   renewAnnouncement,
   updateAnnouncement,
@@ -56,16 +54,15 @@ import type {
   AnnouncementRequest,
   AnnouncementResponse,
   CollectionPointOption,
-  ParcelTypeOption,
   TransportModeOption,
 } from '@/lib/announcements/types';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 type FormState = {
-  collectionPointIds: string[];
-  transportModeIds: string[];
-  parcelTypeIds: string[];
+  originCollectionPointId: string;
+  destinationCollectionPointId: string;
+  transportModeId: string;
   title: string;
   content: string;
   startDate: string;
@@ -88,9 +85,9 @@ type SelectOption = {
 type TFunction = ReturnType<typeof useTranslation>['t'];
 
 const emptyForm = (): FormState => ({
-  collectionPointIds: [],
-  transportModeIds: [],
-  parcelTypeIds: [],
+  originCollectionPointId: '',
+  destinationCollectionPointId: '',
+  transportModeId: '',
   title: '',
   content: '',
   startDate: '',
@@ -139,27 +136,22 @@ function getTransportIcon(names: string[]): ElementType<LucideProps> {
   return Truck;
 }
 
-function idsFromResponse(
-  items: AnnouncementOption[] | AnnouncementCollectionPoint[] | null | undefined,
-  legacyId?: number,
-) {
-  if (items && items.length > 0) {
-    return items.map((item) => String(item.id));
-  }
-
-  return legacyId ? [String(legacyId)] : [];
-}
-
 function toFormState(announcement: AnnouncementResponse): FormState {
   return {
-    collectionPointIds: idsFromResponse(
-      announcement.collectionPoints,
-      announcement.collectionPointId,
+    originCollectionPointId: String(
+      announcement.originCollectionPointId ??
+        announcement.originCollectionPoint?.id ??
+        announcement.collectionPointId ??
+        '',
     ),
-    transportModeIds: idsFromResponse(announcement.transportModes, announcement.transportModeId),
-    parcelTypeIds: idsFromResponse(announcement.parcelTypes, announcement.parcelTypeId),
+    destinationCollectionPointId: String(
+      announcement.destinationCollectionPointId ??
+        announcement.destinationCollectionPoint?.id ??
+        '',
+    ),
+    transportModeId: String(announcement.transportModeId ?? ''),
     title: announcement.title,
-    content: announcement.content,
+    content: announcement.content ?? '',
     startDate: announcement.startDate,
     endDate: announcement.endDate,
     parcelReceptionDeadline: announcement.parcelReceptionDeadline ?? '',
@@ -169,15 +161,81 @@ function toFormState(announcement: AnnouncementResponse): FormState {
   };
 }
 
-function selectedNumbers(values: string[]) {
-  return values.map(Number).filter((value) => Number.isFinite(value) && value > 0);
+function findCollectionPoint(points: CollectionPointOption[], value: string) {
+  return points.find((point) => String(point.id) === value) ?? null;
 }
 
-function validateForm(form: FormState, t: TFunction): FormErrors {
+function isCollectionPointSelectable(point: CollectionPointOption) {
+  return point.active !== false && point.responsible !== null;
+}
+
+function isCollectionPointOperational(point: CollectionPointOption | null) {
+  return (
+    point != null &&
+    point.active !== false &&
+    point.manuallyClosed !== true &&
+    point.mobileAvailability !== false
+  );
+}
+
+function getCollectionPointDescription(point: CollectionPointOption, t: TFunction) {
+  if (point.active === false) return t('announcements.form.collectionPointUnavailable');
+  if (point.responsible === null) return t('announcements.form.collectionPointWithoutResponsible');
+  if (!isCollectionPointOperational(point)) {
+    return t('announcements.form.collectionPointNotOperational');
+  }
+
+  return undefined;
+}
+
+function validateForm(
+  form: FormState,
+  t: TFunction,
+  collectionPoints: CollectionPointOption[] = [],
+): FormErrors {
   const errors: FormErrors = {};
+  const originCollectionPoint = findCollectionPoint(
+    collectionPoints,
+    form.originCollectionPointId,
+  );
+  const destinationCollectionPoint = findCollectionPoint(
+    collectionPoints,
+    form.destinationCollectionPointId,
+  );
 
   if (!form.title.trim()) errors.title = t('announcements.validation.required');
-  if (!form.content.trim()) errors.content = t('announcements.validation.required');
+  if (!form.originCollectionPointId) {
+    errors.originCollectionPointId = t('announcements.validation.required');
+  }
+  if (!form.destinationCollectionPointId) {
+    errors.destinationCollectionPointId = t('announcements.validation.required');
+  }
+  if (
+    form.originCollectionPointId &&
+    form.destinationCollectionPointId &&
+    form.originCollectionPointId === form.destinationCollectionPointId
+  ) {
+    errors.destinationCollectionPointId = t('announcements.validation.differentCollectionPoints');
+  }
+  if (
+    form.active &&
+    form.originCollectionPointId &&
+    !isCollectionPointOperational(originCollectionPoint)
+  ) {
+    errors.originCollectionPointId = t(
+      'announcements.validation.operationalCollectionPointRequired',
+    );
+  }
+  if (
+    form.active &&
+    form.destinationCollectionPointId &&
+    !isCollectionPointOperational(destinationCollectionPoint)
+  ) {
+    errors.destinationCollectionPointId = t(
+      'announcements.validation.operationalCollectionPointRequired',
+    );
+  }
+  if (!form.transportModeId) errors.transportModeId = t('announcements.validation.required');
   if (!form.startDate) errors.startDate = t('announcements.validation.required');
   if (!form.endDate) errors.endDate = t('announcements.validation.required');
 
@@ -207,11 +265,11 @@ function validateForm(form: FormState, t: TFunction): FormErrors {
 
 function buildRequest(form: FormState): AnnouncementRequest {
   return {
-    collectionPointIds: selectedNumbers(form.collectionPointIds),
-    transportModeIds: selectedNumbers(form.transportModeIds),
-    parcelTypeIds: selectedNumbers(form.parcelTypeIds),
+    originCollectionPointId: Number(form.originCollectionPointId),
+    destinationCollectionPointId: Number(form.destinationCollectionPointId),
+    transportModeId: Number(form.transportModeId),
     title: form.title.trim(),
-    content: form.content.trim(),
+    content: form.content.trim() || undefined,
     startDate: form.startDate,
     endDate: form.endDate,
     parcelReceptionDeadline: form.parcelReceptionDeadline || undefined,
@@ -234,7 +292,9 @@ function legacyOption(name: string | undefined, id: number | undefined): Announc
   return name && id ? [{ id, name }] : [];
 }
 
-function getCollectionPoints(announcement: AnnouncementResponse): AnnouncementCollectionPoint[] {
+function getLegacyCollectionPoints(
+  announcement: AnnouncementResponse,
+): AnnouncementCollectionPoint[] {
   if (announcement.collectionPoints && announcement.collectionPoints.length > 0) {
     return announcement.collectionPoints;
   }
@@ -253,16 +313,50 @@ function getCollectionPoints(announcement: AnnouncementResponse): AnnouncementCo
     : [];
 }
 
+function getOriginCollectionPoint(
+  announcement: AnnouncementResponse,
+): AnnouncementCollectionPoint | null {
+  if (announcement.originCollectionPoint) return announcement.originCollectionPoint;
+
+  if (announcement.originCollectionPointName && announcement.originCollectionPointId) {
+    return {
+      id: announcement.originCollectionPointId,
+      name: announcement.originCollectionPointName,
+      countryId: announcement.originCountryId,
+      countryName: announcement.originCountryName,
+      cityId: announcement.originCityId,
+      cityName: announcement.originCityName,
+    };
+  }
+
+  const legacy = getLegacyCollectionPoints(announcement);
+  return legacy[0] ?? null;
+}
+
+function getDestinationCollectionPoint(
+  announcement: AnnouncementResponse,
+): AnnouncementCollectionPoint | null {
+  if (announcement.destinationCollectionPoint) return announcement.destinationCollectionPoint;
+
+  if (announcement.destinationCollectionPointName && announcement.destinationCollectionPointId) {
+    return {
+      id: announcement.destinationCollectionPointId,
+      name: announcement.destinationCollectionPointName,
+      countryId: announcement.destinationCountryId,
+      countryName: announcement.destinationCountryName,
+      cityId: announcement.destinationCityId,
+      cityName: announcement.destinationCityName,
+    };
+  }
+
+  const legacy = getLegacyCollectionPoints(announcement);
+  return legacy[1] ?? null;
+}
+
 function getTransportModes(announcement: AnnouncementResponse): AnnouncementOption[] {
   return announcement.transportModes && announcement.transportModes.length > 0
     ? announcement.transportModes
     : legacyOption(announcement.transportModeName, announcement.transportModeId);
-}
-
-function getParcelTypes(announcement: AnnouncementResponse): AnnouncementOption[] {
-  return announcement.parcelTypes && announcement.parcelTypes.length > 0
-    ? announcement.parcelTypes
-    : legacyOption(announcement.parcelTypeName, announcement.parcelTypeId);
 }
 
 function listNames(items: { name: string }[]) {
@@ -288,110 +382,47 @@ function formatCollectionPointOption(point: CollectionPointOption) {
   return parts.join(' - ');
 }
 
-function MultiSelectField({
+function SelectField({
   label,
-  emptyLabel,
+  placeholder,
   options,
   value,
   error,
   disabled,
-  description,
   onChange,
 }: {
   label: string;
-  emptyLabel: string;
+  placeholder: string;
   options: SelectOption[];
-  value: string[];
+  value: string;
   error?: string;
   disabled?: boolean;
-  description?: string;
-  onChange: (value: string[]) => void;
+  onChange: (value: string) => void;
 }) {
-  const selected = options.filter((option) => value.includes(option.value));
-  const selectedSummary =
-    selected.length === 0 ? emptyLabel : selected.map((option) => option.label).join(', ');
-
-  const toggle = (option: SelectOption) => {
-    if (disabled || option.disabled) return;
-
-    onChange(
-      value.includes(option.value)
-        ? value.filter((current) => current !== option.value)
-        : [...value, option.value],
-    );
-  };
+  const selectedOption = options.find((option) => option.value === value);
 
   return (
-    <div className="min-w-0 space-y-2">
-      <div className="grid min-w-0 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-3">
-        <div className="min-w-0">
-          <label className="text-xs font-medium text-muted-foreground">{label}</label>
-          {description && <p className="text-xs text-muted-foreground/80">{description}</p>}
-        </div>
-        <span className="min-w-0 truncate text-xs text-muted-foreground sm:max-w-44 sm:text-right">
-          {selectedSummary}
-        </span>
-      </div>
-      <div
+    <div className="min-w-0 space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
         className={cn(
-          'max-h-44 min-w-0 space-y-1 overflow-y-auto overflow-x-hidden rounded-xl border bg-input p-2',
-          error ? 'border-destructive' : 'border-border',
-          disabled && 'opacity-60',
+          'w-full rounded-xl border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50',
+          error ? 'border-destructive focus:ring-destructive' : 'border-border',
+          !value && 'text-muted-foreground',
         )}
       >
-        {options.length === 0 ? (
-          <p className="px-2 py-3 text-sm text-muted-foreground">{emptyLabel}</p>
-        ) : (
-          options.map((option) => {
-            const checked = value.includes(option.value);
-
-            return (
-              <button
-                key={option.value}
-                type="button"
-                disabled={disabled || option.disabled}
-                onClick={() => toggle(option)}
-                className={cn(
-                  'flex w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors',
-                  checked
-                    ? 'bg-primary/10 text-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  (disabled || option.disabled) && 'cursor-not-allowed opacity-50',
-                )}
-              >
-                <span
-                  className={cn(
-                    'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                    checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
-                  )}
-                >
-                  {checked && <Check className="h-3 w-3" />}
-                </span>
-                <span className="min-w-0 flex-1 overflow-hidden">
-                  <span className="block truncate">{option.label}</span>
-                  {option.description && (
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  )}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
-      {value.length > 0 && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 max-w-full justify-start px-2 text-xs"
-          disabled={disabled}
-          onClick={() => onChange([])}
-        >
-          <X className="h-3.5 w-3.5" />
-          {emptyLabel}
-        </Button>
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {selectedOption?.description && (
+        <p className="text-xs text-muted-foreground">{selectedOption.description}</p>
       )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
@@ -468,7 +499,6 @@ function AnnouncementFormDialog({
   announcement,
   collectionPoints,
   transportModes,
-  parcelTypes,
   loading,
   onSave,
   onClose,
@@ -477,7 +507,6 @@ function AnnouncementFormDialog({
   announcement: AnnouncementResponse | null;
   collectionPoints: CollectionPointOption[];
   transportModes: TransportModeOption[];
-  parcelTypes: ParcelTypeOption[];
   loading: boolean;
   onSave: (data: AnnouncementRequest) => Promise<void>;
   onClose: () => void;
@@ -506,11 +535,8 @@ function AnnouncementFormDialog({
       collectionPoints.map((point) => ({
         value: String(point.id),
         label: formatCollectionPointOption(point),
-        disabled: point.active === false || point.manuallyClosed === true,
-        description:
-          point.active === false || point.manuallyClosed === true
-            ? t('announcements.form.collectionPointUnavailable')
-            : undefined,
+        disabled: !isCollectionPointSelectable(point),
+        description: getCollectionPointDescription(point, t),
       })),
     [collectionPoints, t],
   );
@@ -520,13 +546,8 @@ function AnnouncementFormDialog({
     [transportModes],
   );
 
-  const parcelTypeOptions = useMemo<SelectOption[]>(
-    () => parcelTypes.map((type) => ({ value: String(type.id), label: type.name })),
-    [parcelTypes],
-  );
-
   const handleSubmit = async () => {
-    const nextErrors = validateForm(form, t);
+    const nextErrors = validateForm(form, t, collectionPoints);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -610,33 +631,35 @@ function AnnouncementFormDialog({
               </div>
 
               <div className="space-y-4 rounded-xl border border-border p-3 sm:p-4">
-                <MultiSelectField
-                  label={t('announcements.form.collectionPoints')}
-                  description={t('announcements.form.generalTargetHint')}
-                  emptyLabel={t('announcements.form.allCollectionPoints')}
-                  value={form.collectionPointIds}
-                  options={collectionPointOptions}
-                  disabled={submitting}
-                  onChange={setField('collectionPointIds')}
-                />
                 <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-                  <MultiSelectField
-                    label={t('announcements.form.transportModes')}
-                    emptyLabel={t('announcements.form.allTransportModes')}
-                    value={form.transportModeIds}
-                    options={transportModeOptions}
+                  <SelectField
+                    label={t('announcements.form.originCollectionPoint')}
+                    placeholder={t('announcements.form.selectCollectionPoint')}
+                    value={form.originCollectionPointId}
+                    error={errors.originCollectionPointId}
+                    options={collectionPointOptions}
                     disabled={submitting}
-                    onChange={setField('transportModeIds')}
+                    onChange={setField('originCollectionPointId')}
                   />
-                  <MultiSelectField
-                    label={t('announcements.form.parcelTypes')}
-                    emptyLabel={t('announcements.form.allParcelTypes')}
-                    value={form.parcelTypeIds}
-                    options={parcelTypeOptions}
+                  <SelectField
+                    label={t('announcements.form.destinationCollectionPoint')}
+                    placeholder={t('announcements.form.selectCollectionPoint')}
+                    value={form.destinationCollectionPointId}
+                    error={errors.destinationCollectionPointId}
+                    options={collectionPointOptions}
                     disabled={submitting}
-                    onChange={setField('parcelTypeIds')}
+                    onChange={setField('destinationCollectionPointId')}
                   />
                 </div>
+                <SelectField
+                  label={t('announcements.form.transportMode')}
+                  placeholder={t('announcements.form.selectTransportMode')}
+                  value={form.transportModeId}
+                  error={errors.transportModeId}
+                  options={transportModeOptions}
+                  disabled={submitting}
+                  onChange={setField('transportModeId')}
+                />
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -911,9 +934,9 @@ function AnnouncementCard({
   onDelete: () => void;
 }) {
   const { locale, t } = useTranslation('dashboard');
-  const collectionPoints = getCollectionPoints(announcement);
+  const originCollectionPoint = getOriginCollectionPoint(announcement);
+  const destinationCollectionPoint = getDestinationCollectionPoint(announcement);
   const transportModes = getTransportModes(announcement);
-  const parcelTypes = getParcelTypes(announcement);
   const transportNames = listNames(transportModes);
   const TransportIcon = getTransportIcon(transportNames);
   const isExpired = toDate(announcement.endDate) < toDate(new Date().toISOString().slice(0, 10));
@@ -980,22 +1003,28 @@ function AnnouncementCard({
         )}
       </div>
 
-      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{announcement.content}</p>
+      {announcement.content && (
+        <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+          {announcement.content}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="flex min-w-0 items-center gap-1.5">
-          <Megaphone className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-primary/70" />
           <span className="truncate">
-            {formatListSummary(listNames(collectionPoints), t)}
+            {originCollectionPoint?.name ?? t('announcements.notScheduled')}
+          </span>
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-success/70" />
+          <span className="truncate">
+            {destinationCollectionPoint?.name ?? t('announcements.notScheduled')}
           </span>
         </span>
         <span className="flex min-w-0 items-center gap-1.5">
           <TransportIcon className="h-3.5 w-3.5 shrink-0 text-primary/70" />
           <span className="truncate">{formatListSummary(transportNames, t)}</span>
-        </span>
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Package className="h-3.5 w-3.5 shrink-0 text-primary/70" />
-          <span className="truncate">{formatListSummary(listNames(parcelTypes), t)}</span>
         </span>
       </div>
 
@@ -1042,7 +1071,6 @@ function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: numb
   const [loadError, setLoadError] = useState<string | null>(null);
   const [collectionPoints, setCollectionPoints] = useState<CollectionPointOption[]>([]);
   const [transportModes, setTransportModes] = useState<TransportModeOption[]>([]);
-  const [parcelTypes, setParcelTypes] = useState<ParcelTypeOption[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportLoaded, setSupportLoaded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -1079,14 +1107,12 @@ function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: numb
 
     setSupportLoading(true);
     try {
-      const [points, modes, types] = await Promise.all([
+      const [points, modes] = await Promise.all([
         getCompanyCollectionPoints(token, companyId),
         getCompanyTransportModes(token, companyId),
-        getCompanyParcelTypes(token, companyId),
       ]);
       setCollectionPoints(points);
       setTransportModes(modes);
-      setParcelTypes(types);
       setSupportLoaded(true);
     } catch (error) {
       showError(getErrorMessage(error, t('announcements.errors.supportData')));
@@ -1258,7 +1284,6 @@ function CompanyAnnouncementsInner({ companyId, companyName }: { companyId: numb
         announcement={editTarget}
         collectionPoints={collectionPoints}
         transportModes={transportModes}
-        parcelTypes={parcelTypes}
         loading={supportLoading}
         onSave={handleSave}
         onClose={() => {

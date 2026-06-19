@@ -5,7 +5,6 @@ import type {
   AnnouncementResponse,
   CollectionPointOption,
   TransportModeOption,
-  ParcelTypeOption,
 } from './types';
 
 const base = (companyId: number) => `/api/delivery/companies/${companyId}`;
@@ -124,6 +123,7 @@ export function getCompanyCollectionPoints(
         active?: boolean;
         manuallyClosed?: boolean;
         mobileAvailability?: boolean;
+        responsible?: unknown;
         city?: { cityName?: string };
         countryName?: string;
       }[]
@@ -139,6 +139,7 @@ export function getCompanyCollectionPoints(
         active: p.active,
         manuallyClosed: p.manuallyClosed,
         mobileAvailability: p.mobileAvailability,
+        responsible: p.responsible,
         cityName: p.city?.cityName,
         countryName: p.countryName,
       })),
@@ -155,16 +156,4 @@ export function getCompanyTransportModes(
       token,
     )
     .then((res) => res.transportModes ?? []);
-}
-
-export function getCompanyParcelTypes(
-  token: string,
-  companyId: number,
-): Promise<ParcelTypeOption[]> {
-  return apiClient
-    .get<{ companyId: number; parcelTypes: { id: number; name: string }[] }>(
-      `${base(companyId)}/parcel-types`,
-      token,
-    )
-    .then((res) => res.parcelTypes ?? []);
 }

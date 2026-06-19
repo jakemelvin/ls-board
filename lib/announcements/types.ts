@@ -1,9 +1,9 @@
 export interface AnnouncementRequest {
-  collectionPointIds?: number[] | null;
-  transportModeIds?: number[] | null;
-  parcelTypeIds?: number[] | null;
+  originCollectionPointId: number;
+  destinationCollectionPointId: number;
+  transportModeId: number;
   title: string;
-  content: string;
+  content?: string;
   startDate: string;
   endDate: string;
   parcelReceptionDeadline?: string;
@@ -38,6 +38,18 @@ export interface AnnouncementResponse {
   id: number;
   companyId: number;
   companyName: string;
+  originCollectionPointId?: number;
+  originCollectionPointName?: string;
+  originCountryId?: number;
+  originCountryName?: string;
+  originCityId?: number;
+  originCityName?: string;
+  destinationCollectionPointId?: number;
+  destinationCollectionPointName?: string;
+  destinationCountryId?: number;
+  destinationCountryName?: string;
+  destinationCityId?: number;
+  destinationCityName?: string;
   collectionPointId?: number;
   collectionPointName?: string;
   countryId?: number;
@@ -48,11 +60,13 @@ export interface AnnouncementResponse {
   transportModeName?: string;
   parcelTypeId?: number;
   parcelTypeName?: string;
+  originCollectionPoint?: AnnouncementCollectionPoint | null;
+  destinationCollectionPoint?: AnnouncementCollectionPoint | null;
   collectionPoints?: AnnouncementCollectionPoint[] | null;
   transportModes?: AnnouncementOption[] | null;
   parcelTypes?: AnnouncementOption[] | null;
   title: string;
-  content: string;
+  content?: string;
   startDate: string;
   endDate: string;
   parcelReceptionDeadline?: string;
@@ -73,14 +87,10 @@ export interface CollectionPointOption {
   mobileAvailability?: boolean;
   cityName?: string;
   countryName?: string;
+  responsible?: unknown;
 }
 
 export interface TransportModeOption {
-  id: number;
-  name: string;
-}
-
-export interface ParcelTypeOption {
   id: number;
   name: string;
 }

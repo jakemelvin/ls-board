@@ -23,8 +23,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { getCountries } from '@/lib/auth/api';
 import type { CountryResponse } from '@/lib/auth/types';
-import { getCities, getParcelTypes } from '@/lib/company/api';
-import type { CityResponse, ParcelTypeResponse } from '@/lib/company/types';
+import { getCities, getCompanyPricingBySelection, getParcelTypes } from '@/lib/company/api';
+import type { CityResponse, ParcelTypeResponse, PricingCriterion } from '@/lib/company/types';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import { getPaymentModes, getPromoCodes, getShipmentFees } from '@/lib/platform-finance/api';
@@ -129,6 +129,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   const [transportModesLoading, setTransportModesLoading] = useState(false);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [collectionPointsLoading, setCollectionPointsLoading] = useState(false);
+  const [dimensionRequirementsLoading, setDimensionRequirementsLoading] = useState(false);
   const [simulating, setSimulating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -136,6 +137,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   const [transportModesError, setTransportModesError] = useState<string | null>(null);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [collectionPointsError, setCollectionPointsError] = useState<string | null>(null);
+  const [dimensionRequirementsError, setDimensionRequirementsError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [senderFrontIdCard, setSenderFrontIdCard] = useState<File | null>(null);
@@ -145,6 +147,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     useState<ShipmentPriceSimulationResponse | null>(null);
   const [pendingShipmentInput, setPendingShipmentInput] =
     useState<CreateShipmentInput | null>(null);
+  const [dimensionCriteria, setDimensionCriteria] = useState<PricingCriterion[] | null>(null);
 
   const originCities = useMemo(
     () => cities.filter((city) => String(city.countryId) === form.originCountryId),
@@ -179,6 +182,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     [paymentModes],
   );
   const isEnvelopeParcel = selectedParcelType ? isEnvelopeParcelType(selectedParcelType) : false;
+  const weightRequired = !isEnvelopeParcel && dimensionCriteria?.includes('WEIGHT') === true;
+  const volumeRequired = !isEnvelopeParcel && dimensionCriteria?.includes('VOLUME') === true;
+  const dimensionsOptional =
+    !isEnvelopeParcel &&
+    dimensionCriteria != null &&
+    !dimensionCriteria.includes('WEIGHT') &&
+    !dimensionCriteria.includes('VOLUME');
 
   const routeReady = Boolean(
     form.originCountryId &&
@@ -188,6 +198,9 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
   );
   const companySearchReady = Boolean(routeReady && form.transportModeId && form.parcelTypeId);
   const pointSearchReady = Boolean(companySearchReady && form.companyId);
+  const pricingSelectionReady = Boolean(
+    pointSearchReady && form.originCollectionPointId && form.destinationCollectionPointId,
+  );
 
   useEffect(() => {
     if (!token) {
@@ -492,6 +505,67 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     });
   }, [isEnvelopeParcel]);
 
+  useEffect(() => {
+    if (!token || !pricingSelectionReady || isEnvelopeParcel) {
+      setDimensionCriteria(null);
+      setDimensionRequirementsError(null);
+      setDimensionRequirementsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDimensionRequirements() {
+      setDimensionRequirementsLoading(true);
+      setDimensionRequirementsError(null);
+
+      try {
+        const pricing = await getCompanyPricingBySelection(
+          token,
+          Number(form.companyId),
+          Number(form.transportModeId),
+          Number(form.originCollectionPointId),
+          Number(form.destinationCollectionPointId),
+          Number(form.parcelTypeId),
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        setDimensionCriteria(pricing.selectedCriteria);
+      } catch (error) {
+        if (!cancelled) {
+          setDimensionCriteria(null);
+          setDimensionRequirementsError(
+            error instanceof ApiError
+              ? error.message
+              : 'Impossible de charger les criteres de tarification.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setDimensionRequirementsLoading(false);
+        }
+      }
+    }
+
+    void loadDimensionRequirements();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    form.companyId,
+    form.destinationCollectionPointId,
+    form.originCollectionPointId,
+    form.parcelTypeId,
+    form.transportModeId,
+    isEnvelopeParcel,
+    pricingSelectionReady,
+    token,
+  ]);
+
   function updateField<Key extends keyof ShipmentCreateFormState>(
     field: Key,
     value: ShipmentCreateFormState[Key],
@@ -513,6 +587,16 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     setSubmitError(null);
     setPriceSimulation(null);
     setPendingShipmentInput(null);
+    if (
+      field === 'companyId' ||
+      field === 'transportModeId' ||
+      field === 'parcelTypeId' ||
+      field === 'originCollectionPointId' ||
+      field === 'destinationCollectionPointId'
+    ) {
+      setDimensionCriteria(null);
+      setDimensionRequirementsError(null);
+    }
   }
 
   function handleCountryChange(field: 'originCountryId' | 'destinationCountryId', value: string) {
@@ -653,12 +737,30 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
       nextErrors.receiverWhatsappNumber = 'Le telephone du destinataire est requis.';
     }
 
-    if (!isEnvelopeParcel && form.weightKg && Number(form.weightKg) < 0) {
-      nextErrors.weightKg = 'Le poids doit etre positif.';
+    if (!isEnvelopeParcel && dimensionRequirementsLoading) {
+      nextErrors.weightKg = 'Patientez pendant le chargement de la tarification.';
     }
 
-    if (!isEnvelopeParcel && form.volumeM3 && Number(form.volumeM3) < 0) {
-      nextErrors.volumeM3 = 'Le volume doit etre positif.';
+    if (weightRequired && !form.weightKg.trim()) {
+      nextErrors.weightKg = 'Le poids est requis par la tarification.';
+    }
+
+    if (volumeRequired && !form.volumeM3.trim()) {
+      nextErrors.volumeM3 = 'Le volume est requis par la tarification.';
+    }
+
+    if (!isEnvelopeParcel && form.weightKg) {
+      const weight = Number(form.weightKg);
+      if (!Number.isFinite(weight) || weight < 0) {
+        nextErrors.weightKg = 'Le poids doit etre positif.';
+      }
+    }
+
+    if (!isEnvelopeParcel && form.volumeM3) {
+      const volume = Number(form.volumeM3);
+      if (!Number.isFinite(volume) || volume < 0) {
+        nextErrors.volumeM3 = 'Le volume doit etre positif.';
+      }
     }
 
     setErrors(nextErrors);
@@ -791,6 +893,23 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     (mode) => String(mode.transportModeId) === form.transportModeId,
   );
   const selectedCompany = companies.find((company) => String(company.companyId) === form.companyId);
+  const dimensionHint =
+    dimensionRequirementsError ??
+    (dimensionRequirementsLoading
+      ? 'Chargement des criteres de tarification...'
+      : dimensionsOptional
+        ? 'Facultatif selon la tarification configuree.'
+        : undefined);
+  const weightHint = isEnvelopeParcel
+    ? 'Non applicable pour une enveloppe.'
+    : weightRequired
+      ? 'Requis par la tarification au poids.'
+      : dimensionHint;
+  const volumeHint = isEnvelopeParcel
+    ? 'Non applicable pour une enveloppe.'
+    : volumeRequired
+      ? 'Requis par la tarification au volume.'
+      : dimensionHint;
 
   return (
     <div className="space-y-6">
@@ -1065,7 +1184,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
               >
                 <div className="grid gap-4 lg:grid-cols-2">
                   <InputField
-                    label="Poids (kg)"
+                    label={weightRequired ? 'Poids (kg) *' : 'Poids (kg)'}
                     type="number"
                     min="0"
                     step="0.01"
@@ -1074,13 +1193,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                       if (!isEnvelopeParcel) updateField('weightKg', event.target.value);
                     }}
                     error={errors.weightKg}
-                    hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
+                    hint={weightHint}
                     disabled={isEnvelopeParcel}
                     readOnly={isEnvelopeParcel}
                     placeholder={isEnvelopeParcel ? 'Non applicable' : '5.50'}
                   />
                   <InputField
-                    label="Volume (m3)"
+                    label={volumeRequired ? 'Volume (m3) *' : 'Volume (m3)'}
                     type="number"
                     min="0"
                     step="0.001"
@@ -1089,7 +1208,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                       if (!isEnvelopeParcel) updateField('volumeM3', event.target.value);
                     }}
                     error={errors.volumeM3}
-                    hint={isEnvelopeParcel ? 'Non applicable pour une enveloppe.' : undefined}
+                    hint={volumeHint}
                     disabled={isEnvelopeParcel}
                     readOnly={isEnvelopeParcel}
                     placeholder={isEnvelopeParcel ? 'Non applicable' : '0.250'}
