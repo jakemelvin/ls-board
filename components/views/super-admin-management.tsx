@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Building2,
   Users,
+  LayoutDashboard,
   CheckCircle2,
   XCircle,
   Shield,
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { OperationalReadinessDialog } from '@/components/company/operational-readiness';
+import { SuperAdminDashboard } from '@/components/views/super-admin-dashboard';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -2086,9 +2088,10 @@ function UsersTab({ token }: { token: string }) {
 
 // ─── Main view ─────────────────────────────────────────────────────────────
 
-type TabId = 'companies' | 'users';
+type TabId = 'overview' | 'companies' | 'users';
 
 const TABS: { id: TabId; labelKey: string; icon: React.ElementType }[] = [
+  { id: 'overview', labelKey: 'superAdmin.tabs.overview', icon: LayoutDashboard },
   { id: 'companies', labelKey: 'superAdmin.tabs.companies', icon: Building2 },
   { id: 'users', labelKey: 'superAdmin.tabs.users', icon: Users },
 ];
@@ -2097,7 +2100,7 @@ export function SuperAdminManagement() {
   const { t } = useTranslation('dashboard');
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
-  const [activeTab, setActiveTab] = useState<TabId>('companies');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [refreshKey, setRefreshKey] = useState(0);
 
   if (role !== 'SUPER_ADMIN') {
@@ -2138,7 +2141,7 @@ export function SuperAdminManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:flex sm:w-fit">
+      <div className="grid w-full grid-cols-3 gap-1 rounded-xl bg-muted p-1 sm:flex sm:w-fit">
         {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
@@ -2158,6 +2161,7 @@ export function SuperAdminManagement() {
 
       {/* Content */}
       <div key={`${activeTab}-${refreshKey}`}>
+        {activeTab === 'overview' && <SuperAdminDashboard />}
         {activeTab === 'companies' && <CompaniesTab token={token} />}
         {activeTab === 'users' && <UsersTab token={token} />}
       </div>

@@ -371,6 +371,77 @@
     }
   },
   "superAdmin": {
+    "overview": {
+      "eyebrow": "Platform control",
+      "title": "Superadmin overview",
+      "subtitle": "Consolidated critical indicators to monitor the platform's commercial, operational, and financial health.",
+      "metrics": {
+        "companies": "Companies",
+        "companiesDetail": "Active accounts and network partners",
+        "deliveryRate": "Delivery rate",
+        "exceptionRate": "{{rate}}% exceptions",
+        "platformRevenue": "Platform revenue",
+        "platformRevenueDetail": "Platform fees, subscription, commissions deducted",
+        "shipments": "Filtered shipments",
+        "shipmentsDetail": "Volume created during the period"
+      },
+      "charts": {
+        "revenueDescription": "Estimated revenue per day during the period",
+        "revenueTitle": "Financial traction",
+        "statusDescription": "Operational split of filtered parcels",
+        "statusTitle": "Critical statuses",
+        "volumeDescription": "Every chart follows the global period filter",
+        "volumeTitle": "Platform volume"
+      },
+      "companyHealth": {
+        "active": "Active",
+        "description": "Synthetic score to prioritize accounts needing support.",
+        "networkPartner": "Network partner",
+        "noPlan": "No plan",
+        "pendingReview": "Review required",
+        "quotaReached": "Quota reached",
+        "setupIncomplete": "Setup incomplete",
+        "shipments": "shipments",
+        "title": "Company health",
+        "trial": "Trial"
+      },
+      "operations": {
+        "description": "Resources, flows, and controls to monitor.",
+        "delivered": "Delivered",
+        "deliveredDetail": "Completed during the period",
+        "exceptions": "Exceptions",
+        "exceptionsDetail": "Rejected and KYC to review",
+        "maintenance": "Maintenance",
+        "maintenanceDetail": "Vehicles immobilized",
+        "paidCommissions": "Paid commissions",
+        "paidCommissionsDetail": "Settled with partners",
+        "title": "Operations",
+        "transit": "In transit",
+        "transitDetail": "Flows currently loaded",
+        "users": "Users",
+        "usersDetail": "Across every role"
+      },
+      "risks": {
+        "closedPoints": {
+          "detail": "Direct impact on coverage and drop-off promise.",
+          "title": "Closed points"
+        },
+        "description": "Attention points that should guide superadmin analysis.",
+        "kyc": {
+          "detail": "Document review to handle before escalation.",
+          "title": "KYC in review"
+        },
+        "pendingTransfers": {
+          "detail": "Transporter requests not accepted or not completed.",
+          "title": "Pending pickups"
+        },
+        "quota": {
+          "detail": "Commercial blocking risk or upgrade opportunity.",
+          "title": "Subscription quota"
+        },
+        "title": "Priority alerts"
+      }
+    },
     "createCompany": {
       "backToCompany": "← Company",
       "creating": "Creating...",
@@ -402,6 +473,7 @@
     },
     "subtitle": "Manage platform companies and users",
     "tabs": {
+      "overview": "Overview",
       "companies": "Companies",
       "users": "Users"
     },

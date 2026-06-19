@@ -371,6 +371,77 @@
     }
   },
   "superAdmin": {
+    "overview": {
+      "eyebrow": "Pilotage plateforme",
+      "title": "Vue d'ensemble superadmin",
+      "subtitle": "Indicateurs critiques consolides pour suivre la sante commerciale, operationnelle et financiere de la plateforme.",
+      "metrics": {
+        "companies": "Entreprises",
+        "companiesDetail": "Comptes actifs et partenaires reseau",
+        "deliveryRate": "Taux de livraison",
+        "exceptionRate": "{{rate}}% d'exceptions",
+        "platformRevenue": "Revenu plateforme",
+        "platformRevenueDetail": "Frais plateforme, abonnement, commissions deduites",
+        "shipments": "Shipments filtres",
+        "shipmentsDetail": "Volume cree sur la periode"
+      },
+      "charts": {
+        "revenueDescription": "Revenu estime par jour sur la periode",
+        "revenueTitle": "Traction financiere",
+        "statusDescription": "Repartition operationnelle des colis filtres",
+        "statusTitle": "Statuts critiques",
+        "volumeDescription": "Tous les graphiques suivent le filtre de periode global",
+        "volumeTitle": "Volume plateforme"
+      },
+      "companyHealth": {
+        "active": "Actif",
+        "description": "Score synthetique pour prioriser les comptes a accompagner.",
+        "networkPartner": "Partenaire reseau",
+        "noPlan": "Aucun plan",
+        "pendingReview": "Verification requise",
+        "quotaReached": "Quota atteint",
+        "setupIncomplete": "Configuration incomplete",
+        "shipments": "shipments",
+        "title": "Sante des entreprises",
+        "trial": "Essai"
+      },
+      "operations": {
+        "description": "Ressources, flux et controles a surveiller.",
+        "delivered": "Livres",
+        "deliveredDetail": "Termines sur la periode",
+        "exceptions": "Exceptions",
+        "exceptionsDetail": "Rejets et KYC a revoir",
+        "maintenance": "Maintenance",
+        "maintenanceDetail": "Vehicules immobilises",
+        "paidCommissions": "Commissions payees",
+        "paidCommissionsDetail": "Reglees aux partenaires",
+        "title": "Operations",
+        "transit": "En transit",
+        "transitDetail": "Flux actuellement embarques",
+        "users": "Utilisateurs",
+        "usersDetail": "Tous roles confondus"
+      },
+      "risks": {
+        "closedPoints": {
+          "detail": "Impact direct sur la couverture et la promesse de depot.",
+          "title": "Points fermes"
+        },
+        "description": "Points d'attention qui doivent guider l'analyse superadmin.",
+        "kyc": {
+          "detail": "Verification documentaire a traiter avant escalation.",
+          "title": "KYC en revue"
+        },
+        "pendingTransfers": {
+          "detail": "Demandes transporteur non acceptees ou non finalisees.",
+          "title": "Prises en attente"
+        },
+        "quota": {
+          "detail": "Risque de blocage commercial ou besoin d'upgrade.",
+          "title": "Quota abonnement"
+        },
+        "title": "Alertes prioritaires"
+      }
+    },
     "createCompany": {
       "backToCompany": "← Entreprise",
       "creating": "Création...",
@@ -402,6 +473,7 @@
     },
     "subtitle": "Gestion des entreprises et utilisateurs de la plateforme",
     "tabs": {
+      "overview": "Vue d'ensemble",
       "companies": "Entreprises",
       "users": "Utilisateurs"
     },
