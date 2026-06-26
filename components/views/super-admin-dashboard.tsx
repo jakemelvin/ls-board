@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
 import {
   AlertTriangle,
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   CreditCard,
   Package,
+  RefreshCw,
   ShieldAlert,
   TrendingUp,
   Truck,
@@ -31,72 +32,38 @@ import {
 
 import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatMoney } from '@/lib/commissions';
+import { getSuperAdminDashboard } from '@/lib/dashboard/api';
+import type {
+  CompanyHealthMetric,
+  PriorityAlert,
+  SuperAdminDashboardResponse,
+} from '@/lib/dashboard/types';
 import {
-  buildParcelVolumeSeries,
-  buildRevenueSeries,
-  filterParcelsByPeriod,
   getDashboardPeriodRange,
-  getParcelRevenueTotal,
-  isDateInRange,
   type DashboardPeriodPreset,
   type DateRange,
 } from '@/lib/dashboard-period';
+import { useAuthStore } from '@/lib/auth/store';
+import { formatMoney } from '@/lib/commissions';
 import { useTranslation } from '@/lib/i18n';
-import type { Parcel } from '@/lib/mock-data';
-import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 type RiskLevel = 'critical' | 'warning' | 'info';
 
-interface SuperAdminDashboardSnapshot {
-  metrics: {
-    companies: number;
-    users: number;
-    shipments: number;
-    platformRevenue: number;
-    deliveryRate: number;
-    exceptionRate: number;
-  };
-  trends: {
-    volume: Array<{ name: string; colis: number }>;
-    revenue: Array<{ name: string; revenue: number }>;
-  };
-  statusDistribution: Array<{ name: string; value: number; color: string }>;
-  companyHealth: Array<{
-    id: string;
-    name: string;
-    plan: string;
-    status: string;
-    score: number;
-    shipments: number;
-    revenue: number;
-    risk: RiskLevel;
-  }>;
-  risks: Array<{
-    id: string;
-    level: RiskLevel;
-    title: string;
-    value: string;
-    detail: string;
-  }>;
-  operations: Array<{
-    label: string;
-    value: number;
-    description: string;
-    icon: ElementType;
-    colorClassName: string;
-  }>;
-}
-
 const STATUS_COLORS: Record<string, string> = {
   CREATED: 'var(--muted-foreground)',
+  PAID: 'var(--chart-3)',
+  AWAITING_DROP_OFF: 'var(--warning)',
   RECEIVED_AT_COLLECTION_POINT: 'var(--chart-1)',
+  READY_FOR_TRANSPORT: 'var(--chart-4)',
   IN_TRANSIT: 'var(--warning)',
-  ARRIVED_AT_DESTINATION: 'var(--chart-2)',
+  ARRIVED_DESTINATION_POINT: 'var(--chart-2)',
+  READY_FOR_PICKUP: 'var(--chart-5)',
   DELIVERED: 'var(--success)',
-  REJECTED: 'var(--destructive)',
+  CANCELLED: 'var(--destructive)',
+  RETURNED: 'var(--destructive)',
 };
 
 const RISK_STYLES: Record<RiskLevel, string> = {
@@ -113,56 +80,42 @@ const RISK_DOT_STYLES: Record<RiskLevel, string> = {
 
 export function SuperAdminDashboard() {
   const { t } = useTranslation('dashboard');
-  const {
-    parcels,
-    users,
-    collectionPoints,
-    networkCollectionPoints,
-    vehicles,
-    transferRequests,
-    subscriptionPlans,
-    companySubscription,
-    subscriptionUsage,
-    commissions,
-  } = useStore();
-
-  const referenceDate = useMemo(() => getLatestParcelDate(parcels), [parcels]);
+  const token = useAuthStore((state) => state.token);
   const [periodPreset, setPeriodPreset] = useState<DashboardPeriodPreset>('CURRENT_MONTH');
   const [periodRange, setPeriodRange] = useState<DateRange>(() =>
-    getDashboardPeriodRange('CURRENT_MONTH', referenceDate),
+    getDashboardPeriodRange('CURRENT_MONTH'),
   );
+  const [dashboard, setDashboard] = useState<SuperAdminDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const snapshot = useMemo(
-    () =>
-      buildSuperAdminDashboardSnapshot({
-        t,
-        parcels,
-        users,
-        collectionPoints,
-        networkCollectionPoints,
-        vehicles,
-        transferRequests,
-        subscriptionPlans,
-        companySubscription,
-        subscriptionUsage,
-        commissions,
-        periodRange,
-      }),
-    [
-      t,
-      parcels,
-      users,
-      collectionPoints,
-      networkCollectionPoints,
-      vehicles,
-      transferRequests,
-      subscriptionPlans,
-      companySubscription,
-      subscriptionUsage,
-      commissions,
-      periodRange,
-    ],
-  );
+  const loadDashboard = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await getSuperAdminDashboard(token, {
+        startDate: formatApiDate(periodRange.from),
+        endDate: formatApiDate(periodRange.to),
+      });
+      setDashboard(response);
+    } catch (err) {
+      setDashboard(null);
+      setError(err instanceof Error ? err.message : t('common.genericError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [periodRange.from, periodRange.to, t, token]);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  const snapshot = useMemo(() => mapSuperAdminDashboard(dashboard, t), [dashboard, t]);
 
   const handlePeriodChange = (preset: DashboardPeriodPreset, range: DateRange) => {
     setPeriodPreset(preset);
@@ -184,34 +137,55 @@ export function SuperAdminDashboard() {
           </p>
         </div>
 
-        <DashboardPeriodFilter
-          preset={periodPreset}
-          range={periodRange}
-          referenceDate={referenceDate}
-          onChange={handlePeriodChange}
-        />
+        <div className="flex flex-col gap-2 sm:items-end">
+          <DashboardPeriodFilter
+            preset={periodPreset}
+            range={periodRange}
+            referenceDate={new Date()}
+            onChange={handlePeriodChange}
+          />
+          {error && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => void loadDashboard()}>
+              <RefreshCw className="h-4 w-4" />
+              {t('common.retry')}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {error && (
+        <Card className="border-destructive/30 bg-destructive/10">
+          <CardContent className="flex items-center gap-3 p-4 text-sm text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <span>{error}</span>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
+          loading={loading}
           icon={Building2}
           title={t('superAdmin.overview.metrics.companies')}
           value={snapshot.metrics.companies.toString()}
           detail={t('superAdmin.overview.metrics.companiesDetail')}
         />
         <MetricCard
+          loading={loading}
           icon={Package}
           title={t('superAdmin.overview.metrics.shipments')}
           value={snapshot.metrics.shipments.toString()}
           detail={t('superAdmin.overview.metrics.shipmentsDetail')}
         />
         <MetricCard
+          loading={loading}
           icon={WalletCards}
           title={t('superAdmin.overview.metrics.platformRevenue')}
           value={formatMoney(snapshot.metrics.platformRevenue)}
           detail={t('superAdmin.overview.metrics.platformRevenueDetail')}
         />
         <MetricCard
+          loading={loading}
           icon={TrendingUp}
           title={t('superAdmin.overview.metrics.deliveryRate')}
           value={`${snapshot.metrics.deliveryRate}%`}
@@ -333,7 +307,8 @@ export function SuperAdminDashboard() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">{company.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {company.plan} - {company.shipments} {t('superAdmin.overview.companyHealth.shipments')}
+                        {company.status} - {company.shipments}{' '}
+                        {t('superAdmin.overview.companyHealth.shipments')}
                       </p>
                     </div>
                     <Badge className={cn('shrink-0 border', RISK_STYLES[company.risk])}>
@@ -354,11 +329,16 @@ export function SuperAdminDashboard() {
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{company.status}</span>
+                    <span>{company.deliveryRate}% livraison</span>
                     <span>{formatMoney(company.revenue)}</span>
                   </div>
                 </div>
               ))}
+              {!snapshot.companyHealth.length && (
+                <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  {t('common.noResults')}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -426,11 +406,13 @@ function MetricCard({
   title,
   value,
   detail,
+  loading,
 }: {
   icon: ElementType;
   title: string;
   value: string;
   detail: string;
+  loading?: boolean;
 }) {
   return (
     <Card className="border-border bg-card">
@@ -439,7 +421,9 @@ function MetricCard({
         <Icon className="h-5 w-5 shrink-0 text-primary" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-foreground sm:text-3xl">{value}</div>
+        <div className="text-2xl font-bold text-foreground sm:text-3xl">
+          {loading ? <span className="inline-block h-8 w-20 animate-pulse rounded bg-secondary" /> : value}
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
       </CardContent>
     </Card>
@@ -478,202 +462,77 @@ function ChartTooltip({
   );
 }
 
-function buildSuperAdminDashboardSnapshot({
-  t,
-  parcels,
-  users,
-  collectionPoints,
-  networkCollectionPoints,
-  vehicles,
-  transferRequests,
-  subscriptionPlans,
-  companySubscription,
-  subscriptionUsage,
-  commissions,
-  periodRange,
-}: {
-  t: ReturnType<typeof useTranslation>['t'];
-  parcels: ReturnType<typeof useStore.getState>['parcels'];
-  users: ReturnType<typeof useStore.getState>['users'];
-  collectionPoints: ReturnType<typeof useStore.getState>['collectionPoints'];
-  networkCollectionPoints: ReturnType<typeof useStore.getState>['networkCollectionPoints'];
-  vehicles: ReturnType<typeof useStore.getState>['vehicles'];
-  transferRequests: ReturnType<typeof useStore.getState>['transferRequests'];
-  subscriptionPlans: ReturnType<typeof useStore.getState>['subscriptionPlans'];
-  companySubscription: ReturnType<typeof useStore.getState>['companySubscription'];
-  subscriptionUsage: ReturnType<typeof useStore.getState>['subscriptionUsage'];
-  commissions: ReturnType<typeof useStore.getState>['commissions'];
-  periodRange: DateRange;
-}): SuperAdminDashboardSnapshot {
-  const filteredParcels = filterParcelsByPeriod(parcels, periodRange);
-  const deliveredParcels = filteredParcels.filter((parcel) => parcel.status === 'DELIVERED').length;
-  const rejectedParcels = filteredParcels.filter((parcel) => parcel.status === 'REJECTED').length;
-  const exceptions = filteredParcels.filter(
-    (parcel) => parcel.status === 'REJECTED' || parcel.senderKyc.verificationStatus === 'PENDING_REVIEW',
-  ).length;
-  const revenue = getParcelRevenueTotal(filteredParcels);
-  const platformFeeRevenue = Math.round(revenue * 0.12);
-  const currentPlan = subscriptionPlans.find((plan) => plan.id === companySubscription.planId);
-  const subscriptionRevenue = currentPlan?.monthlyPrice ?? 0;
-  const commissionCost = commissions
-    .filter((commission) => isDateInRange(commission.earnedAt, periodRange))
-    .reduce((sum, commission) => sum + commission.commissionAmount, 0);
-  const platformRevenue = Math.max(0, platformFeeRevenue + subscriptionRevenue - commissionCost);
-  const allCompanyIds = new Set<string>();
-
-  collectionPoints.forEach((point) => {
-    if (point.organizationId) {
-      allCompanyIds.add(point.organizationId);
-    }
-  });
-  networkCollectionPoints.forEach((point) => allCompanyIds.add(point.organizationId));
-
-  const activeCompanies = Math.max(allCompanyIds.size, 1);
-  const deliveryRate =
-    filteredParcels.length > 0 ? Math.round((deliveredParcels / filteredParcels.length) * 100) : 0;
-  const exceptionRate =
-    filteredParcels.length > 0 ? Math.round((exceptions / filteredParcels.length) * 100) : 0;
-  const pendingTransfers = transferRequests.filter((request) => request.status === 'PENDING').length;
-  const closedPoints = collectionPoints.filter((point) => !point.isOpen).length;
-  const maintenanceVehicles = vehicles.filter((vehicle) => vehicle.status === 'MAINTENANCE').length;
-  const pendingKyc = filteredParcels.filter(
-    (parcel) => parcel.senderKyc.verificationStatus === 'PENDING_REVIEW',
-  ).length;
-  const quotaLimit = currentPlan?.nationalShipmentLimit ?? null;
-  const quotaRate =
-    quotaLimit && quotaLimit > 0 ? Math.round((subscriptionUsage.nationalUsed / quotaLimit) * 100) : 0;
-
-  const statusLabels: Record<string, string> = {
-    CREATED: t('adminDashboard.status.created'),
-    RECEIVED_AT_COLLECTION_POINT: t('adminDashboard.status.received'),
-    IN_TRANSIT: t('adminDashboard.status.transit'),
-    ARRIVED_AT_DESTINATION: t('adminDashboard.status.arrived'),
-    DELIVERED: t('adminDashboard.status.delivered'),
-    REJECTED: t('adminDashboard.status.rejected'),
-  };
+function mapSuperAdminDashboard(
+  dashboard: SuperAdminDashboardResponse | null,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const metrics = dashboard?.metrics;
+  const operations = dashboard?.operations;
 
   return {
     metrics: {
-      companies: activeCompanies,
-      users: users.length,
-      shipments: filteredParcels.length,
-      platformRevenue,
-      deliveryRate,
-      exceptionRate,
+      companies: round(metrics?.companyCount),
+      shipments: round(metrics?.shipmentCount),
+      platformRevenue: round(metrics?.platformRevenue),
+      deliveryRate: round(metrics?.deliveryRatePercent),
+      exceptionRate: round(metrics?.exceptionRatePercent),
     },
     trends: {
-      volume: buildParcelVolumeSeries(filteredParcels, periodRange),
-      revenue: buildRevenueSeries(filteredParcels, periodRange),
+      volume: (dashboard?.shipmentVolumeByDay ?? []).map((item) => ({
+        name: formatChartDate(item.date),
+        colis: round(item.shipmentCount),
+      })),
+      revenue: (dashboard?.platformRevenueByDay ?? []).map((item) => ({
+        name: formatChartDate(item.date),
+        revenue: round(item.platformRevenue),
+      })),
     },
-    statusDistribution: Object.entries(statusLabels).map(([status, name]) => ({
-      name,
-      value: filteredParcels.filter((parcel) => parcel.status === status).length,
-      color: STATUS_COLORS[status] ?? 'var(--muted-foreground)',
+    statusDistribution: (dashboard?.statusDistribution ?? []).map((item) => ({
+      name: item.label ?? item.key ?? '-',
+      value: round(item.count),
+      color: getStatusColor(item),
     })),
-    companyHealth: [
-      {
-        id: 'company-sendam',
-        name: 'Sendam Express',
-        plan: currentPlan?.name ?? t('superAdmin.overview.companyHealth.noPlan'),
-        status:
-          quotaRate >= 100
-            ? t('superAdmin.overview.companyHealth.quotaReached')
-            : t('superAdmin.overview.companyHealth.active'),
-        score: clamp(92 - closedPoints * 8 - pendingTransfers * 5 - rejectedParcels * 4),
-        shipments: filteredParcels.length,
-        revenue,
-        risk: quotaRate >= 100 || closedPoints > 1 ? 'warning' : 'info',
-      },
-      {
-        id: 'network-urban-drop',
-        name: 'Urban Drop',
-        plan: t('superAdmin.overview.companyHealth.networkPartner'),
-        status: t('superAdmin.overview.companyHealth.pendingReview'),
-        score: 68,
-        shipments: Math.max(2, Math.round(filteredParcels.length * 0.22)),
-        revenue: Math.round(revenue * 0.18),
-        risk: 'warning',
-      },
-      {
-        id: 'new-company-onboarding',
-        name: 'Nouveau compte onboarding',
-        plan: t('superAdmin.overview.companyHealth.trial'),
-        status: t('superAdmin.overview.companyHealth.setupIncomplete'),
-        score: 42,
-        shipments: 0,
-        revenue: 0,
-        risk: 'critical',
-      },
-    ],
-    risks: [
-      {
-        id: 'quota',
-        level: quotaRate >= 100 ? 'critical' : 'warning',
-        title: t('superAdmin.overview.risks.quota.title'),
-        value: `${quotaRate}%`,
-        detail: t('superAdmin.overview.risks.quota.detail'),
-      },
-      {
-        id: 'closed-points',
-        level: closedPoints > 1 ? 'critical' : closedPoints > 0 ? 'warning' : 'info',
-        title: t('superAdmin.overview.risks.closedPoints.title'),
-        value: closedPoints.toString(),
-        detail: t('superAdmin.overview.risks.closedPoints.detail'),
-      },
-      {
-        id: 'pending-transfers',
-        level: pendingTransfers > 1 ? 'warning' : 'info',
-        title: t('superAdmin.overview.risks.pendingTransfers.title'),
-        value: pendingTransfers.toString(),
-        detail: t('superAdmin.overview.risks.pendingTransfers.detail'),
-      },
-      {
-        id: 'kyc',
-        level: pendingKyc > 0 ? 'warning' : 'info',
-        title: t('superAdmin.overview.risks.kyc.title'),
-        value: pendingKyc.toString(),
-        detail: t('superAdmin.overview.risks.kyc.detail'),
-      },
-    ],
+    companyHealth: (dashboard?.companyHealth ?? []).map(mapCompanyHealth),
+    risks: (dashboard?.priorityAlerts ?? []).map(mapPriorityAlert),
     operations: [
       {
         label: t('superAdmin.overview.operations.users'),
-        value: users.length,
+        value: round(operations?.totalUserCount),
         description: t('superAdmin.overview.operations.usersDetail'),
         icon: Users,
         colorClassName: 'bg-primary/15 text-primary',
       },
       {
         label: t('superAdmin.overview.operations.transit'),
-        value: filteredParcels.filter((parcel) => parcel.status === 'IN_TRANSIT').length,
+        value: round(operations?.inTransitShipmentCount),
         description: t('superAdmin.overview.operations.transitDetail'),
         icon: Truck,
         colorClassName: 'bg-warning/15 text-warning',
       },
       {
         label: t('superAdmin.overview.operations.paidCommissions'),
-        value: commissions.filter((commission) => commission.status === 'PAID').length,
+        value: round(operations?.paidCommissionCount),
         description: t('superAdmin.overview.operations.paidCommissionsDetail'),
         icon: CreditCard,
         colorClassName: 'bg-success/15 text-success',
       },
       {
         label: t('superAdmin.overview.operations.maintenance'),
-        value: maintenanceVehicles,
+        value: round(operations?.maintenanceVehicleCount),
         description: t('superAdmin.overview.operations.maintenanceDetail'),
         icon: ShieldAlert,
         colorClassName: 'bg-destructive/15 text-destructive',
       },
       {
         label: t('superAdmin.overview.operations.delivered'),
-        value: deliveredParcels,
+        value: round(operations?.deliveredShipmentCount),
         description: t('superAdmin.overview.operations.deliveredDetail'),
         icon: CheckCircle2,
         colorClassName: 'bg-chart-2/15 text-chart-2',
       },
       {
         label: t('superAdmin.overview.operations.exceptions'),
-        value: exceptions,
+        value: round(operations?.exceptionShipmentCount),
         description: t('superAdmin.overview.operations.exceptionsDetail'),
         icon: AlertTriangle,
         colorClassName: 'bg-destructive/15 text-destructive',
@@ -682,18 +541,58 @@ function buildSuperAdminDashboardSnapshot({
   };
 }
 
-function getLatestParcelDate(parcels: Parcel[]) {
-  return (
-    parcels.reduce<Date | null>((latestDate, parcel) => {
-      if (!latestDate || parcel.createdAt.getTime() > latestDate.getTime()) {
-        return parcel.createdAt;
-      }
-
-      return latestDate;
-    }, null) ?? new Date()
-  );
+function mapCompanyHealth(company: CompanyHealthMetric) {
+  const score = round(company.healthScorePercent);
+  return {
+    id: String(company.companyId),
+    name: company.companyName ?? '-',
+    status: company.statusLabel ?? '-',
+    score,
+    shipments: round(company.shipmentCount),
+    revenue: round(company.platformRevenue),
+    deliveryRate: round(company.deliveryRatePercent),
+    risk: getRiskLevel(score, round(company.exceptionRatePercent), !company.exploitable),
+  };
 }
 
-function clamp(value: number) {
-  return Math.max(0, Math.min(100, value));
+function mapPriorityAlert(alert: PriorityAlert) {
+  const count = round(alert.count);
+  const percentage = round(alert.percentage);
+  const level: RiskLevel = alert.available === false || count > 0 ? 'warning' : 'info';
+
+  return {
+    id: alert.key ?? alert.label ?? String(count),
+    level,
+    title: alert.label ?? '-',
+    value: percentage > 0 ? `${percentage}%` : count.toString(),
+    detail: alert.description ?? '-',
+  };
+}
+
+function getRiskLevel(score: number, exceptionRate: number, blocked: boolean): RiskLevel {
+  if (blocked || score < 50 || exceptionRate >= 20) return 'critical';
+  if (score < 75 || exceptionRate >= 10) return 'warning';
+  return 'info';
+}
+
+function getStatusColor(item: { key?: string; statuses?: string[] }) {
+  const status = item.statuses?.[0] ?? item.key ?? '';
+  return STATUS_COLORS[status] ?? 'var(--muted-foreground)';
+}
+
+function formatChartDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function formatApiDate(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function round(value?: number) {
+  return Math.round(value ?? 0);
 }

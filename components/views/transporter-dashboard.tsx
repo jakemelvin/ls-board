@@ -1,17 +1,22 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ElementType } from 'react';
 import {
+  AlertTriangle,
   ArrowRightLeft,
   CheckCircle2,
-  Clock3,
   Coins,
   MapPin,
   Package,
+  RefreshCw,
   Route,
   Truck,
   Weight,
 } from 'lucide-react';
+
+import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -21,15 +26,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
-import { getCollectionPointLocationLabel } from '@/lib/collection-point-location';
-import { formatMoney, getUserCommissionSummary } from '@/lib/commissions';
-import { getStatusColor, getStatusLabel, type User } from '@/lib/mock-data';
-import {
-  getRecipientDisplayName,
-  getSenderDisplayName,
-} from '@/lib/parcel-privacy';
-import { useStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/auth/store';
+import { formatMoney } from '@/lib/commissions';
+import { getTransporterDashboard } from '@/lib/dashboard/api';
+import type { CommissionSummary, TransporterDashboardResponse } from '@/lib/dashboard/types';
+import { useTranslation } from '@/lib/i18n';
+import type { User } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
 interface TransporterDashboardProps {
@@ -37,96 +39,41 @@ interface TransporterDashboardProps {
 }
 
 export function TransporterDashboard({ currentUser }: TransporterDashboardProps) {
-  const {
-    users,
-    vehicles,
-    parcels,
-    commissions,
-    transferRequests,
-    collectionPoints,
-    countries,
-    cities,
-    zones,
-  } = useStore();
+  const { t } = useTranslation('dashboard');
+  const token = useAuthStore((state) => state.token);
+  const [dashboard, setDashboard] = useState<TransporterDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const transporter = users.find((user) => user.id === currentUser.id) ?? currentUser;
-  const assignedVehicle = transporter.assignedVehicleId
-    ? vehicles.find((vehicle) => vehicle.id === transporter.assignedVehicleId) ?? null
-    : null;
+  const loadDashboard = useCallback(async () => {
+    if (!token) return;
 
-  const pendingPickupRequests = useMemo(
-    () =>
-      transferRequests.filter(
-        (request) => request.transporterId === transporter.id && request.status === 'PENDING'
-      ),
-    [transferRequests, transporter.id]
-  );
+    setLoading(true);
+    setError(null);
 
-  const acceptedPickupRequests = useMemo(
-    () =>
-      transferRequests.filter(
-        (request) => request.transporterId === transporter.id && request.status === 'ACCEPTED'
-      ),
-    [transferRequests, transporter.id]
-  );
+    try {
+      setDashboard(await getTransporterDashboard(token));
+    } catch (err) {
+      setDashboard(null);
+      setError(err instanceof Error ? err.message : t('common.genericError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t, token]);
 
-  const onboardParcels = useMemo(
-    () =>
-      assignedVehicle
-        ? parcels.filter(
-            (parcel) =>
-              parcel.currentVehicleId === assignedVehicle.id && parcel.status === 'IN_TRANSIT'
-          )
-        : [],
-    [assignedVehicle, parcels]
-  );
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
 
-  const completedTrips = useMemo(
-    () =>
-      parcels.filter((parcel) =>
-        parcel.history.some(
-          (entry) => entry.actorId === transporter.id && entry.status === 'ARRIVED_AT_DESTINATION'
-        )
-      ).length,
-    [parcels, transporter.id]
-  );
+  const vehicle = dashboard?.vehicle;
+  const metrics = dashboard?.metrics;
+  const commissions = dashboard?.commissions;
+  const displayName = dashboard?.transporterUsername ?? currentUser.name;
+  const loadRate = round(metrics?.loadRatePercent ?? vehicle?.loadRatePercent);
+  const currentWeight = metrics?.currentWeightKg ?? vehicle?.currentWeightKg ?? 0;
+  const maxWeight = vehicle?.maxWeightKg ?? 0;
 
-  const deliveredParcels = useMemo(
-    () =>
-      parcels.filter(
-        (parcel) =>
-          parcel.status === 'DELIVERED' &&
-          parcel.history.some((entry) => entry.actorId === transporter.id)
-      ).length,
-    [parcels, transporter.id]
-  );
-
-  const totalOnboardWeight = onboardParcels.reduce((sum, parcel) => sum + parcel.weight, 0);
-  const commissionSummary = getUserCommissionSummary(commissions, transporter.id);
-  const weightUtilization =
-    assignedVehicle && assignedVehicle.maxWeight > 0
-      ? Math.round((totalOnboardWeight / assignedVehicle.maxWeight) * 100)
-      : 0;
-
-  const requestRows = acceptedPickupRequests
-    .map((request) => {
-      const point = collectionPoints.find((collectionPoint) => collectionPoint.id === request.collectionPointId);
-      const relatedParcels = request.parcelIds
-        .map((parcelId) => parcels.find((parcel) => parcel.id === parcelId))
-        .filter((parcel): parcel is NonNullable<typeof parcel> => Boolean(parcel));
-
-      return {
-        request,
-        point,
-        parcelCount: relatedParcels.length,
-        totalWeight: relatedParcels.reduce((sum, parcel) => sum + parcel.weight, 0),
-      };
-    })
-    .slice(0, 5);
-
-  const currentRoute = onboardParcels.slice(0, 5);
-
-  if (!assignedVehicle) {
+  if (!loading && !error && !vehicle) {
     return (
       <Card className="border-border bg-card">
         <CardContent className="flex min-h-[320px] flex-col items-center justify-center gap-4 p-8 text-center">
@@ -148,106 +95,73 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
         <div>
           <h2 className="text-2xl font-bold text-foreground">Tableau de bord transporteur</h2>
           <p className="text-muted-foreground">
-            {assignedVehicle.type} · {assignedVehicle.plate}
+            {vehicle?.type ?? displayName}
+            {vehicle?.immatriculation ? ` - ${vehicle.immatriculation}` : ''}
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card px-4 py-3">
           <p className="text-sm text-muted-foreground">Charge actuelle</p>
           <p className="mt-1 text-lg font-semibold text-foreground">
-            {totalOnboardWeight.toFixed(1)} / {assignedVehicle.maxWeight} kg
+            {currentWeight.toFixed(1)} / {maxWeight.toFixed(1)} kg
           </p>
         </div>
       </div>
 
+      {(error || loading) && (
+        <Card className={cn('border-border bg-card', error && 'border-destructive/30 bg-destructive/10')}>
+          <CardContent className="flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className={cn('flex items-center gap-3', error ? 'text-destructive' : 'text-muted-foreground')}>
+              {error ? <AlertTriangle className="h-5 w-5" /> : <RefreshCw className="h-5 w-5 animate-spin" />}
+              <span>{error ?? 'Chargement du dashboard transporteur...'}</span>
+            </div>
+            {error && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => void loadDashboard()}>
+                <RefreshCw className="h-4 w-4" />
+                {t('common.retry')}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20">
-              <ArrowRightLeft className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{acceptedPickupRequests.length}</p>
-              <p className="text-xs text-muted-foreground">Demandes acceptees a charger</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{onboardParcels.length}</p>
-              <p className="text-xs text-muted-foreground">Colis a bord</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-2/20">
-              <Route className="h-5 w-5 text-chart-2" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{completedTrips}</p>
-              <p className="text-xs text-muted-foreground">Trajets completes</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/20">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{deliveredParcels}</p>
-              <p className="text-xs text-muted-foreground">Colis deja livres</p>
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardMetric
+          icon={ArrowRightLeft}
+          iconClassName="bg-warning/20 text-warning"
+          value={round(metrics?.acceptedRequestsToLoadCount)}
+          label="Demandes acceptees a charger"
+        />
+        <DashboardMetric
+          icon={Package}
+          iconClassName="bg-primary/20 text-primary"
+          value={round(metrics?.onboardShipmentCount)}
+          label="Colis a bord"
+        />
+        <DashboardMetric
+          icon={Route}
+          iconClassName="bg-chart-2/20 text-chart-2"
+          value={round(metrics?.completedTripCount)}
+          label="Trajets completes"
+        />
+        <DashboardMetric
+          icon={CheckCircle2}
+          iconClassName="bg-success/20 text-success"
+          value={round(metrics?.deliveredShipmentCount)}
+          label="Colis deja livres"
+        />
       </div>
 
-      {transporter.transporterCommissionRate !== undefined && (
+      {commissions && (
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Coins className="h-5 w-5 text-primary" />
               Mes commissions
             </CardTitle>
-            <CardDescription>
-              Montants generes par les colis livres sur vos trajets termines.
-            </CardDescription>
+            <CardDescription>Montants generes par les trajets traites par le backend.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="rounded-xl border border-border bg-secondary/20 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Taux configure</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">
-                  {transporter.transporterCommissionRate}%
-                </p>
-              </div>
-              <div className="rounded-xl border border-border bg-warning/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">A payer</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">
-                  {formatMoney(commissionSummary.payableAmount)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border bg-success/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Deja paye</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">
-                  {formatMoney(commissionSummary.paidAmount)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border bg-secondary/20 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Colis commissionnes</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">{commissionSummary.parcelCount}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Derniere commission:{' '}
-              {commissionSummary.latestCommission
-                ? `${formatMoney(commissionSummary.latestCommission.commissionAmount)} le ${commissionSummary.latestCommission.earnedAt.toLocaleDateString('fr-FR')}`
-                : 'aucune commission generee pour le moment.'}
-            </p>
+            <CommissionGrid commissions={commissions} />
           </CardContent>
         </Card>
       )}
@@ -256,7 +170,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="text-foreground">Vehicule et disponibilite</CardTitle>
-            <CardDescription>Etat de charge de votre vehicule assigne</CardDescription>
+            <CardDescription>Etat de charge du vehicule assigne.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-border bg-secondary/20 p-4">
@@ -264,21 +178,21 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                 <div className="flex items-center gap-3">
                   <Truck className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium text-foreground">{assignedVehicle.plate}</p>
-                    <p className="text-sm text-muted-foreground">{assignedVehicle.type}</p>
+                    <p className="font-medium text-foreground">{vehicle?.immatriculation ?? '-'}</p>
+                    <p className="text-sm text-muted-foreground">{vehicle?.type ?? '-'}</p>
                   </div>
                 </div>
                 <span
                   className={cn(
                     'rounded-lg px-2 py-1 text-xs font-medium',
-                    assignedVehicle.status === 'AVAILABLE'
+                    vehicle?.status === 'DISPONIBLE'
                       ? 'bg-success/20 text-success'
-                      : assignedVehicle.status === 'IN_TRANSIT'
+                      : vehicle?.status === 'EN_TRANSIT'
                         ? 'bg-warning/20 text-warning'
-                        : 'bg-destructive/20 text-destructive'
+                        : 'bg-destructive/20 text-destructive',
                   )}
                 >
-                  {assignedVehicle.status}
+                  {vehicle?.status ?? '-'}
                 </span>
               </div>
             </div>
@@ -289,23 +203,19 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                   <div>
                     <p className="font-medium text-foreground">Taux de charge</p>
                     <p className="text-sm text-muted-foreground">
-                      {totalOnboardWeight.toFixed(1)} kg transportes actuellement
+                      {currentWeight.toFixed(1)} kg transportes actuellement
                     </p>
                   </div>
                 </div>
-                <span className="text-xl font-bold text-foreground">{weightUtilization}%</span>
+                <span className="text-xl font-bold text-foreground">{loadRate}%</span>
               </div>
               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
                 <div
                   className={cn(
                     'h-full transition-all',
-                    weightUtilization > 85
-                      ? 'bg-destructive'
-                      : weightUtilization > 60
-                        ? 'bg-warning'
-                        : 'bg-success'
+                    loadRate > 85 ? 'bg-destructive' : loadRate > 60 ? 'bg-warning' : 'bg-success',
                   )}
-                  style={{ width: `${Math.min(weightUtilization, 100)}%` }}
+                  style={{ width: `${Math.min(loadRate, 100)}%` }}
                 />
               </div>
             </div>
@@ -315,36 +225,33 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="text-foreground">Demandes a charger</CardTitle>
-            <CardDescription>Demandes acceptees par le collecteur en attente de choix reel</CardDescription>
+            <CardDescription>Demandes acceptees par les collecteurs et renvoyees par l'API.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {requestRows.length > 0 ? (
-              requestRows.map(({ request, point, parcelCount, totalWeight }) => (
-                <div key={request.id} className="rounded-xl border border-border bg-secondary/20 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{point?.name ?? 'Point de collecte'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {point
-                          ? getCollectionPointLocationLabel(point, zones, cities, countries)
-                          : 'Localisation indisponible'}
-                      </p>
-                    </div>
-                    <span className="rounded-lg bg-chart-2/20 px-2 py-1 text-xs font-medium text-chart-2">
-                      Acceptee
-                    </span>
+            {(dashboard?.acceptedRequestsToLoad ?? []).map((request) => (
+              <div key={request.requestId} className="rounded-xl border border-border bg-secondary/20 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {request.originCollectionPointName ?? 'Point de collecte'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Collecteur: {request.collectorUsername ?? '-'}
+                    </p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    <span>{parcelCount} colis</span>
-                    <span>{totalWeight.toFixed(1)} kg</span>
-                    <span>{request.createdAt.toLocaleDateString('fr-FR')}</span>
-                  </div>
+                  <span className="rounded-lg bg-chart-2/20 px-2 py-1 text-xs font-medium text-chart-2">
+                    {request.status ?? '-'}
+                  </span>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Aucune demande acceptee a charger pour le moment.
+                <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <span>{round(request.shipmentCount)} colis</span>
+                  <span>{round(request.pendingShipmentCount)} en attente</span>
+                  <span>{formatDate(request.createdAt)}</span>
+                </div>
               </div>
+            ))}
+            {!dashboard?.acceptedRequestsToLoad?.length && (
+              <EmptyState label="Aucune demande acceptee a charger pour le moment." />
             )}
           </CardContent>
         </Card>
@@ -353,7 +260,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-foreground">Colis actuellement a bord</CardTitle>
-          <CardDescription>Vue rapide sur votre tournee active</CardDescription>
+          <CardDescription>Vue rapide sur votre tournee active.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -368,46 +275,35 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentRoute.map((parcel) => {
-                const destination = collectionPoints.find(
-                  (point) => point.id === parcel.destinationPointId
-                );
-
-                return (
-                  <TableRow key={parcel.id} className="border-border">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-foreground">{parcel.trackingNumber}</span>
-                        <CopyTrackingNumberButton trackingNumber={parcel.trackingNumber} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {getSenderDisplayName(parcel.senderName, 'TRANSPORTER')}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {getRecipientDisplayName(parcel.recipientName, 'TRANSPORTER')}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{destination?.name ?? 'Point de destination'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-foreground">{parcel.weight} kg</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'rounded-lg px-2 py-1 text-xs font-medium',
-                          getStatusColor(parcel.status)
-                        )}
-                      >
-                        {getStatusLabel(parcel.status)}
+              {(dashboard?.onboardShipments ?? []).map((shipment) => (
+                <TableRow key={shipment.shipmentId} className="border-border">
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-foreground">
+                        {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
                       </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {currentRoute.length === 0 && (
+                      {shipment.shipmentReference && (
+                        <CopyTrackingNumberButton trackingNumber={shipment.shipmentReference} />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
+                  <TableCell className="text-foreground">{shipment.receiverFullName ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>{shipment.destinationCollectionPointName ?? '-'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
+                  <TableCell>
+                    <span className="rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
+                      {shipment.status ?? '-'}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!dashboard?.onboardShipments?.length && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
                     Aucun colis actuellement charge dans ce vehicule.
@@ -420,4 +316,69 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
       </Card>
     </div>
   );
+}
+
+function DashboardMetric({
+  icon: Icon,
+  iconClassName,
+  value,
+  label,
+}: {
+  icon: ElementType;
+  iconClassName: string;
+  value: number;
+  label: string;
+}) {
+  return (
+    <Card className="border-border bg-card">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', iconClassName)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <p className="text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CommissionGrid({ commissions }: { commissions: CommissionSummary }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-4">
+      <InfoTile title="Taux configure" value={`${round(commissions.configuredPercentage)}%`} />
+      <InfoTile title="A payer" value={formatMoney(round(commissions.pendingAmount))} />
+      <InfoTile title="Deja paye" value={formatMoney(round(commissions.paidAmount))} />
+      <InfoTile title="Colis commissionnes" value={round(commissions.commissionedShipmentCount).toString()} />
+    </div>
+  );
+}
+
+function InfoTile({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-secondary/20 p-4">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="mt-2 text-sm font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('fr-FR');
+}
+
+function round(value?: number) {
+  return Math.round(value ?? 0);
 }

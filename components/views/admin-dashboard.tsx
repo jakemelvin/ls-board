@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
 import {
   AlertTriangle,
@@ -28,6 +28,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+
 import { OperationalReadinessDialog } from '@/components/company/operational-readiness';
 import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
 import { Button } from '@/components/ui/button';
@@ -36,79 +37,112 @@ import { getCompanyOperationalReadiness } from '@/lib/admin/api';
 import type { CompanyOperationalReadiness } from '@/lib/admin/types';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
-import {
-  formatCollectionPointLoadRatio,
-  getCollectionPointSaturationRate,
-} from '@/lib/collection-point-capacity';
 import { useCompanyContext } from '@/lib/company/use-company';
 import { formatMoney } from '@/lib/commissions';
+import { getCompanyDashboard } from '@/lib/dashboard/api';
+import type { CompanyDashboardResponse } from '@/lib/dashboard/types';
 import {
-  buildParcelVolumeSeries,
-  buildRevenueSeries,
-  filterParcelsByPeriod,
   getDashboardPeriodRange,
-  getParcelRevenueTotal,
   type DashboardPeriodPreset,
   type DateRange,
 } from '@/lib/dashboard-period';
-import type { Parcel } from '@/lib/mock-data';
-import { useStore } from '@/lib/store';
 import { useTranslation } from '@/lib/i18n';
+
+const STATUS_COLORS: Record<string, string> = {
+  CREATED: 'var(--muted)',
+  PAID: 'var(--chart-3)',
+  AWAITING_DROP_OFF: 'var(--warning)',
+  RECEIVED_AT_COLLECTION_POINT: 'var(--chart-1)',
+  READY_FOR_TRANSPORT: 'var(--chart-4)',
+  IN_TRANSIT: 'var(--warning)',
+  ARRIVED_DESTINATION_POINT: 'var(--chart-2)',
+  READY_FOR_PICKUP: 'var(--chart-5)',
+  DELIVERED: 'var(--success)',
+  CANCELLED: 'var(--destructive)',
+  RETURNED: 'var(--destructive)',
+};
+
+const referenceDate = new Date();
 
 export function AdminDashboard() {
   const { t } = useTranslation('dashboard');
-  const { parcels, collectionPoints, vehicles, users } = useStore();
-  const referenceDate = useMemo(() => getLatestParcelDate(parcels), [parcels]);
+  const token = useAuthStore((state) => state.token);
+  const {
+    status: companyStatus,
+    company,
+    error: companyError,
+    retry: retryCompany,
+  } = useCompanyContext();
   const [periodPreset, setPeriodPreset] = useState<DashboardPeriodPreset>('CURRENT_MONTH');
   const [periodRange, setPeriodRange] = useState<DateRange>(() =>
-    getDashboardPeriodRange('CURRENT_MONTH', referenceDate)
+    getDashboardPeriodRange('CURRENT_MONTH', referenceDate),
   );
+  const [dashboard, setDashboard] = useState<CompanyDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const companyId = company?.id;
 
-  const filteredParcels = useMemo(
-    () => filterParcelsByPeriod(parcels, periodRange),
-    [parcels, periodRange]
-  );
-  const totalParcels = filteredParcels.length;
-  const deliveredParcels = filteredParcels.filter((parcel) => parcel.status === 'DELIVERED').length;
-  const rejectedParcels = filteredParcels.filter((parcel) => parcel.status === 'REJECTED').length;
-  const deliveryRate = totalParcels > 0 ? Math.round((deliveredParcels / totalParcels) * 100) : 0;
-  const activeVehicles = vehicles.filter((vehicle) => vehicle.status === 'IN_TRANSIT').length;
-  const revenue = getParcelRevenueTotal(filteredParcels);
-  const saturationRate =
-    collectionPoints.length > 0
-      ? Math.round(
-          collectionPoints.reduce(
-            (sum, point) => sum + getCollectionPointSaturationRate(point, parcels),
-            0
-          ) / collectionPoints.length
-        )
-      : 0;
+  const loadDashboard = useCallback(async () => {
+    if (!token || companyStatus !== 'resolved' || !companyId) {
+      setLoading(companyStatus === 'loading');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await getCompanyDashboard(token, companyId, {
+        startDate: formatApiDate(periodRange.from),
+        endDate: formatApiDate(periodRange.to),
+      });
+      setDashboard(response);
+    } catch (err) {
+      setDashboard(null);
+      setError(err instanceof Error ? err.message : t('common.genericError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [companyId, companyStatus, periodRange.from, periodRange.to, t, token]);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  const totalParcels = round(dashboard?.shipmentCount);
+  const deliveredParcels = round(dashboard?.deliveredShipmentCount);
+  const rejectedParcels = round(dashboard?.quickOverview?.rejectedShipmentCount);
+  const deliveryRate = round(dashboard?.deliveryRatePercent);
+  const activeVehicles = round(dashboard?.quickOverview?.activeVehicleCount);
+  const teamMembers = round(dashboard?.quickOverview?.teamMemberCount);
+  const revenue = round(dashboard?.estimatedRevenue);
+  const saturationRate = round(dashboard?.collectionPointSaturationPercent);
 
   const volumeData = useMemo(
-    () => buildParcelVolumeSeries(filteredParcels, periodRange),
-    [filteredParcels, periodRange]
+    () =>
+      (dashboard?.shipmentVolumeByDay ?? []).map((item) => ({
+        name: formatChartDate(item.date),
+        colis: round(item.shipmentCount),
+      })),
+    [dashboard?.shipmentVolumeByDay],
   );
   const revenueData = useMemo(
-    () => buildRevenueSeries(filteredParcels, periodRange),
-    [filteredParcels, periodRange]
+    () =>
+      (dashboard?.revenueByDay ?? []).map((item) => ({
+        name: formatChartDate(item.date),
+        revenue: round(item.platformRevenue),
+      })),
+    [dashboard?.revenueByDay],
   );
-
-  const statusDistribution = [
-    { name: t('adminDashboard.status.created'), value: filteredParcels.filter((p) => p.status === 'CREATED').length, color: 'var(--muted)' },
-    {
-      name: t('adminDashboard.status.received'),
-      value: filteredParcels.filter((p) => p.status === 'RECEIVED_AT_COLLECTION_POINT').length,
-      color: 'var(--chart-1)',
-    },
-    { name: t('adminDashboard.status.transit'), value: filteredParcels.filter((p) => p.status === 'IN_TRANSIT').length, color: 'var(--warning)' },
-    {
-      name: t('adminDashboard.status.arrived'),
-      value: filteredParcels.filter((p) => p.status === 'ARRIVED_AT_DESTINATION').length,
-      color: 'var(--chart-2)',
-    },
-    { name: t('adminDashboard.status.delivered'), value: deliveredParcels, color: 'var(--success)' },
-    { name: t('adminDashboard.status.rejected'), value: rejectedParcels, color: 'var(--destructive)' },
-  ];
+  const statusDistribution = useMemo(
+    () =>
+      (dashboard?.statusDistribution ?? []).map((item) => ({
+        name: item.label ?? item.key ?? '-',
+        value: round(item.count),
+        color: STATUS_COLORS[item.statuses?.[0] ?? item.key ?? ''] ?? 'var(--muted)',
+      })),
+    [dashboard?.statusDistribution],
+  );
 
   const handlePeriodChange = (preset: DashboardPeriodPreset, range: DateRange) => {
     setPeriodPreset(preset);
@@ -120,9 +154,7 @@ export function AdminDashboard() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">{t('adminDashboard.title')}</h2>
-          <p className="text-muted-foreground">
-            {t('adminDashboard.subtitle')}
-          </p>
+          <p className="text-muted-foreground">{t('adminDashboard.subtitle')}</p>
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -137,58 +169,72 @@ export function AdminDashboard() {
         </div>
       </div>
 
+      {(error || companyError) && (
+        <Card className="border-destructive/30 bg-destructive/10">
+          <CardContent className="flex flex-col gap-3 p-4 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5" />
+              <span>{error ?? companyError}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                if (companyStatus === 'error' || companyStatus === 'forbidden') {
+                  retryCompany();
+                } else {
+                  void loadDashboard();
+                }
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+              {t('common.retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          loading={loading}
+          icon={Package}
+          title={t('adminDashboard.metrics.parcels.title')}
+          value={totalParcels.toString()}
+          description={t('adminDashboard.metrics.parcels.description')}
+          descriptionIcon={TrendingUp}
+        />
+        <MetricCard
+          loading={loading}
+          icon={DollarSign}
+          title={t('adminDashboard.metrics.revenue.title')}
+          value={formatMoney(revenue)}
+          description={t('adminDashboard.metrics.revenue.description')}
+        />
+        <MetricCard
+          loading={loading}
+          icon={Truck}
+          title={t('adminDashboard.metrics.deliveryRate.title')}
+          value={`${deliveryRate}%`}
+          description={t('adminDashboard.metrics.deliveryRate.description', {
+            values: { delivered: deliveredParcels, total: totalParcels },
+          })}
+        />
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.parcels.title')}</CardTitle>
-            <Package className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">{totalParcels}</div>
-            <p className="mt-1 flex items-center text-xs text-muted-foreground">
-              <TrendingUp className="mr-1 h-3 w-3" />
-              {t('adminDashboard.metrics.parcels.description')}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.revenue.title')}</CardTitle>
-            <DollarSign className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">{formatMoney(revenue)}</div>
-            <p className="mt-1 text-xs text-muted-foreground">{t('adminDashboard.metrics.revenue.description')}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.deliveryRate.title')}</CardTitle>
-            <Truck className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">{deliveryRate}%</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t('adminDashboard.metrics.deliveryRate.description', {
-                values: { delivered: deliveredParcels, total: totalParcels },
-              })}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t('adminDashboard.metrics.saturation.title')}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t('adminDashboard.metrics.saturation.title')}
+            </CardTitle>
             <MapPin className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">{saturationRate}%</div>
+            <div className="text-3xl font-bold text-foreground">
+              {loading ? <MetricSkeleton /> : `${saturationRate}%`}
+            </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${saturationRate}%` }}
+                style={{ width: `${Math.min(saturationRate, 100)}%` }}
               />
             </div>
           </CardContent>
@@ -214,14 +260,7 @@ export function AdminDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
                   <YAxis stroke="var(--muted-foreground)" fontSize={12} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: 'var(--foreground)' }}
-                  />
+                  <Tooltip content={<ChartTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="colis"
@@ -248,13 +287,7 @@ export function AdminDashboard() {
                   <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
                   <YAxis stroke="var(--muted-foreground)" fontSize={12} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: 'var(--foreground)' }}
-                    formatter={(value) => [formatMoney(Number(value)), t('adminDashboard.charts.revenue.tooltip')]}
+                    content={<ChartTooltip formatter={(value) => formatMoney(Number(value))} />}
                   />
                   <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -283,17 +316,11 @@ export function AdminDashboard() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {statusDistribution.filter((item) => item.value > 0).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {statusDistribution.filter((item) => item.value > 0).map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                    }}
-                  />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -315,14 +342,16 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {collectionPoints.map((point) => {
-                const saturation = getCollectionPointSaturationRate(point, parcels);
+              {(dashboard?.collectionPoints ?? []).map((point) => {
+                const saturation = round(point.saturationPercent);
                 return (
-                  <div key={point.id}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{point.name}</span>
-                      <span className="text-muted-foreground">
-                        {formatCollectionPointLoadRatio(point, parcels)}
+                  <div key={point.collectionPointId}>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="truncate font-medium text-foreground">
+                        {point.collectionPointName ?? '-'}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {round(point.currentLoad)} / {round(point.maxCapacity)} {point.capacityUnit ?? ''}
                       </span>
                     </div>
                     <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -330,12 +359,17 @@ export function AdminDashboard() {
                         className={`h-full transition-all ${
                           saturation > 80 ? 'bg-destructive' : saturation > 50 ? 'bg-warning' : 'bg-success'
                         }`}
-                        style={{ width: `${saturation}%` }}
+                        style={{ width: `${Math.min(saturation, 100)}%` }}
                       />
                     </div>
                   </div>
                 );
               })}
+              {!dashboard?.collectionPoints?.length && (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  {t('common.noResults')}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -359,7 +393,7 @@ export function AdminDashboard() {
                 iconClassName="bg-chart-2/20 text-chart-2"
                 title={t('adminDashboard.quickStats.teamMembers.title')}
                 description={t('adminDashboard.quickStats.teamMembers.description')}
-                value={users.length}
+                value={teamMembers}
               />
               <QuickStat
                 icon={AlertTriangle}
@@ -373,6 +407,38 @@ export function AdminDashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function MetricCard({
+  icon: Icon,
+  descriptionIcon: DescriptionIcon,
+  title,
+  description,
+  value,
+  loading,
+}: {
+  icon: ElementType;
+  descriptionIcon?: ElementType;
+  title: string;
+  description: string;
+  value: string;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className="h-5 w-5 text-primary" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-foreground">{loading ? <MetricSkeleton /> : value}</div>
+        <p className="mt-1 flex items-center text-xs text-muted-foreground">
+          {DescriptionIcon && <DescriptionIcon className="mr-1 h-3 w-3" />}
+          {description}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -477,14 +543,55 @@ function OperationalReadinessButton() {
   );
 }
 
-function getLatestParcelDate(parcels: Parcel[]) {
-  return (
-    parcels.reduce<Date | null>((latestDate, parcel) => {
-      if (!latestDate || parcel.createdAt.getTime() > latestDate.getTime()) {
-        return parcel.createdAt;
-      }
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  formatter,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number | string }>;
+  label?: string;
+  formatter?: (value: number | string) => string;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
 
-      return latestDate;
-    }, null) ?? new Date()
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-lg">
+      {label && <p className="mb-1 font-medium text-foreground">{label}</p>}
+      <div className="space-y-1">
+        {payload.map((item) => (
+          <div key={`${item.name}-${item.value}`} className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">{item.name}</span>
+            <span className="font-semibold text-foreground">
+              {formatter ? formatter(item.value ?? 0) : item.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
+}
+
+function MetricSkeleton() {
+  return <span className="inline-block h-8 w-20 animate-pulse rounded bg-secondary" />;
+}
+
+function formatChartDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function formatApiDate(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function round(value?: number) {
+  return Math.round(value ?? 0);
 }
