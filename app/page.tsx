@@ -31,6 +31,7 @@ import { SuperAdminShipmentsView } from '@/components/views/super-admin-shipment
 import { CatalogManagement } from '@/components/views/catalog-management';
 import { PlatformFinanceSettings } from '@/components/views/platform-finance-settings';
 import { CompanyAnnouncements } from '@/components/views/announcements';
+import { NotificationsManagement } from '@/components/views/notifications-management';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { useStore } from '@/lib/store';
@@ -185,6 +186,8 @@ export default function DashboardPage() {
 
       case 'announcements':
         return <CompanyAnnouncements />;
+      case 'notifications':
+        return <NotificationsManagement />;
 
       default:
         return isAdminLikeRole(currentRole) ? (

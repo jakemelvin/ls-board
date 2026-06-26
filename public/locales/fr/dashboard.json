@@ -32,6 +32,7 @@
     "commissions": "Commissions",
     "dashboard": "Tableau de bord",
     "fleet": "Flotte",
+    "notifications": "Notifications",
     "parcels": "Colis",
     "pricing": "Tarification",
     "routeExceptions": "Exceptions de route",
@@ -58,6 +59,7 @@
       "fleet": "Gestion de flotte",
       "localStock": "Stock local",
       "myTour": "Ma tournée",
+      "notifications": "Notifications",
       "parcelTypes": "Types de colis",
       "parcels": "Gestion des colis",
       "pickupRequest": "Nouvelle demande",
@@ -369,6 +371,156 @@
       "required": "Champ requis",
       "validityOrder": "La fin de validité doit être après le début."
     }
+  },
+  "notifications": {
+    "actions": {
+      "archive": "Archiver",
+      "markAllRead": "Tout marquer lu",
+      "markRead": "Marquer lu"
+    },
+    "channels": {
+      "EMAIL": "Email",
+      "IN_APP": "Dans l'application",
+      "PUSH": "Push"
+    },
+    "composer": {
+      "actions": {
+        "send": "Envoyer la notification"
+      },
+      "errors": {
+        "send": "Envoi impossible"
+      },
+      "fields": {
+        "channels": "Canaux",
+        "deduplicationKey": "Clé de déduplication",
+        "expiresAt": "Expiration",
+        "message": "Message",
+        "priority": "Priorité",
+        "relatedEntityId": "ID entité liée",
+        "relatedEntityType": "Type entité liée",
+        "title": "Titre",
+        "type": "Type"
+      },
+      "messages": {
+        "sent": "Notification envoyée",
+        "sentDescription": "{{count}} destinataire(s) notifié(s)."
+      },
+      "placeholders": {
+        "deduplicationKey": "Ex : shipment-123-ready",
+        "message": "Rédigez le contenu à afficher aux destinataires...",
+        "relatedEntityId": "123",
+        "relatedEntityType": "SHIPMENT",
+        "title": "Ex : Colis prêt au retrait"
+      },
+      "subtitle": "Créez une notification backend et ciblez des utilisateurs précis ou un segment.",
+      "target": {
+        "allRoles": "Tous les rôles",
+        "allStatuses": "Tous les statuts",
+        "city": "Ville",
+        "cityPlaceholder": "Ex : Douala",
+        "companyId": "Entreprise ID",
+        "criteria": "Critères",
+        "includeAllUsers": "Inclure tous les utilisateurs correspondant aux critères",
+        "loadingUsers": "Chargement des utilisateurs...",
+        "noUsers": "Aucun utilisateur disponible.",
+        "role": "Rôle",
+        "selected": "{{count}} utilisateur(s) sélectionné(s)",
+        "status": "Statut utilisateur",
+        "subtitle": "Choisissez les destinataires avant l'envoi.",
+        "title": "Ciblage",
+        "users": "Utilisateurs"
+      },
+      "title": "Composer",
+      "userStatuses": {
+        "ACTIVE": "Actif",
+        "DELETED": "Supprimé",
+        "INACTIVE": "Inactif",
+        "SUSPENDED": "Suspendu"
+      },
+      "validation": {
+        "companyId": "L'ID entreprise doit être un entier positif.",
+        "required": "Titre et message sont requis.",
+        "users": "Sélectionnez au moins un utilisateur."
+      }
+    },
+    "devices": {
+      "actions": {
+        "revoke": "Révoquer l'appareil"
+      },
+      "appVersion": "Version {{version}}",
+      "disabled": "Désactivé",
+      "empty": {
+        "description": "Aucun appareil push n'est rattaché à votre compte.",
+        "title": "Aucun appareil"
+      },
+      "enabled": "Actif",
+      "errors": {
+        "load": "Impossible de charger les appareils.",
+        "revoke": "Révocation impossible"
+      },
+      "lastSeen": "Vu le {{date}}",
+      "messages": {
+        "revoked": "Appareil révoqué"
+      },
+      "subtitle": "Appareils enregistrés auprès du backend de notification.",
+      "title": "Appareils",
+      "unknownDevice": "Appareil inconnu"
+    },
+    "empty": {
+      "description": "Les nouvelles notifications apparaîtront ici dès leur réception.",
+      "title": "Aucune notification"
+    },
+    "errors": {
+      "action": "Action impossible",
+      "load": "Impossible de charger les notifications."
+    },
+    "loading": "Chargement des notifications...",
+    "messages": {
+      "archived": "Notification archivée",
+      "deleted": "Notification supprimée",
+      "readAll": "Notifications marquées comme lues"
+    },
+    "pageSubtitle": "Consultez vos notifications, traitez les alertes et pilotez les envois backend.",
+    "pageTitle": "Notifications",
+    "pagination": {
+      "current": "{{page}} / {{total}}",
+      "next": "Page suivante",
+      "previous": "Page précédente",
+      "total": "{{count}} notification(s)"
+    },
+    "priority": {
+      "HIGH": "Haute",
+      "LOW": "Basse",
+      "NORMAL": "Normale",
+      "URGENT": "Urgente"
+    },
+    "status": {
+      "ALL": "Toutes",
+      "ARCHIVED": "Archivées",
+      "READ": "Lues",
+      "UNREAD": "Non lues"
+    },
+    "tabs": {
+      "composer": "Envoyer",
+      "devices": "Appareils",
+      "inbox": "Boîte"
+    },
+    "title": "Notifications",
+    "types": {
+      "ACCOUNT": "Compte",
+      "COMPANY_ANNOUNCEMENT": "Annonce entreprise",
+      "COMPANY_REVIEW": "Revue entreprise",
+      "PAYMENT_STATUS_UPDATED": "Paiement",
+      "PROMOTION": "Promotion",
+      "SHIPMENT_CANCELLED": "Colis annulé",
+      "SHIPMENT_CREATED": "Colis créé",
+      "SHIPMENT_DELIVERED": "Colis livré",
+      "SHIPMENT_IN_TRANSIT": "Colis en transit",
+      "SHIPMENT_READY_FOR_PICKUP": "Prêt au retrait",
+      "SHIPMENT_TRANSIT_NOTE": "Note de transit",
+      "SYSTEM": "Système"
+    },
+    "unreadCount": "{{count}} non lue(s)"
   },
   "superAdmin": {
     "overview": {

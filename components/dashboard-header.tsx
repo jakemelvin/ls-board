@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Bell, ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { logout } from '@/lib/auth/api';
 import { useAuthStore } from '@/lib/auth/store';
@@ -67,12 +68,7 @@ export function DashboardHeader({ currentUser, currentRole, onRoleChange }: Dash
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <LanguageSwitcher />
 
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            3
-          </span>
-        </button>
+        {token && <NotificationBell token={token} />}
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Avatar className="h-10 w-10 rounded-xl">

@@ -13,6 +13,7 @@ import {
   Map,
   MapPin,
   Megaphone,
+  Bell,
   Package,
   PackageCheck,
   PackageSearch,
@@ -59,6 +60,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'my-tour', labelKey: 'shell.sections.myTour', icon: Route, roles: ['TRANSPORTER'] },
   { id: 'pickup-request', labelKey: 'shell.sections.pickupRequest', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
   { id: 'announcements', labelKey: 'shell.sections.announcements', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
+  { id: 'notifications', labelKey: 'shell.sections.notifications', icon: Bell, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
 ];
 
 interface DashboardSidebarProps {

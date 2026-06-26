@@ -32,6 +32,7 @@
     "commissions": "Commissions",
     "dashboard": "Dashboard",
     "fleet": "Fleet",
+    "notifications": "Notifications",
     "parcels": "Parcels",
     "pricing": "Pricing",
     "routeExceptions": "Route exceptions",
@@ -58,6 +59,7 @@
       "fleet": "Fleet management",
       "localStock": "Local stock",
       "myTour": "My tour",
+      "notifications": "Notifications",
       "parcelTypes": "Parcel types",
       "parcels": "Parcel management",
       "pickupRequest": "New request",
@@ -369,6 +371,156 @@
       "required": "Required field",
       "validityOrder": "The validity end must be after the start."
     }
+  },
+  "notifications": {
+    "actions": {
+      "archive": "Archive",
+      "markAllRead": "Mark all read",
+      "markRead": "Mark read"
+    },
+    "channels": {
+      "EMAIL": "Email",
+      "IN_APP": "In app",
+      "PUSH": "Push"
+    },
+    "composer": {
+      "actions": {
+        "send": "Send notification"
+      },
+      "errors": {
+        "send": "Unable to send"
+      },
+      "fields": {
+        "channels": "Channels",
+        "deduplicationKey": "Deduplication key",
+        "expiresAt": "Expiration",
+        "message": "Message",
+        "priority": "Priority",
+        "relatedEntityId": "Related entity ID",
+        "relatedEntityType": "Related entity type",
+        "title": "Title",
+        "type": "Type"
+      },
+      "messages": {
+        "sent": "Notification sent",
+        "sentDescription": "{{count}} recipient(s) notified."
+      },
+      "placeholders": {
+        "deduplicationKey": "Ex: shipment-123-ready",
+        "message": "Write the content recipients will see...",
+        "relatedEntityId": "123",
+        "relatedEntityType": "SHIPMENT",
+        "title": "Ex: Parcel ready for pickup"
+      },
+      "subtitle": "Create a backend notification and target specific users or a segment.",
+      "target": {
+        "allRoles": "All roles",
+        "allStatuses": "All statuses",
+        "city": "City",
+        "cityPlaceholder": "Ex: Douala",
+        "companyId": "Company ID",
+        "criteria": "Criteria",
+        "includeAllUsers": "Include all users matching the criteria",
+        "loadingUsers": "Loading users...",
+        "noUsers": "No users available.",
+        "role": "Role",
+        "selected": "{{count}} selected user(s)",
+        "status": "User status",
+        "subtitle": "Choose recipients before sending.",
+        "title": "Targeting",
+        "users": "Users"
+      },
+      "title": "Compose",
+      "userStatuses": {
+        "ACTIVE": "Active",
+        "DELETED": "Deleted",
+        "INACTIVE": "Inactive",
+        "SUSPENDED": "Suspended"
+      },
+      "validation": {
+        "companyId": "Company ID must be a positive integer.",
+        "required": "Title and message are required.",
+        "users": "Select at least one user."
+      }
+    },
+    "devices": {
+      "actions": {
+        "revoke": "Revoke device"
+      },
+      "appVersion": "Version {{version}}",
+      "disabled": "Disabled",
+      "empty": {
+        "description": "No push device is attached to your account.",
+        "title": "No device"
+      },
+      "enabled": "Enabled",
+      "errors": {
+        "load": "Unable to load devices.",
+        "revoke": "Unable to revoke device"
+      },
+      "lastSeen": "Seen on {{date}}",
+      "messages": {
+        "revoked": "Device revoked"
+      },
+      "subtitle": "Devices registered with the notification backend.",
+      "title": "Devices",
+      "unknownDevice": "Unknown device"
+    },
+    "empty": {
+      "description": "New notifications will appear here as soon as they arrive.",
+      "title": "No notification"
+    },
+    "errors": {
+      "action": "Action failed",
+      "load": "Unable to load notifications."
+    },
+    "loading": "Loading notifications...",
+    "messages": {
+      "archived": "Notification archived",
+      "deleted": "Notification deleted",
+      "readAll": "Notifications marked as read"
+    },
+    "pageSubtitle": "Read your notifications, handle alerts, and manage backend sends.",
+    "pageTitle": "Notifications",
+    "pagination": {
+      "current": "{{page}} / {{total}}",
+      "next": "Next page",
+      "previous": "Previous page",
+      "total": "{{count}} notification(s)"
+    },
+    "priority": {
+      "HIGH": "High",
+      "LOW": "Low",
+      "NORMAL": "Normal",
+      "URGENT": "Urgent"
+    },
+    "status": {
+      "ALL": "All",
+      "ARCHIVED": "Archived",
+      "READ": "Read",
+      "UNREAD": "Unread"
+    },
+    "tabs": {
+      "composer": "Send",
+      "devices": "Devices",
+      "inbox": "Inbox"
+    },
+    "title": "Notifications",
+    "types": {
+      "ACCOUNT": "Account",
+      "COMPANY_ANNOUNCEMENT": "Company announcement",
+      "COMPANY_REVIEW": "Company review",
+      "PAYMENT_STATUS_UPDATED": "Payment",
+      "PROMOTION": "Promotion",
+      "SHIPMENT_CANCELLED": "Shipment cancelled",
+      "SHIPMENT_CREATED": "Shipment created",
+      "SHIPMENT_DELIVERED": "Shipment delivered",
+      "SHIPMENT_IN_TRANSIT": "Shipment in transit",
+      "SHIPMENT_READY_FOR_PICKUP": "Ready for pickup",
+      "SHIPMENT_TRANSIT_NOTE": "Transit note",
+      "SYSTEM": "System"
+    },
+    "unreadCount": "{{count}} unread"
   },
   "superAdmin": {
     "overview": {
