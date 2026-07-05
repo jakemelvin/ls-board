@@ -749,6 +749,19 @@
       "empty": "No users found"
     }
   },
+  "parcelManagement": {
+    "list": {
+      "openDetailWithId": "Open shipment #{{id}} detail",
+      "openDetailWithReference": "Open shipment {{reference}} detail"
+    },
+    "reference": {
+      "hiddenHint": "Visible after collector reception",
+      "hiddenLabel": "Shipment #{{id}}"
+    },
+    "search": {
+      "collectorPlaceholder": "Search by sender or receiver..."
+    }
+  },
   "superAdminShipments": {
     "collectionModes": {
       "COLLECTION_POINT": "Collection point",

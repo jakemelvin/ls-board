@@ -749,6 +749,19 @@
       "empty": "Aucun utilisateur trouvé"
     }
   },
+  "parcelManagement": {
+    "list": {
+      "openDetailWithId": "Voir le detail du shipment #{{id}}",
+      "openDetailWithReference": "Voir le detail du shipment {{reference}}"
+    },
+    "reference": {
+      "hiddenHint": "Visible apres reception collecteur",
+      "hiddenLabel": "Shipment #{{id}}"
+    },
+    "search": {
+      "collectorPlaceholder": "Rechercher par expediteur ou destinataire..."
+    }
+  },
   "superAdminShipments": {
     "collectionModes": {
       "COLLECTION_POINT": "Point de collecte",

@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
 import {
   getRecipientColumnLabel,
   getRecipientDisplayName,
@@ -69,6 +70,15 @@ import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const COLLECTOR_REFERENCE_VISIBLE_STATUSES = new Set<ShipmentStatus>([
+  'RECEIVED_AT_COLLECTION_POINT',
+  'READY_FOR_TRANSPORT',
+  'IN_TRANSIT',
+  'ARRIVED_DESTINATION_POINT',
+  'READY_FOR_PICKUP',
+  'DELIVERED',
+  'RETURNED',
+]);
 
 const STATUS_FILTERS: Array<{ value: ShipmentStatus | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Tous' },
@@ -92,6 +102,7 @@ interface ParcelManagementProps {
 
 export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const token = useAuthStore((state) => state.token);
+  const { t } = useTranslation('dashboard');
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -204,9 +215,11 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     }
 
     return shipments.filter((shipment) => {
+      const canSearchReference = canShowShipmentReference(shipment, currentRole);
       const referenceMatches =
-        shipment.reference.toLowerCase().includes(query) ||
-        (shipment.code ?? '').toLowerCase().includes(query);
+        canSearchReference &&
+        (shipment.reference.toLowerCase().includes(query) ||
+          (shipment.code ?? '').toLowerCase().includes(query));
 
       if (currentRole === 'TRANSPORTER') {
         return referenceMatches;
@@ -327,7 +340,9 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
             placeholder={
               currentRole === 'TRANSPORTER'
                 ? 'Rechercher par reference ou code...'
-                : 'Rechercher par reference, expediteur ou destinataire...'
+                : currentRole === 'COLLECTOR'
+                  ? t('parcelManagement.search.collectorPlaceholder')
+                  : 'Rechercher par reference, expediteur ou destinataire...'
             }
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
@@ -419,15 +434,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                               <Package className="h-4 w-4 text-primary" />
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-medium text-foreground">
-                                  {shipment.reference}
-                                </span>
-                                <CopyTrackingNumberButton trackingNumber={shipment.reference} />
-                              </div>
-                              {shipment.code && (
-                                <p className="text-xs text-muted-foreground">{shipment.code}</p>
-                              )}
+                              <ShipmentReferenceBlock shipment={shipment} currentRole={currentRole} />
                             </div>
                           </div>
                         </TableCell>
@@ -457,7 +464,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => loadShipmentDetail(shipment.id)}
-                            aria-label={`Voir le detail du shipment ${shipment.reference}`}
+                            aria-label={getOpenShipmentDetailLabel(shipment, currentRole, t)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -514,6 +521,8 @@ function ShipmentMobileCard({
   currentRole: UserRole;
   onOpen: () => void;
 }) {
+  const canShowReference = canShowShipmentReference(shipment, currentRole);
+
   return (
     <div className="space-y-4 px-4 py-5">
       <div className="flex items-start justify-between gap-3">
@@ -523,10 +532,12 @@ function ShipmentMobileCard({
               <Package className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate font-mono text-sm font-semibold text-foreground">
-                {shipment.reference}
-              </p>
-              {shipment.code && <p className="truncate text-xs text-muted-foreground">{shipment.code}</p>}
+              <ShipmentReferenceBlock
+                shipment={shipment}
+                currentRole={currentRole}
+                compact
+                showCopyButton={false}
+              />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -537,7 +548,9 @@ function ShipmentMobileCard({
           </div>
         </div>
 
-        <CopyTrackingNumberButton trackingNumber={shipment.reference} className="shrink-0" />
+        {canShowReference && (
+          <CopyTrackingNumberButton trackingNumber={shipment.reference} className="shrink-0" />
+        )}
       </div>
 
       <div className="grid gap-3 rounded-2xl bg-secondary/40 p-4 sm:grid-cols-2">
@@ -554,6 +567,56 @@ function ShipmentMobileCard({
           Voir details
         </Button>
       </div>
+    </div>
+  );
+}
+
+function ShipmentReferenceBlock({
+  shipment,
+  currentRole,
+  compact = false,
+  showCopyButton = true,
+}: {
+  shipment: Shipment;
+  currentRole: UserRole;
+  compact?: boolean;
+  showCopyButton?: boolean;
+}) {
+  const { t } = useTranslation('dashboard');
+  const canShowReference = canShowShipmentReference(shipment, currentRole);
+
+  if (!canShowReference) {
+    return (
+      <div className="min-w-0">
+        <p
+          className={cn(
+            'truncate font-mono font-medium text-foreground',
+            compact ? 'text-sm font-semibold' : undefined,
+          )}
+        >
+          {getShipmentReferenceDisplay(shipment, currentRole, t)}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {t('parcelManagement.reference.hiddenHint')}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'truncate font-mono font-medium text-foreground',
+            compact ? 'text-sm font-semibold' : undefined,
+          )}
+        >
+          {shipment.reference}
+        </span>
+        {showCopyButton && <CopyTrackingNumberButton trackingNumber={shipment.reference} />}
+      </div>
+      {shipment.code && <p className="truncate text-xs text-muted-foreground">{shipment.code}</p>}
     </div>
   );
 }
@@ -576,6 +639,13 @@ function ShipmentDetailView({
   onRetry: () => void;
 }) {
   const statusHistory = shipment?.statusHistory ?? [];
+  const { t } = useTranslation('dashboard');
+  const canShowReference = shipment
+    ? canShowShipmentReference(shipment, currentRole)
+    : false;
+  const shipmentDisplayName = shipment
+    ? getShipmentReferenceDisplay(shipment, currentRole, t)
+    : `Shipment #${shipmentId}`;
 
   return (
     <div className="space-y-6">
@@ -588,7 +658,7 @@ function ShipmentDetailView({
           <div>
             <p className="text-sm font-medium text-primary">Detail shipment</p>
             <h2 className="text-2xl font-bold text-foreground">
-              {shipment?.reference ?? `Shipment #${shipmentId}`}
+              {shipmentDisplayName}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Vue detaillee, optimisee pour mobile et alimentee par l&apos;API backend.
@@ -633,11 +703,13 @@ function ShipmentDetailView({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="break-all font-mono text-lg font-semibold text-foreground sm:text-xl">
-                          {shipment.reference}
+                          {shipmentDisplayName}
                         </p>
-                        <CopyTrackingNumberButton trackingNumber={shipment.reference} className="shrink-0" />
+                        {canShowReference && (
+                          <CopyTrackingNumberButton trackingNumber={shipment.reference} className="shrink-0" />
+                        )}
                       </div>
-                      {shipment.code && (
+                      {canShowReference && shipment.code && (
                         <p className="mt-1 break-all text-sm text-muted-foreground">{shipment.code}</p>
                       )}
                     </div>
@@ -773,7 +845,9 @@ function ShipmentDetailView({
             />
           </div>
 
-          <ShipmentQrCodeCard qrCodeUrl={shipment.qrCodeUrl} reference={shipment.reference} />
+          {canShowReference && (
+            <ShipmentQrCodeCard qrCodeUrl={shipment.qrCodeUrl} reference={shipment.reference} />
+          )}
 
           <SectionCard
             title="Photos du shipment"
@@ -791,7 +865,7 @@ function ShipmentDetailView({
                     <div className="relative aspect-[4/3] w-full bg-muted">
                       <Image
                         src={photo.photoUrl}
-                        alt={`Photo ${photo.id} du shipment ${shipment.reference}`}
+                        alt={`Photo ${photo.id} du shipment ${shipmentDisplayName}`}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                         className="object-cover"
@@ -846,6 +920,43 @@ function ShipmentDetailView({
       ) : null}
     </div>
   );
+}
+
+function canShowShipmentReference(shipment: Shipment, currentRole: UserRole) {
+  return (
+    currentRole !== 'COLLECTOR' ||
+    COLLECTOR_REFERENCE_VISIBLE_STATUSES.has(shipment.status)
+  );
+}
+
+function getShipmentReferenceDisplay(
+  shipment: Shipment,
+  currentRole: UserRole,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  if (canShowShipmentReference(shipment, currentRole)) {
+    return shipment.reference;
+  }
+
+  return t('parcelManagement.reference.hiddenLabel', {
+    values: { id: shipment.id },
+  });
+}
+
+function getOpenShipmentDetailLabel(
+  shipment: Shipment,
+  currentRole: UserRole,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  if (canShowShipmentReference(shipment, currentRole)) {
+    return t('parcelManagement.list.openDetailWithReference', {
+      values: { reference: shipment.reference },
+    });
+  }
+
+  return t('parcelManagement.list.openDetailWithId', {
+    values: { id: shipment.id },
+  });
 }
 
 function HighlightPanel({
