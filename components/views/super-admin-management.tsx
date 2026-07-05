@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  Activity,
+  ArrowLeft,
+  BarChart3,
   Building2,
+  CalendarDays,
+  CreditCard,
+  Gauge,
+  Globe2,
   Users,
   LayoutDashboard,
   CheckCircle2,
@@ -11,7 +18,10 @@ import {
   ShieldOff,
   Trash2,
   Phone,
+  Mail,
+  MapPin,
   Lock,
+  Package,
   Percent,
   RefreshCw,
   ChevronLeft,
@@ -41,11 +51,20 @@ import {
   changeUserPassword,
   updateUserCommission,
   createUser,
+  getCompany,
+  getCompanyEmployees,
   approveCompany,
   deleteCompany,
   getCompanyOperationalReadiness,
 } from '@/lib/admin/api';
+import { getCompanyDashboard } from '@/lib/dashboard/api';
 import { getCountries, registerCompany } from '@/lib/auth/api';
+import { resolveRemoteAssetUrl } from '@/lib/asset-url';
+import { formatMoney } from '@/lib/commissions';
+import {
+  formatDashboardDateParam,
+  getDefaultDashboardPeriod,
+} from '@/lib/dashboard-period';
 import { useTranslation } from '@/lib/i18n';
 import type {
   Page,
@@ -53,6 +72,7 @@ import type {
   UserResponse,
   CompanyResponse,
 } from '@/lib/admin/types';
+import type { CompanyDashboardResponse } from '@/lib/dashboard/types';
 import type { CountryResponse, ApiRole, Gender, PaymentCollectionMode, CreateCompanyRequest } from '@/lib/auth/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -871,6 +891,523 @@ function CreateCompanyDialog({
 
 // ─── Companies tab ─────────────────────────────────────────────────────────
 
+interface CompanyDetailSnapshot {
+  company: CompanyResponse;
+  employees: UserResponse[];
+  readiness: CompanyOperationalReadiness | null;
+  dashboard: CompanyDashboardResponse | null;
+  partialErrors: string[];
+}
+
+function numberValue(value?: number | string | null) {
+  const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatInteger(value?: number | null) {
+  return new Intl.NumberFormat('fr-FR').format(numberValue(value));
+}
+
+function formatPercent(value?: number | null) {
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(numberValue(value))}%`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function DetailMetric({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-2 truncate text-2xl font-bold text-foreground">{value}</p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-secondary/20 p-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <div className="mt-1 break-words text-sm font-medium text-foreground">{value || '—'}</div>
+      </div>
+    </div>
+  );
+}
+
+function ReadinessLine({
+  ok,
+  label,
+  detail,
+}: {
+  ok: boolean;
+  label: string;
+  detail?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-secondary/20 p-3">
+      <div
+        className={cn(
+          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+          ok ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning',
+        )}
+      >
+        {ok ? <CheckCircle2 className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{label}</p>
+        {detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
+      </div>
+    </div>
+  );
+}
+
+function CompanyDetailLogo({ company }: { company: CompanyResponse }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const logoUrl = resolveRemoteAssetUrl(company.logoUrl);
+  const initials = company.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'CO';
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [logoUrl]);
+
+  return (
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      {logoUrl && !imageFailed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          className="h-full w-full object-contain p-2"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center bg-primary/10 text-lg font-black text-primary">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CompanyDetailsView({
+  token,
+  companyId,
+  seedCompany,
+  onBack,
+  onOpenReadiness,
+}: {
+  token: string;
+  companyId: number;
+  seedCompany?: CompanyResponse;
+  onBack: () => void;
+  onOpenReadiness: (readiness: CompanyOperationalReadiness) => void;
+}) {
+  const { t } = useTranslation('dashboard');
+  const [snapshot, setSnapshot] = useState<CompanyDetailSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const range = getDefaultDashboardPeriod();
+    const dashboardParams = {
+      startDate: formatDashboardDateParam(range.from),
+      endDate: formatDashboardDateParam(range.to),
+    };
+
+    const [companyResult, employeesResult, readinessResult, dashboardResult] =
+      await Promise.allSettled([
+        getCompany(token, companyId),
+        getCompanyEmployees(token, companyId),
+        getCompanyOperationalReadiness(token, companyId),
+        getCompanyDashboard(token, companyId, dashboardParams),
+      ]);
+
+    const company =
+      companyResult.status === 'fulfilled' ? companyResult.value : seedCompany;
+
+    if (!company) {
+      setSnapshot(null);
+      setError(t('superAdmin.companies.detail.errors.load'));
+      setLoading(false);
+      return;
+    }
+
+    const partialErrors: string[] = [];
+    if (companyResult.status === 'rejected') partialErrors.push(t('superAdmin.companies.detail.partial.identity'));
+    if (employeesResult.status === 'rejected') partialErrors.push(t('superAdmin.companies.detail.partial.team'));
+    if (readinessResult.status === 'rejected') partialErrors.push(t('superAdmin.companies.detail.partial.readiness'));
+    if (dashboardResult.status === 'rejected') partialErrors.push(t('superAdmin.companies.detail.partial.dashboard'));
+
+    setSnapshot({
+      company,
+      employees: employeesResult.status === 'fulfilled' ? employeesResult.value : [],
+      readiness: readinessResult.status === 'fulfilled' ? readinessResult.value : null,
+      dashboard: dashboardResult.status === 'fulfilled' ? dashboardResult.value : null,
+      partialErrors,
+    });
+    setLoading(false);
+  }, [companyId, seedCompany, t, token]);
+
+  useEffect(() => {
+    void loadDetail();
+  }, [loadDetail]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[24rem] items-center justify-center">
+        <Spinner className="h-8 w-8 text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !snapshot) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          {t('superAdmin.companies.detail.back')}
+        </Button>
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          {error ?? t('common.genericError')}
+        </div>
+      </div>
+    );
+  }
+
+  const { company, employees, readiness, dashboard, partialErrors } = snapshot;
+  const activeEmployees = employees.filter((employee) => employee.status === 'ACTIVE').length;
+  const adminEmployees = employees.filter((employee) => employee.role === 'ADMIN_COMPANY').length;
+  const operationsEmployees = employees.filter((employee) =>
+    ['EMPLOYEE_COMPANY', 'COLLECTOR', 'TRANSPORTER'].includes(employee.role),
+  ).length;
+  const missingItems = readiness?.missingItems ?? [];
+  const collectionPoints = dashboard?.collectionPoints ?? [];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-3">
+          <Button variant="outline" size="sm" onClick={onBack} className="w-fit gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            {t('superAdmin.companies.detail.back')}
+          </Button>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              {t('superAdmin.companies.detail.eyebrow')}
+            </p>
+            <h2 className="mt-1 break-words text-2xl font-bold text-foreground">{company.name}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('superAdmin.companies.detail.subtitle')}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge className={company.approved ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}>
+            {company.approved ? (
+              <><CheckCircle2 className="h-3 w-3" />{t('superAdmin.companies.status.approved')}</>
+            ) : (
+              <><Info className="h-3 w-3" />{t('superAdmin.companies.status.pending')}</>
+            )}
+          </Badge>
+          <Badge className={company.exploitable ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}>
+            <Shield className="h-3 w-3" />
+            {company.exploitable
+              ? t('superAdmin.companies.status.exploitable')
+              : t('superAdmin.companies.status.notExploitable')}
+          </Badge>
+          {readiness && (
+            <Button size="sm" variant="outline" onClick={() => onOpenReadiness(readiness)} className="gap-2">
+              <Activity className="h-4 w-4" />
+              {t('superAdmin.companies.actions.readiness')}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={loadDetail} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            {t('common.refresh')}
+          </Button>
+        </div>
+      </div>
+
+      {partialErrors.length > 0 && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+          {t('superAdmin.companies.detail.partial.title', {
+            values: { sections: partialErrors.join(', ') },
+          })}
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <DetailMetric
+          icon={Package}
+          label={t('superAdmin.companies.detail.metrics.shipments')}
+          value={formatInteger(dashboard?.shipmentCount)}
+          hint={t('superAdmin.companies.detail.metrics.delivered', {
+            values: { count: formatInteger(dashboard?.deliveredShipmentCount) },
+          })}
+        />
+        <DetailMetric
+          icon={BarChart3}
+          label={t('superAdmin.companies.detail.metrics.revenue')}
+          value={formatMoney(numberValue(dashboard?.estimatedRevenue))}
+          hint={t('superAdmin.companies.detail.metrics.period')}
+        />
+        <DetailMetric
+          icon={Gauge}
+          label={t('superAdmin.companies.detail.metrics.deliveryRate')}
+          value={formatPercent(dashboard?.deliveryRatePercent)}
+          hint={t('superAdmin.companies.detail.metrics.saturation', {
+            values: { rate: formatPercent(dashboard?.collectionPointSaturationPercent) },
+          })}
+        />
+        <DetailMetric
+          icon={Users}
+          label={t('superAdmin.companies.detail.metrics.team')}
+          value={formatInteger(employees.length)}
+          hint={t('superAdmin.companies.detail.metrics.activeTeam', {
+            values: { count: formatInteger(activeEmployees) },
+          })}
+        />
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.72fr)]">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-start gap-4">
+              <CompanyDetailLogo company={company} />
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {t('superAdmin.companies.detail.identity.title')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t('superAdmin.companies.detail.identity.description')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <DetailRow icon={Phone} label={t('superAdmin.companies.detail.identity.phone')} value={company.phone} />
+              <DetailRow icon={Mail} label={t('superAdmin.companies.detail.identity.email')} value={company.email} />
+              <DetailRow
+                icon={Globe2}
+                label={t('superAdmin.companies.detail.identity.website')}
+                value={
+                  company.companyUrl ? (
+                    <a href={company.companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {company.companyUrl.replace(/^https?:\/\//, '')}
+                    </a>
+                  ) : null
+                }
+              />
+              <DetailRow
+                icon={MapPin}
+                label={t('superAdmin.companies.detail.identity.location')}
+                value={`${company.country?.countryName ?? '—'} · ${company.city || '—'}`}
+              />
+              <DetailRow
+                icon={CreditCard}
+                label={t('superAdmin.companies.detail.identity.paymentMode')}
+                value={company.paymentCollectionMode ? t(`superAdminShipments.collectionModes.${company.paymentCollectionMode}`) : '—'}
+              />
+              <DetailRow
+                icon={CalendarDays}
+                label={t('superAdmin.companies.detail.identity.readinessCheckedAt')}
+                value={formatDateTime(company.operationalCheckAt ?? readiness?.checkedAt)}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  {t('superAdmin.companies.detail.readiness.title')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {readiness?.summary ?? t('superAdmin.companies.detail.readiness.unavailable')}
+                </p>
+              </div>
+              {readiness && (
+                <Badge className={readiness.exploitable ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}>
+                  {readiness.exploitable
+                    ? t('superAdmin.companies.detail.readiness.ready')
+                    : t('superAdmin.companies.detail.readiness.incomplete')}
+                </Badge>
+              )}
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <ReadinessLine
+                ok={Boolean(readiness?.parcelTypesConfigured)}
+                label={t('superAdmin.companies.detail.readiness.parcelTypes')}
+                detail={t('superAdmin.companies.detail.readiness.count', {
+                  values: { count: formatInteger(readiness?.parcelTypeCount) },
+                })}
+              />
+              <ReadinessLine
+                ok={Boolean(readiness?.transportModesConfigured)}
+                label={t('superAdmin.companies.detail.readiness.transportModes')}
+                detail={t('superAdmin.companies.detail.readiness.count', {
+                  values: { count: formatInteger(readiness?.transportModeCount) },
+                })}
+              />
+              <ReadinessLine
+                ok={Boolean(readiness?.pricingConfigured)}
+                label={t('superAdmin.companies.detail.readiness.pricing')}
+                detail={t('superAdmin.companies.detail.readiness.count', {
+                  values: { count: formatInteger(readiness?.pricingCount) },
+                })}
+              />
+              <ReadinessLine
+                ok={Boolean(readiness?.collectionPointsConfigured)}
+                label={t('superAdmin.companies.detail.readiness.collectionPoints')}
+                detail={t('superAdmin.companies.detail.readiness.count', {
+                  values: { count: formatInteger(readiness?.collectionPointCount) },
+                })}
+              />
+            </div>
+            {missingItems.length > 0 && (
+              <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4">
+                <p className="text-sm font-semibold text-warning">
+                  {t('superAdmin.companies.detail.readiness.missing')}
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-warning">
+                  {missingItems.slice(0, 5).map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="text-lg font-semibold text-foreground">
+              {t('superAdmin.companies.detail.team.title')}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t('superAdmin.companies.detail.team.summary', {
+                values: {
+                  admins: formatInteger(adminEmployees),
+                  operations: formatInteger(operationsEmployees),
+                },
+              })}
+            </p>
+            <div className="mt-4 space-y-2">
+              {employees.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                  {t('superAdmin.companies.detail.team.empty')}
+                </p>
+              )}
+              {employees.slice(0, 6).map((employee) => {
+                const statusCfg = STATUS_CONFIG[employee.status] ?? STATUS_CONFIG.INACTIVE;
+                return (
+                  <div key={employee.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-secondary/20 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {employee.firstName} {employee.lastName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">@{employee.username}</p>
+                      <Badge className="mt-2 bg-secondary text-secondary-foreground">
+                        {t(ROLE_LABEL_KEYS[employee.role] ?? employee.role)}
+                      </Badge>
+                    </div>
+                    <Badge className={statusCfg.color}>{t(statusCfg.labelKey)}</Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="text-lg font-semibold text-foreground">
+              {t('superAdmin.companies.detail.collectionPoints.title')}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t('superAdmin.companies.detail.collectionPoints.description')}
+            </p>
+            <div className="mt-4 space-y-2">
+              {collectionPoints.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                  {t('superAdmin.companies.detail.collectionPoints.empty')}
+                </p>
+              )}
+              {collectionPoints.slice(0, 5).map((point) => (
+                <div key={point.collectionPointId} className="rounded-xl border border-border bg-secondary/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {point.collectionPointName ?? `#${point.collectionPointId}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {point.active ? t('superAdmin.companies.detail.collectionPoints.active') : t('superAdmin.companies.detail.collectionPoints.inactive')}
+                      </p>
+                    </div>
+                    <Badge className="bg-primary/20 text-primary">
+                      {formatPercent(point.saturationPercent)}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-background">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.min(Math.max(numberValue(point.saturationPercent), 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CompaniesTab({ token }: { token: string }) {
   const { t } = useTranslation('dashboard');
   const { success, error: showError, toast } = useToastSimple();
@@ -883,6 +1420,7 @@ function CompaniesTab({ token }: { token: string }) {
   const [confirmApprove, setConfirmApprove] = useState<CompanyResponse | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CompanyResponse | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyResponse | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -965,6 +1503,22 @@ function CompaniesTab({ token }: { token: string }) {
       <div className="flex items-center justify-center py-20">
         <Spinner className="h-8 w-8 text-primary" />
       </div>
+    );
+  }
+
+  if (selectedCompany) {
+    return (
+      <>
+        <ToastBar toast={toast} />
+        <OperationalReadinessDialog data={readiness} onClose={() => setReadiness(null)} />
+        <CompanyDetailsView
+          token={token}
+          companyId={selectedCompany.id}
+          seedCompany={selectedCompany}
+          onBack={() => setSelectedCompany(null)}
+          onOpenReadiness={setReadiness}
+        />
+      </>
     );
   }
 
@@ -1074,6 +1628,15 @@ function CompaniesTab({ token }: { token: string }) {
             <div className="mt-4 grid grid-cols-3 gap-2">
               <Button
                 type="button"
+                size="sm"
+                onClick={() => setSelectedCompany(company)}
+                className="col-span-3 gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                {t('superAdmin.companies.actions.viewDetails')}
+              </Button>
+              <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => handleReadiness(company)}
@@ -1084,7 +1647,7 @@ function CompaniesTab({ token }: { token: string }) {
                 {readinessLoading === company.id ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Eye className="h-4 w-4" />
+                  <Activity className="h-4 w-4" />
                 )}
               </Button>
               {!company.approved ? (
@@ -1198,6 +1761,15 @@ function CompaniesTab({ token }: { token: string }) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
+                    {/* Open details */}
+                    <button
+                      onClick={() => setSelectedCompany(company)}
+                      title={t('superAdmin.companies.actions.viewDetails')}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+
                     {/* Check readiness */}
                     <button
                       onClick={() => handleReadiness(company)}
@@ -1208,7 +1780,7 @@ function CompaniesTab({ token }: { token: string }) {
                       {readinessLoading === company.id ? (
                         <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <Eye className="h-3.5 w-3.5" />
+                        <Activity className="h-3.5 w-3.5" />
                       )}
                     </button>
 

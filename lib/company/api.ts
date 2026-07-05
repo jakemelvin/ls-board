@@ -28,6 +28,7 @@ import type {
   CompanyDeliveryEstimateRequirementsResponse,
   CompanyRouteExceptionRequest,
   CompanyRouteExceptionResponse,
+  CompanyProfileUpdateRequest,
   MessageResponse,
 } from './types';
 
@@ -40,8 +41,30 @@ function buildMultipartPayload(data: unknown, file?: File) {
   return formData;
 }
 
+function buildCompanyProfilePayload(data: CompanyProfileUpdateRequest, logo?: File) {
+  const formData = new FormData();
+  formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  if (logo) {
+    formData.append('logo', logo);
+  }
+  return formData;
+}
+
 export function getCurrentUserCompany(token: string): Promise<CompanyResponse> {
   return apiClient.get<CompanyResponse>('/api/delivery/users/me/company', token);
+}
+
+export function updateCompanyProfile(
+  token: string,
+  companyId: number,
+  payload: CompanyProfileUpdateRequest,
+  logo?: File,
+): Promise<CompanyResponse> {
+  return apiClient.putForm<CompanyResponse>(
+    `/api/delivery/companies/${companyId}`,
+    buildCompanyProfilePayload(payload, logo),
+    token,
+  );
 }
 
 // Parcel types - global catalog

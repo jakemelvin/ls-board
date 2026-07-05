@@ -34,9 +34,10 @@ import {
 } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { getUsers } from '@/lib/admin/api';
+import { getCompanies, getUsers } from '@/lib/admin/api';
 import { ApiError } from '@/lib/api-client';
-import type { ApiRole, UserResponse, UserStatus } from '@/lib/auth/types';
+import { getCountries } from '@/lib/auth/api';
+import type { ApiRole, CompanyResponse, CountryResponse, UserResponse, UserStatus } from '@/lib/auth/types';
 import { useAuthStore } from '@/lib/auth/store';
 import { useTranslation } from '@/lib/i18n';
 import {
@@ -47,11 +48,11 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
   notifyByCriteria,
-  notifyUsers,
   revokeNotificationDevice,
 } from '@/lib/notifications/api';
 import type {
   CreateNotificationRequest,
+  NotificationCriteriaRequest,
   NotificationChannel,
   NotificationPriority,
   NotificationResponse,
@@ -81,6 +82,17 @@ const USER_STATUSES: UserStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED
 const CHANNELS: NotificationChannel[] = ['IN_APP', 'PUSH', 'EMAIL'];
 
 type TargetMode = 'users' | 'criteria';
+type ComposerErrorKey =
+  | 'title'
+  | 'message'
+  | 'selectedUsers'
+  | 'criteriaUserIds'
+  | 'excludeUserIds'
+  | 'companyId'
+  | 'countryId'
+  | 'criteria';
+
+type ComposerErrors = Partial<Record<ComposerErrorKey, string>>;
 
 interface ComposerForm {
   targetMode: TargetMode;
@@ -89,10 +101,13 @@ interface ComposerForm {
   title: string;
   message: string;
   channels: NotificationChannel[];
-  role: ApiRole | 'ALL';
+  roles: ApiRole[];
   userStatus: UserStatus | 'ALL';
   city: string;
   companyId: string;
+  countryId: string;
+  criteriaUserIds: string;
+  excludeUserIds: string;
   includeAllUsers: boolean;
   relatedEntityType: string;
   relatedEntityId: string;
@@ -108,10 +123,13 @@ function emptyComposerForm(): ComposerForm {
     title: '',
     message: '',
     channels: ['IN_APP'],
-    role: 'ALL',
-    userStatus: 'ACTIVE',
+    roles: [],
+    userStatus: 'ALL',
     city: '',
     companyId: '',
+    countryId: '',
+    criteriaUserIds: '',
+    excludeUserIds: '',
     includeAllUsers: false,
     relatedEntityType: '',
     relatedEntityId: '',
@@ -126,6 +144,23 @@ function parsePositiveInteger(value: string) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+function parsePositiveIntegerList(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return { values: undefined, invalid: false };
+
+  const parts = trimmed
+    .split(/[,\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const values = parts.map((part) => Number(part));
+  const invalid = values.some((item) => !Number.isInteger(item) || item <= 0);
+
+  return {
+    values: invalid ? undefined : Array.from(new Set(values)),
+    invalid,
+  };
+}
+
 function toDatetimeLocalValue(value: string) {
   if (!value) return undefined;
   const date = new Date(value);
@@ -133,7 +168,7 @@ function toDatetimeLocalValue(value: string) {
 }
 
 function canSendNotifications(role: ApiRole | undefined) {
-  return role === 'SUPER_ADMIN' || role === 'ADMIN_COMPANY';
+  return role === 'SUPER_ADMIN';
 }
 
 function roleLabelKey(role: ApiRole) {
@@ -151,6 +186,16 @@ function roleLabelKey(role: ApiRole) {
     case 'SUPER_ADMIN':
       return 'roles.superAdmin';
   }
+}
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+
+  return (
+    <p id={id} className="text-xs font-medium text-destructive">
+      {message}
+    </p>
+  );
 }
 
 function NotificationCard({
@@ -475,9 +520,15 @@ function ComposerTab({ token }: { token: string }) {
   const { t } = useTranslation('dashboard');
   const [form, setForm] = useState<ComposerForm>(() => emptyComposerForm());
   const [users, setUsers] = useState<UserResponse[]>([]);
+  const [companies, setCompanies] = useState<CompanyResponse[]>([]);
+  const [countries, setCountries] = useState<CountryResponse[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [countriesLoading, setCountriesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<ComposerErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (form.targetMode !== 'users') return;
@@ -488,11 +539,76 @@ function ComposerTab({ token }: { token: string }) {
       .finally(() => setUsersLoading(false));
   }, [form.targetMode, token]);
 
+  useEffect(() => {
+    if (form.targetMode !== 'criteria' || countries.length > 0) return;
+    setCountriesLoading(true);
+    getCountries()
+      .then(setCountries)
+      .catch(() => setCountries([]))
+      .finally(() => setCountriesLoading(false));
+  }, [countries.length, form.targetMode]);
+
+  useEffect(() => {
+    if (form.targetMode !== 'criteria' || companies.length > 0) return;
+    let cancelled = false;
+
+    async function loadCompanies() {
+      const pageSize = 100;
+      const maxPages = 20;
+      const nextCompanies: CompanyResponse[] = [];
+
+      for (let page = 0; page < maxPages; page += 1) {
+        const response = await getCompanies(token, { page, size: pageSize });
+        nextCompanies.push(...(response.content ?? []));
+        if (response.last || response.content.length < pageSize) break;
+      }
+
+      if (!cancelled) {
+        setCompanies(nextCompanies);
+      }
+    }
+
+    setCompaniesLoading(true);
+    loadCompanies()
+      .catch(() => {
+        if (!cancelled) setCompanies([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCompaniesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companies.length, form.targetMode, token]);
+
+  const clearErrors = (...keys: ComposerErrorKey[]) => {
+    setFieldErrors((prev) => {
+      if (keys.every((key) => !prev[key])) return prev;
+      const next = { ...prev };
+      keys.forEach((key) => {
+        delete next[key];
+      });
+      return next;
+    });
+    setSubmitError(null);
+  };
+
   const update = <K extends keyof ComposerForm>(key: K, value: ComposerForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+
+    if (key === 'title') clearErrors('title');
+    if (key === 'message') clearErrors('message');
+    if (key === 'criteriaUserIds') clearErrors('criteriaUserIds', 'criteria');
+    if (key === 'excludeUserIds') clearErrors('excludeUserIds');
+    if (key === 'companyId') clearErrors('companyId', 'criteria');
+    if (key === 'countryId') clearErrors('countryId', 'criteria');
+    if (key === 'city' || key === 'userStatus' || key === 'includeAllUsers') clearErrors('criteria');
+    if (key === 'targetMode') clearErrors('selectedUsers', 'criteria', 'criteriaUserIds', 'excludeUserIds');
   };
 
   const toggleChannel = (channel: NotificationChannel, checked: boolean) => {
+    setSubmitError(null);
     setForm((prev) => {
       const channels = checked
         ? Array.from(new Set([...prev.channels, channel]))
@@ -502,9 +618,20 @@ function ComposerTab({ token }: { token: string }) {
   };
 
   const toggleUser = (id: number, checked: boolean) => {
+    clearErrors('selectedUsers', 'criteria');
     setSelectedUserIds((prev) =>
       checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id),
     );
+  };
+
+  const toggleRole = (role: ApiRole, checked: boolean) => {
+    clearErrors('criteria');
+    setForm((prev) => ({
+      ...prev,
+      roles: checked
+        ? Array.from(new Set([...prev.roles, role]))
+        : prev.roles.filter((item) => item !== role),
+    }));
   };
 
   const payload = useMemo<CreateNotificationRequest>(() => ({
@@ -519,38 +646,109 @@ function ComposerTab({ token }: { token: string }) {
     expiresAt: toDatetimeLocalValue(form.expiresAt),
   }), [form]);
 
+  const focusFirstError = (errors: ComposerErrors) => {
+    const focusOrder: Array<[ComposerErrorKey, string]> = [
+      ['title', 'notification-title'],
+      ['message', 'notification-message'],
+      ['selectedUsers', 'notification-users-panel'],
+      ['criteriaUserIds', form.targetMode === 'users' ? 'notification-users-exclude' : 'notification-user-ids'],
+      ['excludeUserIds', form.targetMode === 'users' ? 'notification-users-exclude' : 'notification-exclude-user-ids'],
+      ['companyId', 'notification-company-id'],
+      ['countryId', 'notification-country-id'],
+      ['criteria', 'notification-target-panel'],
+    ];
+    const target = focusOrder.find(([key]) => errors[key]);
+    if (!target || typeof document === 'undefined') return;
+    document.getElementById(target[1])?.focus({ preventScroll: false });
+  };
+
   const handleSubmit = async () => {
+    setSubmitError(null);
+    const nextErrors: ComposerErrors = {};
+
     if (!payload.title || !payload.message) {
-      toast({ title: t('notifications.composer.validation.required'), variant: 'destructive' });
-      return;
+      if (!payload.title) nextErrors.title = t('notifications.composer.validation.titleRequired');
+      if (!payload.message) nextErrors.message = t('notifications.composer.validation.messageRequired');
     }
 
+    const manualUserIds = parsePositiveIntegerList(form.criteriaUserIds);
+    if (manualUserIds.invalid) {
+      nextErrors.criteriaUserIds = t('notifications.composer.validation.userIds');
+    }
+
+    const excludeUserIds = parsePositiveIntegerList(form.excludeUserIds);
+    if (excludeUserIds.invalid) {
+      nextErrors.excludeUserIds = t('notifications.composer.validation.excludeUserIds');
+    }
+
+    const userIds =
+      form.targetMode === 'users'
+        ? selectedUserIds
+        : manualUserIds.values;
+
     if (form.targetMode === 'users' && selectedUserIds.length === 0) {
-      toast({ title: t('notifications.composer.validation.users'), variant: 'destructive' });
-      return;
+      nextErrors.selectedUsers = t('notifications.composer.validation.users');
     }
 
     const companyId = parsePositiveInteger(form.companyId);
     if (form.companyId.trim() && !companyId) {
-      toast({ title: t('notifications.composer.validation.companyId'), variant: 'destructive' });
+      nextErrors.companyId = t('notifications.composer.validation.companyId');
+    }
+
+    const countryId = parsePositiveInteger(form.countryId);
+    if (form.countryId.trim() && !countryId) {
+      nextErrors.countryId = t('notifications.composer.validation.countryId');
+    }
+
+    const criteria: NotificationCriteriaRequest =
+      form.targetMode === 'users'
+        ? {
+            userIds,
+            excludeUserIds: excludeUserIds.values,
+            includeAllUsers: false,
+          }
+        : {
+            userIds,
+            excludeUserIds: excludeUserIds.values,
+            roles: form.roles.length > 0 ? form.roles : undefined,
+            status: form.userStatus === 'ALL' ? undefined : form.userStatus,
+            city: form.city.trim() || undefined,
+            companyId,
+            countryId,
+            includeAllUsers: form.includeAllUsers,
+          };
+
+    const hasRecipientTarget =
+      Boolean(criteria.includeAllUsers) ||
+      Boolean(criteria.userIds?.length) ||
+      Boolean(criteria.roles?.length) ||
+      criteria.status !== undefined ||
+      criteria.city !== undefined ||
+      criteria.companyId !== undefined ||
+      criteria.countryId !== undefined;
+
+    if (!hasRecipientTarget) {
+      nextErrors.criteria = t('notifications.composer.validation.criteria');
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstError(nextErrors);
+      toast({
+        title: t('notifications.composer.validation.title'),
+        description: t('notifications.composer.validation.summary'),
+        variant: 'destructive',
+      });
       return;
     }
 
+    setFieldErrors({});
     setSubmitting(true);
     try {
-      const result =
-        form.targetMode === 'users'
-          ? await notifyUsers(token, selectedUserIds, payload)
-          : await notifyByCriteria(token, {
-              notification: payload,
-              criteria: {
-                roles: form.role === 'ALL' ? undefined : [form.role],
-                status: form.userStatus === 'ALL' ? undefined : form.userStatus,
-                city: form.city.trim() || undefined,
-                companyId,
-                includeAllUsers: form.includeAllUsers,
-              },
-            });
+      const result = await notifyByCriteria(token, {
+        notification: payload,
+        criteria,
+      });
 
       toast({
         title: t('notifications.composer.messages.sent'),
@@ -560,10 +758,13 @@ function ComposerTab({ token }: { token: string }) {
       });
       setForm(emptyComposerForm());
       setSelectedUserIds([]);
+      setSubmitError(null);
     } catch (err) {
+      const description = err instanceof ApiError ? err.message : t('common.genericError');
+      setSubmitError(description);
       toast({
         title: t('notifications.composer.errors.send'),
-        description: err instanceof ApiError ? err.message : t('common.genericError'),
+        description,
         variant: 'destructive',
       });
     } finally {
@@ -616,25 +817,37 @@ function ComposerTab({ token }: { token: string }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="notification-title">{t('notifications.composer.fields.title')}</Label>
+          <Label htmlFor="notification-title">
+            {t('notifications.composer.fields.title')} <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="notification-title"
             value={form.title}
             maxLength={160}
             onChange={(event) => update('title', event.target.value)}
             placeholder={t('notifications.composer.placeholders.title')}
+            aria-invalid={Boolean(fieldErrors.title)}
+            aria-describedby={fieldErrors.title ? 'notification-title-error' : undefined}
+            className={cn(fieldErrors.title && 'border-destructive focus-visible:ring-destructive/30')}
           />
+          <FieldError id="notification-title-error" message={fieldErrors.title} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="notification-message">{t('notifications.composer.fields.message')}</Label>
+          <Label htmlFor="notification-message">
+            {t('notifications.composer.fields.message')} <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="notification-message"
             value={form.message}
             rows={5}
             onChange={(event) => update('message', event.target.value)}
             placeholder={t('notifications.composer.placeholders.message')}
+            aria-invalid={Boolean(fieldErrors.message)}
+            aria-describedby={fieldErrors.message ? 'notification-message-error' : undefined}
+            className={cn(fieldErrors.message && 'border-destructive focus-visible:ring-destructive/30')}
           />
+          <FieldError id="notification-message-error" message={fieldErrors.message} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -707,7 +920,12 @@ function ComposerTab({ token }: { token: string }) {
             <TabsTrigger value="criteria">{t('notifications.composer.target.criteria')}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="space-y-3 pt-2">
+          <TabsContent
+            id="notification-users-panel"
+            value="users"
+            className="space-y-3 pt-2"
+            tabIndex={-1}
+          >
             {usersLoading && (
               <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -747,9 +965,35 @@ function ComposerTab({ token }: { token: string }) {
                 values: { count: selectedUserIds.length },
               })}
             </p>
+            <FieldError id="notification-users-error" message={fieldErrors.selectedUsers} />
+            <div className="space-y-2">
+              <Label htmlFor="notification-users-exclude">
+                {t('notifications.composer.target.excludeUserIds')}
+              </Label>
+              <Input
+                id="notification-users-exclude"
+                value={form.excludeUserIds}
+                onChange={(event) => update('excludeUserIds', event.target.value)}
+                placeholder={t('notifications.composer.target.userIdsPlaceholder')}
+                aria-invalid={Boolean(fieldErrors.excludeUserIds)}
+                aria-describedby={fieldErrors.excludeUserIds ? 'notification-users-exclude-error' : undefined}
+                className={cn(fieldErrors.excludeUserIds && 'border-destructive focus-visible:ring-destructive/30')}
+              />
+              <FieldError id="notification-users-exclude-error" message={fieldErrors.excludeUserIds} />
+            </div>
           </TabsContent>
 
-          <TabsContent value="criteria" className="space-y-3 pt-2">
+          <TabsContent
+            id="notification-target-panel"
+            value="criteria"
+            className="space-y-3 pt-2"
+            tabIndex={-1}
+          >
+            {fieldErrors.criteria && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {fieldErrors.criteria}
+              </div>
+            )}
             <label className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm">
               <Checkbox
                 checked={form.includeAllUsers}
@@ -759,20 +1003,23 @@ function ComposerTab({ token }: { token: string }) {
             </label>
 
             <div className="space-y-2">
-              <Label>{t('notifications.composer.target.role')}</Label>
-              <Select value={form.role} onValueChange={(value) => update('role', value as ApiRole | 'ALL')}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">{t('notifications.composer.target.allRoles')}</SelectItem>
-                  {API_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
+              <Label>{t('notifications.composer.target.roles')}</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {API_ROLES.map((role) => (
+                  <label
+                    key={role}
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={form.roles.includes(role)}
+                      onCheckedChange={(checked) => toggleRole(role, checked === true)}
+                    />
+                    <span className="min-w-0 truncate">
                       {t(roleLabelKey(role))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -797,16 +1044,104 @@ function ComposerTab({ token }: { token: string }) {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="notification-user-ids">
+                  {t('notifications.composer.target.userIds')}
+                </Label>
+                <Input
+                  id="notification-user-ids"
+                  value={form.criteriaUserIds}
+                  onChange={(event) => update('criteriaUserIds', event.target.value)}
+                  placeholder={t('notifications.composer.target.userIdsPlaceholder')}
+                  aria-invalid={Boolean(fieldErrors.criteriaUserIds)}
+                  aria-describedby={fieldErrors.criteriaUserIds ? 'notification-user-ids-error' : undefined}
+                  className={cn(fieldErrors.criteriaUserIds && 'border-destructive focus-visible:ring-destructive/30')}
+                />
+                <FieldError id="notification-user-ids-error" message={fieldErrors.criteriaUserIds} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notification-exclude-user-ids">
+                  {t('notifications.composer.target.excludeUserIds')}
+                </Label>
+                <Input
+                  id="notification-exclude-user-ids"
+                  value={form.excludeUserIds}
+                  onChange={(event) => update('excludeUserIds', event.target.value)}
+                  placeholder={t('notifications.composer.target.userIdsPlaceholder')}
+                  aria-invalid={Boolean(fieldErrors.excludeUserIds)}
+                  aria-describedby={fieldErrors.excludeUserIds ? 'notification-exclude-user-ids-error' : undefined}
+                  className={cn(fieldErrors.excludeUserIds && 'border-destructive focus-visible:ring-destructive/30')}
+                />
+                <FieldError id="notification-exclude-user-ids-error" message={fieldErrors.excludeUserIds} />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="notification-company-id">
                   {t('notifications.composer.target.companyId')}
                 </Label>
-                <Input
-                  id="notification-company-id"
-                  inputMode="numeric"
-                  value={form.companyId}
-                  onChange={(event) => update('companyId', event.target.value)}
-                  placeholder="12"
-                />
+                <Select
+                  value={form.companyId || 'ALL'}
+                  onValueChange={(value) => update('companyId', value === 'ALL' ? '' : value)}
+                  disabled={companiesLoading}
+                >
+                  <SelectTrigger
+                    id="notification-company-id"
+                    className={cn('w-full', fieldErrors.companyId && 'border-destructive ring-destructive/30')}
+                    aria-invalid={Boolean(fieldErrors.companyId)}
+                    aria-describedby={fieldErrors.companyId ? 'notification-company-id-error' : undefined}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      {companiesLoading
+                        ? t('notifications.composer.target.loadingCompanies')
+                        : t('notifications.composer.target.allCompanies')}
+                    </SelectItem>
+                    {!companiesLoading && companies.length === 0 && (
+                      <SelectItem value="NO_COMPANIES" disabled>
+                        {t('notifications.composer.target.noCompanies')}
+                      </SelectItem>
+                    )}
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={String(company.id)}>
+                        {company.name}
+                        {company.city ? ` - ${company.city}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError id="notification-company-id-error" message={fieldErrors.companyId} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notification-country-id">
+                  {t('notifications.composer.target.countryId')}
+                </Label>
+                <Select
+                  value={form.countryId || 'ALL'}
+                  onValueChange={(value) => update('countryId', value === 'ALL' ? '' : value)}
+                  disabled={countriesLoading}
+                >
+                  <SelectTrigger
+                    id="notification-country-id"
+                    className={cn('w-full', fieldErrors.countryId && 'border-destructive ring-destructive/30')}
+                    aria-invalid={Boolean(fieldErrors.countryId)}
+                    aria-describedby={fieldErrors.countryId ? 'notification-country-id-error' : undefined}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      {countriesLoading
+                        ? t('notifications.composer.target.loadingCountries')
+                        : t('notifications.composer.target.allCountries')}
+                    </SelectItem>
+                    {countries.map((country) => (
+                      <SelectItem key={country.countryId} value={String(country.countryId)}>
+                        {country.countryName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError id="notification-country-id-error" message={fieldErrors.countryId} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notification-city">{t('notifications.composer.target.city')}</Label>
@@ -832,6 +1167,25 @@ function ComposerTab({ token }: { token: string }) {
             placeholder={t('notifications.composer.placeholders.deduplicationKey')}
           />
         </div>
+
+        {(Object.keys(fieldErrors).length > 0 || submitError) && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <p className="font-medium">
+              {submitError
+                ? t('notifications.composer.validation.submitBlocked')
+                : t('notifications.composer.validation.fixBeforeSend')}
+            </p>
+            {submitError ? (
+              <p className="mt-1 break-words">{submitError}</p>
+            ) : (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {Object.entries(fieldErrors).map(([key, message]) => (
+                  <li key={key}>{message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <Button type="button" className="w-full" onClick={handleSubmit} disabled={submitting}>
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

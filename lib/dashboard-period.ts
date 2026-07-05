@@ -100,6 +100,23 @@ export function formatDateRange(range: DateRange) {
   return `${formatShortDate(range.from)} - ${formatShortDate(range.to)}`;
 }
 
+export function formatDashboardDateParam(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function parseDashboardDateInput(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function normalizeDateRange(range: DateRange): DateRange {
   if (range.from.getTime() <= range.to.getTime()) {
     return { from: startOfDay(range.from), to: endOfDay(range.to) };

@@ -64,6 +64,7 @@ export interface CompanyResponse {
   email?: string;
   phone: string;
   companyUrl: string;
+  logoUrl?: string;
   country: CountryResponse;
   city: string;
   paymentCollectionMode: PaymentCollectionMode;

@@ -52,6 +52,7 @@
       "billing": "Billing",
       "catalog": "Catalog",
       "collectionPoints": "Territory management",
+      "companyProfile": "Company profile",
       "commissions": "Commissions",
       "dashboard": "Dashboard",
       "dashboardShort": "Dashboard",
@@ -76,6 +77,17 @@
       "team": "Team management",
       "transferRequests": "Pickup requests",
       "transportModes": "Transport modes"
+    }
+  },
+  "collectorDashboard": {
+    "location": {
+      "address": "Address",
+      "description": "Map preview of the assigned collection point.",
+      "openMap": "Open larger map",
+      "previewTitle": "Collection point map",
+      "title": "Point map position",
+      "unavailable": "Map position unavailable.",
+      "updatedAt": "Last updated"
     }
   },
   "adminDashboard": {
@@ -115,7 +127,7 @@
     },
     "quickStats": {
       "activeVehicles": {
-        "description": "On the road",
+        "description": "{{available}} available",
         "title": "Active vehicles"
       },
       "description": "Resources and alerts over the period",
@@ -124,7 +136,7 @@
         "title": "Rejected parcels"
       },
       "teamMembers": {
-        "description": "Total team",
+        "description": "{{active}} active / {{total}}",
         "title": "Team members"
       },
       "title": "Quick overview"
@@ -414,20 +426,30 @@
       },
       "subtitle": "Create a backend notification and target specific users or a segment.",
       "target": {
+        "allCompanies": "All companies",
+        "allCountries": "All countries",
         "allRoles": "All roles",
         "allStatuses": "All statuses",
         "city": "City",
         "cityPlaceholder": "Ex: Douala",
-        "companyId": "Company ID",
+        "companyId": "Company",
+        "countryId": "Country",
         "criteria": "Criteria",
-        "includeAllUsers": "Include all users matching the criteria",
+        "excludeUserIds": "Users to exclude",
+        "includeAllUsers": "Explicitly send to the whole user base",
+        "loadingCompanies": "Loading companies...",
+        "loadingCountries": "Loading countries...",
         "loadingUsers": "Loading users...",
+        "noCompanies": "No company available",
         "noUsers": "No users available.",
         "role": "Role",
+        "roles": "Roles",
         "selected": "{{count}} selected user(s)",
         "status": "User status",
         "subtitle": "Choose recipients before sending.",
         "title": "Targeting",
+        "userIds": "Target users",
+        "userIdsPlaceholder": "Ex: 12, 18, 31",
         "users": "Users"
       },
       "title": "Compose",
@@ -439,7 +461,17 @@
       },
       "validation": {
         "companyId": "Company ID must be a positive integer.",
+        "countryId": "Country must be valid.",
+        "criteria": "Fill at least one targeting criterion.",
+        "excludeUserIds": "Excluded user IDs must be positive integers separated by commas.",
+        "fixBeforeSend": "Fix the following items before sending.",
+        "messageRequired": "Message is required.",
         "required": "Title and message are required.",
+        "submitBlocked": "The notification could not be sent.",
+        "summary": "Some fields must be corrected before sending.",
+        "title": "Incomplete form",
+        "titleRequired": "Title is required.",
+        "userIds": "User IDs must be positive integers separated by commas.",
         "users": "Select at least one user."
       }
     },
@@ -529,13 +561,13 @@
       "subtitle": "Consolidated critical indicators to monitor the platform's commercial, operational, and financial health.",
       "metrics": {
         "companies": "Companies",
-        "companiesDetail": "Active accounts and network partners",
+        "companiesDetail": "{{approved}} approved - {{exploitable}} exploitable",
         "deliveryRate": "Delivery rate",
         "exceptionRate": "{{rate}}% exceptions",
         "platformRevenue": "Platform revenue",
-        "platformRevenueDetail": "Platform fees, subscription, commissions deducted",
+        "platformRevenueDetail": "Gross shipments: {{gross}}",
         "shipments": "Filtered shipments",
-        "shipmentsDetail": "Volume created during the period"
+        "shipmentsDetail": "{{delivered}} delivered during the period"
       },
       "charts": {
         "revenueDescription": "Estimated revenue per day during the period",
@@ -566,12 +598,12 @@
         "maintenance": "Maintenance",
         "maintenanceDetail": "Vehicles immobilized",
         "paidCommissions": "Paid commissions",
-        "paidCommissionsDetail": "Settled with partners",
+        "paidCommissionsDetail": "{{generated}} generated - {{amount}} paid",
         "title": "Operations",
         "transit": "In transit",
         "transitDetail": "Flows currently loaded",
         "users": "Users",
-        "usersDetail": "Across every role"
+        "usersDetail": "{{active}} active / {{total}}"
       },
       "risks": {
         "closedPoints": {
@@ -630,6 +662,77 @@
       "users": "Users"
     },
     "title": "Administration",
+    "companies": {
+      "actions": {
+        "readiness": "Readiness",
+        "viewDetails": "View detail"
+      },
+      "detail": {
+        "back": "Back to companies",
+        "collectionPoints": {
+          "active": "Active",
+          "description": "Collection point saturation returned by the company dashboard.",
+          "empty": "No collection point in the period.",
+          "inactive": "Inactive",
+          "title": "Collection points"
+        },
+        "errors": {
+          "load": "Unable to load this company detail."
+        },
+        "eyebrow": "Company detail",
+        "identity": {
+          "description": "Identity and contact information exposed by the company API.",
+          "email": "Email",
+          "location": "Country / city",
+          "paymentMode": "Collection",
+          "phone": "Phone",
+          "readinessCheckedAt": "Operational check",
+          "title": "General information",
+          "website": "Website"
+        },
+        "metrics": {
+          "activeTeam": "{{count}} active",
+          "delivered": "{{count}} delivered",
+          "deliveryRate": "Delivery rate",
+          "period": "Current month",
+          "revenue": "Estimated revenue",
+          "saturation": "Saturation {{rate}}",
+          "shipments": "Shipments",
+          "team": "Team"
+        },
+        "partial": {
+          "dashboard": "dashboard",
+          "identity": "identity",
+          "readiness": "readiness",
+          "team": "team",
+          "title": "Some data could not be loaded: {{sections}}."
+        },
+        "readiness": {
+          "collectionPoints": "Collection points",
+          "count": "{{count}} configured",
+          "incomplete": "Incomplete setup",
+          "missing": "Missing items",
+          "parcelTypes": "Parcel types",
+          "pricing": "Pricing",
+          "ready": "Ready",
+          "title": "Operational readiness",
+          "transportModes": "Transport modes",
+          "unavailable": "Diagnostic unavailable for now."
+        },
+        "subtitle": "Consolidated view of data, activity, and operational setup.",
+        "team": {
+          "empty": "No attached member.",
+          "summary": "{{admins}} admin(s), {{operations}} operational profile(s)",
+          "title": "Attached team"
+        }
+      },
+      "status": {
+        "approved": "Approved",
+        "exploitable": "Operational",
+        "notExploitable": "Not exploitable",
+        "pending": "Pending"
+      }
+    },
     "users": {
       "columns": {
         "actions": "Actions",
@@ -846,5 +949,68 @@
       "description": "Unable to determine your company with this account.",
       "title": "Company not found"
     }
+  },
+  "companyProfile": {
+    "actions": {
+      "removeSelection": "Remove selection",
+      "replaceLogo": "Replace logo",
+      "save": "Save",
+      "uploadLogo": "Upload logo"
+    },
+    "badges": {
+      "approved": "Approved",
+      "pending": "In review"
+    },
+    "brand": {
+      "currentLogo": "Current logo or initials",
+      "description": "The logo is sent to the backend through the multipart logo field.",
+      "logoAlt": "Company logo",
+      "title": "Brand"
+    },
+    "form": {
+      "address": "Address",
+      "city": "City",
+      "country": "Country",
+      "countryUnknown": "Country not provided",
+      "email": "Email",
+      "name": "Name",
+      "paymentMode": "Collection",
+      "paymentNotes": "Payment policy",
+      "phone": "Phone",
+      "website": "Website"
+    },
+    "identity": {
+      "description": "Information visible to teams, clients, and operational pages.",
+      "title": "Company information"
+    },
+    "messages": {
+      "invalid": "Fill the required fields before saving.",
+      "saveFailed": "Unable to save.",
+      "saved": "Company profile updated."
+    },
+    "payment": {
+      "description": "Control where payments are collected using the modes exposed by the API.",
+      "modes": {
+        "COLLECTION_POINT": "Payment at collection point",
+        "PLATFORM": "Payment through the platform"
+      },
+      "title": "Payment",
+      "unsyncedNote": "These notes are not sent yet: they are waiting for a dedicated backend field."
+    },
+    "placeholders": {
+      "address": "Legal address or operating headquarters",
+      "city": "Douala",
+      "email": "contact@company.com",
+      "name": "Sendam Express",
+      "paymentNotes": "Ex: deposit required, payment delay, B2B exceptions...",
+      "phone": "+237 6 00 00 00 00",
+      "website": "https://www.your-company.com"
+    },
+    "states": {
+      "forbiddenDescription": "Your account cannot edit this company.",
+      "forbiddenTitle": "Restricted access"
+    },
+    "subtitle": "Update your company brand, contact details, and payment settings.",
+    "title": "Company profile"
   }
 }

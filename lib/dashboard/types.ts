@@ -21,6 +21,10 @@ export interface DailyShipmentMetric {
 export interface DailyRevenueMetric {
   date: string;
   platformRevenue?: number;
+  estimatedRevenue?: number;
+  grossShipmentRevenue?: number;
+  revenue?: number;
+  amount?: number;
 }
 
 export interface StatusDistributionMetric {

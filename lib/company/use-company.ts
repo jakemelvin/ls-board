@@ -24,7 +24,11 @@ export interface CompanyContext {
   retry: () => void;
 }
 
-export function useCompanyContext(): CompanyContext {
+interface UseCompanyContextOptions {
+  enabled?: boolean;
+}
+
+export function useCompanyContext({ enabled = true }: UseCompanyContextOptions = {}): CompanyContext {
   const token = useAuthStore((s) => s.token);
   const setCompanyId = useAuthStore((s) => s.setCompanyId);
 
@@ -33,6 +37,13 @@ export function useCompanyContext(): CompanyContext {
   const [error, setError] = useState<string | null>(null);
 
   const resolve = useCallback(async () => {
+    if (!enabled) {
+      setCompany(null);
+      setStatus('empty');
+      setError(null);
+      return;
+    }
+
     if (!token) {
       setCompany(null);
       setStatus('error');
@@ -72,7 +83,7 @@ export function useCompanyContext(): CompanyContext {
       setStatus('error');
       setError(err instanceof Error ? err.message : "Erreur lors de la récupération de l'entreprise");
     }
-  }, [token, setCompanyId]);
+  }, [enabled, token, setCompanyId]);
 
   useEffect(() => {
     resolve();

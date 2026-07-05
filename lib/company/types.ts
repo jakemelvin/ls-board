@@ -2,6 +2,7 @@
 // Mirrors the Delivery Service OpenAPI schemas.
 
 import type { UserResponse } from '@/lib/auth/types';
+import type { PaymentCollectionMode } from '@/lib/auth/types';
 
 // Catalog
 
@@ -77,6 +78,19 @@ export interface ZoneResponse {
 
 export interface MessageResponse {
   message: string;
+}
+
+// Company profile
+
+export interface CompanyProfileUpdateRequest {
+  name: string;
+  email?: string;
+  phone: string;
+  companyUrl: string;
+  address?: string;
+  countryId: number;
+  city: string;
+  paymentCollectionMode?: PaymentCollectionMode;
 }
 
 // Collection points

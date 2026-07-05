@@ -26,7 +26,9 @@ import {
   Waypoints,
 } from 'lucide-react';
 
+import { CompanyBrand } from '@/components/company-brand';
 import { SendamLogo } from '@/components/sendam-logo';
+import type { CompanyResponse } from '@/lib/auth/types';
 import { useAuthStore } from '@/lib/auth/store';
 import { useTranslation } from '@/lib/i18n';
 import type { UserRole } from '@/lib/mock-data';
@@ -61,12 +63,14 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'pickup-request', labelKey: 'shell.sections.pickupRequest', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
   { id: 'announcements', labelKey: 'shell.sections.announcements', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
   { id: 'notifications', labelKey: 'shell.sections.notifications', icon: Bell, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'company-profile', labelKey: 'shell.sections.companyProfile', icon: Settings, roles: ADMIN_LIKE_ROLES },
 ];
 
 interface DashboardSidebarProps {
   currentRole: UserRole;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  company?: CompanyResponse | null;
   className?: string;
 }
 
@@ -74,6 +78,7 @@ export function DashboardSidebar({
   currentRole,
   activeSection,
   onSectionChange,
+  company,
   className,
 }: DashboardSidebarProps) {
   const authRole = useAuthStore((s) => s.role);
@@ -82,8 +87,9 @@ export function DashboardSidebar({
 
   return (
     <aside className={cn('flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar', className)}>
-      <div className="flex h-20 items-center border-b border-sidebar-border px-5">
-        <SendamLogo />
+      <div className="border-b border-sidebar-border px-5 py-4">
+        <SendamLogo className="h-12" />
+        {company && <CompanyBrand company={company} className="mt-3" />}
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
@@ -162,10 +168,6 @@ export function DashboardSidebar({
             </button>
           </>
         )}
-        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
-          <Settings className="h-5 w-5" />
-          {t('shell.sections.settings')}
-        </button>
       </div>
     </aside>
   );

@@ -32,8 +32,10 @@ import { CatalogManagement } from '@/components/views/catalog-management';
 import { PlatformFinanceSettings } from '@/components/views/platform-finance-settings';
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { NotificationsManagement } from '@/components/views/notifications-management';
+import { CompanyProfileView } from '@/components/views/company-profile';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
+import { useCompanyContext } from '@/lib/company/use-company';
 import { useStore } from '@/lib/store';
 import type { ApiRole } from '@/lib/auth/types';
 
@@ -75,6 +77,16 @@ export default function DashboardPage() {
   const router = useRouter();
   const { token, role: authRole, isHydrated } = useAuthStore();
   const { users } = useStore();
+  const shouldShowCompanyBrand =
+    authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY';
+  const {
+    status: companyStatus,
+    company,
+    error: companyError,
+    retry: retryCompany,
+  } = useCompanyContext({
+    enabled: isHydrated && Boolean(token) && shouldShowCompanyBrand,
+  });
   const didSyncRoleFromAuth = useRef(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
@@ -188,6 +200,18 @@ export default function DashboardPage() {
         return <CompanyAnnouncements />;
       case 'notifications':
         return <NotificationsManagement />;
+      case 'company-profile':
+        return isAdminLikeRole(currentRole) ? (
+          <CompanyProfileView
+            company={company}
+            status={companyStatus}
+            error={companyError}
+            onRetry={retryCompany}
+            onCompanyUpdated={retryCompany}
+          />
+        ) : (
+          <AdminDashboard />
+        );
 
       default:
         return isAdminLikeRole(currentRole) ? (
@@ -199,26 +223,28 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="fixed inset-0 flex overflow-hidden bg-background">
       {/* Sidebar */}
       <DashboardSidebar
         currentRole={currentRole}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
+        company={shouldShowCompanyBrand ? company : null}
         className="hidden md:flex"
       />
 
       {/* Main Content */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
         <DashboardHeader
           currentUser={currentUser}
           currentRole={currentRole}
           onRoleChange={handleRoleChange}
+          company={shouldShowCompanyBrand ? company : null}
         />
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6">
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6">
           {renderContent()}
         </main>
       </div>
@@ -227,6 +253,7 @@ export default function DashboardPage() {
         currentRole={currentRole}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
+        company={shouldShowCompanyBrand ? company : null}
       />
     </div>
   );

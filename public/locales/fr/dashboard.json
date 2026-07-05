@@ -52,6 +52,7 @@
       "billing": "Facturation",
       "catalog": "Catalogue",
       "collectionPoints": "Gestion territoriale",
+      "companyProfile": "Profil entreprise",
       "commissions": "Commissions",
       "dashboard": "Tableau de bord",
       "dashboardShort": "Dashboard",
@@ -76,6 +77,17 @@
       "team": "Gestion d'équipe",
       "transferRequests": "Demandes de prise",
       "transportModes": "Modes de transport"
+    }
+  },
+  "collectorDashboard": {
+    "location": {
+      "address": "Adresse",
+      "description": "Apercu cartographique du point de collecte assigne.",
+      "openMap": "Ouvrir en grand",
+      "previewTitle": "Carte du point de collecte",
+      "title": "Position carte du point",
+      "unavailable": "Position cartographique indisponible.",
+      "updatedAt": "Derniere mise a jour"
     }
   },
   "adminDashboard": {
@@ -115,7 +127,7 @@
     },
     "quickStats": {
       "activeVehicles": {
-        "description": "En circulation",
+        "description": "{{available}} disponible(s)",
         "title": "Véhicules actifs"
       },
       "description": "Ressources et alertes sur la période",
@@ -124,7 +136,7 @@
         "title": "Colis rejetés"
       },
       "teamMembers": {
-        "description": "Total équipe",
+        "description": "{{active}} actif(s) / {{total}}",
         "title": "Membres d'équipe"
       },
       "title": "Aperçu rapide"
@@ -414,20 +426,30 @@
       },
       "subtitle": "Créez une notification backend et ciblez des utilisateurs précis ou un segment.",
       "target": {
+        "allCompanies": "Toutes les entreprises",
+        "allCountries": "Tous les pays",
         "allRoles": "Tous les rôles",
         "allStatuses": "Tous les statuts",
         "city": "Ville",
         "cityPlaceholder": "Ex : Douala",
-        "companyId": "Entreprise ID",
+        "companyId": "Entreprise",
+        "countryId": "Pays",
         "criteria": "Critères",
-        "includeAllUsers": "Inclure tous les utilisateurs correspondant aux critères",
+        "excludeUserIds": "Utilisateurs à exclure",
+        "includeAllUsers": "Envoyer explicitement à toute la base utilisateurs",
+        "loadingCompanies": "Chargement des entreprises...",
+        "loadingCountries": "Chargement des pays...",
         "loadingUsers": "Chargement des utilisateurs...",
+        "noCompanies": "Aucune entreprise disponible",
         "noUsers": "Aucun utilisateur disponible.",
         "role": "Rôle",
+        "roles": "Rôles",
         "selected": "{{count}} utilisateur(s) sélectionné(s)",
         "status": "Statut utilisateur",
         "subtitle": "Choisissez les destinataires avant l'envoi.",
         "title": "Ciblage",
+        "userIds": "Utilisateurs cibles",
+        "userIdsPlaceholder": "Ex : 12, 18, 31",
         "users": "Utilisateurs"
       },
       "title": "Composer",
@@ -439,7 +461,17 @@
       },
       "validation": {
         "companyId": "L'ID entreprise doit être un entier positif.",
+        "countryId": "Le pays doit être valide.",
+        "criteria": "Renseignez au moins un critère de ciblage.",
+        "excludeUserIds": "Les IDs à exclure doivent être des entiers positifs séparés par des virgules.",
+        "fixBeforeSend": "Corrigez les points suivants avant l'envoi.",
+        "messageRequired": "Le message est obligatoire.",
         "required": "Titre et message sont requis.",
+        "submitBlocked": "La notification n'a pas pu être envoyée.",
+        "summary": "Certains champs doivent être corrigés avant l'envoi.",
+        "title": "Formulaire incomplet",
+        "titleRequired": "Le titre est obligatoire.",
+        "userIds": "Les IDs utilisateurs doivent être des entiers positifs séparés par des virgules.",
         "users": "Sélectionnez au moins un utilisateur."
       }
     },
@@ -529,13 +561,13 @@
       "subtitle": "Indicateurs critiques consolides pour suivre la sante commerciale, operationnelle et financiere de la plateforme.",
       "metrics": {
         "companies": "Entreprises",
-        "companiesDetail": "Comptes actifs et partenaires reseau",
+        "companiesDetail": "{{approved}} approuvees - {{exploitable}} exploitables",
         "deliveryRate": "Taux de livraison",
         "exceptionRate": "{{rate}}% d'exceptions",
         "platformRevenue": "Revenu plateforme",
-        "platformRevenueDetail": "Frais plateforme, abonnement, commissions deduites",
+        "platformRevenueDetail": "Brut shipments : {{gross}}",
         "shipments": "Shipments filtres",
-        "shipmentsDetail": "Volume cree sur la periode"
+        "shipmentsDetail": "{{delivered}} livres sur la periode"
       },
       "charts": {
         "revenueDescription": "Revenu estime par jour sur la periode",
@@ -566,12 +598,12 @@
         "maintenance": "Maintenance",
         "maintenanceDetail": "Vehicules immobilises",
         "paidCommissions": "Commissions payees",
-        "paidCommissionsDetail": "Reglees aux partenaires",
+        "paidCommissionsDetail": "{{generated}} generees - {{amount}} paye",
         "title": "Operations",
         "transit": "En transit",
         "transitDetail": "Flux actuellement embarques",
         "users": "Utilisateurs",
-        "usersDetail": "Tous roles confondus"
+        "usersDetail": "{{active}} actifs / {{total}}"
       },
       "risks": {
         "closedPoints": {
@@ -630,6 +662,77 @@
       "users": "Utilisateurs"
     },
     "title": "Administration",
+    "companies": {
+      "actions": {
+        "readiness": "Readiness",
+        "viewDetails": "Voir le detail"
+      },
+      "detail": {
+        "back": "Retour aux entreprises",
+        "collectionPoints": {
+          "active": "Actif",
+          "description": "Saturation des points renvoyee par le dashboard entreprise.",
+          "empty": "Aucun point de collecte dans la periode.",
+          "inactive": "Inactif",
+          "title": "Points de collecte"
+        },
+        "errors": {
+          "load": "Impossible de charger les details de cette entreprise."
+        },
+        "eyebrow": "Detail entreprise",
+        "identity": {
+          "description": "Informations d'identite et de contact exposees par l'API entreprise.",
+          "email": "Email",
+          "location": "Pays / ville",
+          "paymentMode": "Encaissement",
+          "phone": "Telephone",
+          "readinessCheckedAt": "Controle operationnel",
+          "title": "Informations generales",
+          "website": "Site internet"
+        },
+        "metrics": {
+          "activeTeam": "{{count}} actif(s)",
+          "delivered": "{{count}} livres",
+          "deliveryRate": "Taux de livraison",
+          "period": "Mois courant",
+          "revenue": "Revenu estime",
+          "saturation": "Saturation {{rate}}",
+          "shipments": "Shipments",
+          "team": "Equipe"
+        },
+        "partial": {
+          "dashboard": "dashboard",
+          "identity": "identite",
+          "readiness": "readiness",
+          "team": "equipe",
+          "title": "Certaines donnees n'ont pas pu etre chargees : {{sections}}."
+        },
+        "readiness": {
+          "collectionPoints": "Points de collecte",
+          "count": "{{count}} configure(s)",
+          "incomplete": "Configuration incomplete",
+          "missing": "Elements manquants",
+          "parcelTypes": "Types de colis",
+          "pricing": "Tarification",
+          "ready": "Pret",
+          "title": "Readiness operationnelle",
+          "transportModes": "Modes de transport",
+          "unavailable": "Diagnostic indisponible pour le moment."
+        },
+        "subtitle": "Vue consolidee des donnees, de l'activite et de la configuration operationnelle.",
+        "team": {
+          "empty": "Aucun membre rattache.",
+          "summary": "{{admins}} admin(s), {{operations}} profil(s) operationnel(s)",
+          "title": "Equipe rattachee"
+        }
+      },
+      "status": {
+        "approved": "Approuvee",
+        "exploitable": "Operationnelle",
+        "notExploitable": "Non exploitable",
+        "pending": "En attente"
+      }
+    },
     "users": {
       "columns": {
         "actions": "Actions",
@@ -846,5 +949,68 @@
       "description": "Impossible de déterminer votre entreprise avec ce compte.",
       "title": "Entreprise introuvable"
     }
+  },
+  "companyProfile": {
+    "actions": {
+      "removeSelection": "Retirer la selection",
+      "replaceLogo": "Remplacer le logo",
+      "save": "Enregistrer",
+      "uploadLogo": "Importer un logo"
+    },
+    "badges": {
+      "approved": "Approuvee",
+      "pending": "En validation"
+    },
+    "brand": {
+      "currentLogo": "Logo actuel ou initiales",
+      "description": "Le logo est envoye au backend via le champ multipart logo.",
+      "logoAlt": "Logo de l'entreprise",
+      "title": "Marque"
+    },
+    "form": {
+      "address": "Adresse",
+      "city": "Ville",
+      "country": "Pays",
+      "countryUnknown": "Pays non renseigne",
+      "email": "Email",
+      "name": "Nom",
+      "paymentMode": "Encaissement",
+      "paymentNotes": "Politique de paiement",
+      "phone": "Telephone",
+      "website": "Site internet"
+    },
+    "identity": {
+      "description": "Informations visibles par les equipes, clients et pages operationnelles.",
+      "title": "Informations entreprise"
+    },
+    "messages": {
+      "invalid": "Renseignez les champs obligatoires avant d'enregistrer.",
+      "saveFailed": "Enregistrement impossible.",
+      "saved": "Profil entreprise mis a jour."
+    },
+    "payment": {
+      "description": "Controlez ou les paiements sont collectes selon les modes exposes par l'API.",
+      "modes": {
+        "COLLECTION_POINT": "Paiement au point de collecte",
+        "PLATFORM": "Paiement via la plateforme"
+      },
+      "title": "Paiement",
+      "unsyncedNote": "Ces notes ne sont pas encore envoyees: elles attendent un champ backend dedie."
+    },
+    "placeholders": {
+      "address": "Adresse legale ou siege operationnel",
+      "city": "Douala",
+      "email": "contact@entreprise.com",
+      "name": "Sendam Express",
+      "paymentNotes": "Ex: acompte requis, delai de paiement, exceptions B2B...",
+      "phone": "+237 6 00 00 00 00",
+      "website": "https://www.votre-entreprise.com"
+    },
+    "states": {
+      "forbiddenDescription": "Votre compte ne peut pas modifier cette entreprise.",
+      "forbiddenTitle": "Acces restreint"
+    },
+    "subtitle": "Mettez a jour la marque, les coordonnees et les parametres de paiement de votre entreprise.",
+    "title": "Profil entreprise"
   }
 }

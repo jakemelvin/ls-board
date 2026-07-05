@@ -40,27 +40,18 @@ import { useAuthStore } from '@/lib/auth/store';
 import { useCompanyContext } from '@/lib/company/use-company';
 import { formatMoney } from '@/lib/commissions';
 import { getCompanyDashboard } from '@/lib/dashboard/api';
+import {
+  DASHBOARD_CHART_COLORS,
+  getStatusDistributionChartColor,
+} from '@/lib/dashboard/chart-colors';
 import type { CompanyDashboardResponse } from '@/lib/dashboard/types';
 import {
+  formatDashboardDateParam,
   getDashboardPeriodRange,
   type DashboardPeriodPreset,
   type DateRange,
 } from '@/lib/dashboard-period';
 import { useTranslation } from '@/lib/i18n';
-
-const STATUS_COLORS: Record<string, string> = {
-  CREATED: 'var(--muted)',
-  PAID: 'var(--chart-3)',
-  AWAITING_DROP_OFF: 'var(--warning)',
-  RECEIVED_AT_COLLECTION_POINT: 'var(--chart-1)',
-  READY_FOR_TRANSPORT: 'var(--chart-4)',
-  IN_TRANSIT: 'var(--warning)',
-  ARRIVED_DESTINATION_POINT: 'var(--chart-2)',
-  READY_FOR_PICKUP: 'var(--chart-5)',
-  DELIVERED: 'var(--success)',
-  CANCELLED: 'var(--destructive)',
-  RETURNED: 'var(--destructive)',
-};
 
 const referenceDate = new Date();
 
@@ -93,8 +84,8 @@ export function AdminDashboard() {
 
     try {
       const response = await getCompanyDashboard(token, companyId, {
-        startDate: formatApiDate(periodRange.from),
-        endDate: formatApiDate(periodRange.to),
+        startDate: formatDashboardDateParam(periodRange.from),
+        endDate: formatDashboardDateParam(periodRange.to),
       });
       setDashboard(response);
     } catch (err) {
@@ -109,20 +100,22 @@ export function AdminDashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
-  const totalParcels = round(dashboard?.shipmentCount);
-  const deliveredParcels = round(dashboard?.deliveredShipmentCount);
-  const rejectedParcels = round(dashboard?.quickOverview?.rejectedShipmentCount);
-  const deliveryRate = round(dashboard?.deliveryRatePercent);
-  const activeVehicles = round(dashboard?.quickOverview?.activeVehicleCount);
-  const teamMembers = round(dashboard?.quickOverview?.teamMemberCount);
-  const revenue = round(dashboard?.estimatedRevenue);
-  const saturationRate = round(dashboard?.collectionPointSaturationPercent);
+  const totalParcels = formatCount(dashboard?.shipmentCount);
+  const deliveredParcels = formatCount(dashboard?.deliveredShipmentCount);
+  const rejectedParcels = formatCount(dashboard?.quickOverview?.rejectedShipmentCount);
+  const deliveryRate = numberValue(dashboard?.deliveryRatePercent);
+  const activeVehicles = formatCount(dashboard?.quickOverview?.activeVehicleCount);
+  const availableVehicles = formatCount(dashboard?.quickOverview?.availableVehicleCount);
+  const teamMembers = formatCount(dashboard?.quickOverview?.teamMemberCount);
+  const activeTeamMembers = formatCount(dashboard?.quickOverview?.activeTeamMemberCount);
+  const revenue = numberValue(dashboard?.estimatedRevenue);
+  const saturationRate = numberValue(dashboard?.collectionPointSaturationPercent);
 
   const volumeData = useMemo(
     () =>
       (dashboard?.shipmentVolumeByDay ?? []).map((item) => ({
         name: formatChartDate(item.date),
-        colis: round(item.shipmentCount),
+        colis: formatCount(item.shipmentCount),
       })),
     [dashboard?.shipmentVolumeByDay],
   );
@@ -130,7 +123,7 @@ export function AdminDashboard() {
     () =>
       (dashboard?.revenueByDay ?? []).map((item) => ({
         name: formatChartDate(item.date),
-        revenue: round(item.platformRevenue),
+        revenue: getDailyRevenue(item),
       })),
     [dashboard?.revenueByDay],
   );
@@ -138,8 +131,8 @@ export function AdminDashboard() {
     () =>
       (dashboard?.statusDistribution ?? []).map((item) => ({
         name: item.label ?? item.key ?? '-',
-        value: round(item.count),
-        color: STATUS_COLORS[item.statuses?.[0] ?? item.key ?? ''] ?? 'var(--muted)',
+        value: formatCount(item.count),
+        color: getStatusDistributionChartColor(item),
       })),
     [dashboard?.statusDistribution],
   );
@@ -215,7 +208,7 @@ export function AdminDashboard() {
           loading={loading}
           icon={Truck}
           title={t('adminDashboard.metrics.deliveryRate.title')}
-          value={`${deliveryRate}%`}
+          value={formatPercent(deliveryRate)}
           description={t('adminDashboard.metrics.deliveryRate.description', {
             values: { delivered: deliveredParcels, total: totalParcels },
           })}
@@ -229,12 +222,12 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">
-              {loading ? <MetricSkeleton /> : `${saturationRate}%`}
+              {loading ? <MetricSkeleton /> : formatPercent(saturationRate)}
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(saturationRate, 100)}%` }}
+                style={{ width: `${clampPercent(saturationRate)}%` }}
               />
             </div>
           </CardContent>
@@ -253,8 +246,8 @@ export function AdminDashboard() {
                 <AreaChart data={volumeData}>
                   <defs>
                     <linearGradient id="colorColis" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                      <stop offset="5%" stopColor={DASHBOARD_CHART_COLORS.volume} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={DASHBOARD_CHART_COLORS.volume} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -264,7 +257,7 @@ export function AdminDashboard() {
                   <Area
                     type="monotone"
                     dataKey="colis"
-                    stroke="var(--primary)"
+                    stroke={DASHBOARD_CHART_COLORS.volume}
                     strokeWidth={2}
                     fill="url(#colorColis)"
                   />
@@ -289,7 +282,7 @@ export function AdminDashboard() {
                   <Tooltip
                     content={<ChartTooltip formatter={(value) => formatMoney(Number(value))} />}
                   />
-                  <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" fill={DASHBOARD_CHART_COLORS.revenue} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -343,7 +336,7 @@ export function AdminDashboard() {
           <CardContent>
             <div className="space-y-4">
               {(dashboard?.collectionPoints ?? []).map((point) => {
-                const saturation = round(point.saturationPercent);
+                const saturation = numberValue(point.saturationPercent);
                 return (
                   <div key={point.collectionPointId}>
                     <div className="flex items-center justify-between gap-3 text-sm">
@@ -351,7 +344,7 @@ export function AdminDashboard() {
                         {point.collectionPointName ?? '-'}
                       </span>
                       <span className="shrink-0 text-muted-foreground">
-                        {round(point.currentLoad)} / {round(point.maxCapacity)} {point.capacityUnit ?? ''}
+                        {formatCapacity(point.currentLoad)} / {formatCapacity(point.maxCapacity)} {point.capacityUnit ?? ''}
                       </span>
                     </div>
                     <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -359,7 +352,7 @@ export function AdminDashboard() {
                         className={`h-full transition-all ${
                           saturation > 80 ? 'bg-destructive' : saturation > 50 ? 'bg-warning' : 'bg-success'
                         }`}
-                        style={{ width: `${Math.min(saturation, 100)}%` }}
+                        style={{ width: `${clampPercent(saturation)}%` }}
                       />
                     </div>
                   </div>
@@ -385,14 +378,18 @@ export function AdminDashboard() {
                 icon={Truck}
                 iconClassName="bg-primary/20 text-primary"
                 title={t('adminDashboard.quickStats.activeVehicles.title')}
-                description={t('adminDashboard.quickStats.activeVehicles.description')}
+                description={t('adminDashboard.quickStats.activeVehicles.description', {
+                  values: { available: availableVehicles },
+                })}
                 value={activeVehicles}
               />
               <QuickStat
                 icon={Users}
                 iconClassName="bg-chart-2/20 text-chart-2"
                 title={t('adminDashboard.quickStats.teamMembers.title')}
-                description={t('adminDashboard.quickStats.teamMembers.description')}
+                description={t('adminDashboard.quickStats.teamMembers.description', {
+                  values: { active: activeTeamMembers, total: teamMembers },
+                })}
                 value={teamMembers}
               />
               <QuickStat
@@ -585,13 +582,39 @@ function formatChartDate(date: string) {
   return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function formatApiDate(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function getDailyRevenue(item: {
+  platformRevenue?: number;
+  estimatedRevenue?: number;
+  grossShipmentRevenue?: number;
+  revenue?: number;
+  amount?: number;
+}) {
+  return numberValue(
+    item.platformRevenue ?? item.estimatedRevenue ?? item.grossShipmentRevenue ?? item.revenue ?? item.amount,
+  );
 }
 
-function round(value?: number) {
-  return Math.round(value ?? 0);
+function numberValue(value?: number | string | null) {
+  const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatCount(value?: number | null) {
+  return Math.round(numberValue(value));
+}
+
+function formatCapacity(value?: number | null) {
+  return new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: 2,
+  }).format(numberValue(value));
+}
+
+function formatPercent(value?: number | null) {
+  return `${new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: 1,
+  }).format(numberValue(value))}%`;
+}
+
+function clampPercent(value: number) {
+  return Math.min(Math.max(value, 0), 100);
 }

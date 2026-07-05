@@ -68,6 +68,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
   const metrics = dashboard?.metrics;
   const commissions = dashboard?.commissions;
   const displayName = dashboard?.collectorUsername ?? currentUser.name;
+  const locationMapUrl = getLocationMapUrl(dashboard?.location);
 
   if (!loading && !error && !point) {
     return (
@@ -183,24 +184,25 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-foreground">Position carte du point</CardTitle>
-            <CardDescription>Coordonnees exposees par le backend pour ce point de collecte.</CardDescription>
+            <CardTitle className="text-foreground">{t('collectorDashboard.location.title')}</CardTitle>
+            <CardDescription>{t('collectorDashboard.location.description')}</CardDescription>
           </div>
-          {dashboard?.location?.mapUrl && (
+          {locationMapUrl && (
             <Button variant="outline" className="gap-2" asChild>
-              <a href={dashboard.location.mapUrl} target="_blank" rel="noreferrer">
+              <a href={locationMapUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4" />
-                Ouvrir la carte
+                {t('collectorDashboard.location.openMap')}
               </a>
             </Button>
           )}
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <InfoTile title="Coordonnees" value={formatCoordinates(dashboard?.location)} />
-            <InfoTile title="Source" value={dashboard?.location?.lastUpdatedBy ?? 'Backend'} />
-            <InfoTile title="Mise a jour" value={formatDateTime(dashboard?.location?.lastUpdatedAt)} />
-          </div>
+          <PointLocationMap
+            location={dashboard?.location}
+            address={formatPointAddress(point)}
+            updatedAt={formatDateTime(dashboard?.location?.lastUpdatedAt)}
+            t={t}
+          />
         </CardContent>
       </Card>
 
@@ -364,11 +366,6 @@ function formatOpeningHours(hours?: OpeningHourSnapshot[]) {
   return `${firstOpen.openingTime} - ${firstOpen.closingTime}`;
 }
 
-function formatCoordinates(location?: CollectorDashboardResponse['location']) {
-  if (location?.latitude == null || location.longitude == null) return 'En attente';
-  return `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
-}
-
 function formatDateTime(value?: string) {
   if (!value) return '-';
   const date = new Date(value);
@@ -378,4 +375,98 @@ function formatDateTime(value?: string) {
 
 function round(value?: number) {
   return Math.round(value ?? 0);
+}
+
+function PointLocationMap({
+  location,
+  address,
+  updatedAt,
+  t,
+}: {
+  location?: CollectorDashboardResponse['location'];
+  address: string;
+  updatedAt: string;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const previewUrl = getLocationPreviewUrl(location);
+
+  if (!previewUrl) {
+    return <EmptyState label={t('collectorDashboard.location.unavailable')} />;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-secondary/20">
+      <div className="relative h-64 min-h-0 bg-secondary md:h-72">
+        <iframe
+          title={t('collectorDashboard.location.previewTitle')}
+          src={previewUrl}
+          className="h-full w-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/85 to-transparent p-4">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-card/95 px-3 py-2 text-sm shadow-sm">
+            <MapPin className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate text-foreground">{address}</span>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-3 border-t border-border p-4 text-sm md:grid-cols-2">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('collectorDashboard.location.address')}
+          </p>
+          <p className="mt-1 font-medium text-foreground">{address}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('collectorDashboard.location.updatedAt')}
+          </p>
+          <p className="mt-1 font-medium text-foreground">{updatedAt}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function hasLocationCoordinates(
+  location?: CollectorDashboardResponse['location'],
+): location is CollectorDashboardResponse['location'] & { latitude: number; longitude: number } {
+  return typeof location?.latitude === 'number' && typeof location.longitude === 'number';
+}
+
+function getLocationMapUrl(location?: CollectorDashboardResponse['location']) {
+  if (location?.mapUrl) {
+    return location.mapUrl;
+  }
+
+  if (!hasLocationCoordinates(location)) {
+    return undefined;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
+}
+
+function getLocationPreviewUrl(location?: CollectorDashboardResponse['location']) {
+  if (!hasLocationCoordinates(location)) {
+    return undefined;
+  }
+
+  const latitude = location.latitude;
+  const longitude = location.longitude;
+  const delta = 0.006;
+  const bbox = [
+    longitude - delta,
+    latitude - delta,
+    longitude + delta,
+    latitude + delta,
+  ].join(',');
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+    bbox,
+  )}&layer=mapnik&marker=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function formatPointAddress(point?: CollectorDashboardResponse['collectionPoint']) {
+  return [point?.address, point?.zoneName, point?.cityName, point?.countryName].filter(Boolean).join(', ') || '-';
 }

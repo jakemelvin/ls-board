@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import type { CompanyResponse } from '@/lib/auth/types';
 import { useAuthStore } from '@/lib/auth/store';
 import { useTranslation } from '@/lib/i18n';
 import type { UserRole } from '@/lib/mock-data';
@@ -21,6 +22,7 @@ interface DashboardMobileNavProps {
   currentRole: UserRole;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  company?: CompanyResponse | null;
 }
 
 const primaryItems = [

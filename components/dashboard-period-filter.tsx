@@ -12,9 +12,11 @@ import {
 } from '@/components/ui/select';
 import {
   DASHBOARD_PERIOD_LABELS,
+  formatDashboardDateParam,
   formatDateRange,
   getDashboardPeriodRange,
   normalizeDateRange,
+  parseDashboardDateInput,
   type DashboardPeriodPreset,
   type DateRange,
 } from '@/lib/dashboard-period';
@@ -50,21 +52,26 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
       return;
     }
 
+    const parsed = parseDashboardDateInput(value);
+    if (!parsed) {
+      return;
+    }
+
     const nextRange = normalizeDateRange({
       ...range,
-      [key]: new Date(`${value}T00:00:00`),
+      [key]: parsed,
     });
     onChange('CUSTOM', nextRange);
   };
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:p-4 lg:w-auto lg:flex-row lg:items-end">
-      <div className="min-w-0 lg:min-w-56">
+    <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:p-4 xl:w-auto xl:flex-row xl:flex-wrap xl:items-end">
+      <div className="min-w-0 xl:w-56 xl:shrink-0">
         <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Periode d'analyse
         </label>
         <Select value={preset} onValueChange={handlePresetChange}>
-          <SelectTrigger className="bg-secondary">
+          <SelectTrigger className="w-full bg-secondary">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -77,8 +84,8 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
         </Select>
       </div>
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <div>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:w-[300px] xl:shrink-0">
+        <div className="min-w-0">
           <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Du
           </label>
@@ -89,7 +96,7 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
             className="bg-secondary"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Au
           </label>
@@ -102,14 +109,18 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
         </div>
       </div>
 
-      <Button variant="outline" className="min-w-0 gap-2 whitespace-normal text-left lg:ml-auto" disabled>
-        <CalendarDays className="h-4 w-4" />
-        {formatDateRange(range)}
+      <Button
+        variant="outline"
+        className="w-full min-w-0 justify-start gap-2 px-3 text-left xl:w-[270px] xl:shrink-0"
+        disabled
+      >
+        <CalendarDays className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 truncate">{formatDateRange(range)}</span>
       </Button>
     </div>
   );
 }
 
 function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return formatDashboardDateParam(date);
 }

@@ -35,12 +35,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSuperAdminDashboard } from '@/lib/dashboard/api';
+import {
+  DASHBOARD_CHART_COLORS,
+  getStatusDistributionChartColor,
+} from '@/lib/dashboard/chart-colors';
 import type {
   CompanyHealthMetric,
   PriorityAlert,
   SuperAdminDashboardResponse,
 } from '@/lib/dashboard/types';
 import {
+  formatDashboardDateParam,
   getDashboardPeriodRange,
   type DashboardPeriodPreset,
   type DateRange,
@@ -51,20 +56,6 @@ import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 type RiskLevel = 'critical' | 'warning' | 'info';
-
-const STATUS_COLORS: Record<string, string> = {
-  CREATED: 'var(--muted-foreground)',
-  PAID: 'var(--chart-3)',
-  AWAITING_DROP_OFF: 'var(--warning)',
-  RECEIVED_AT_COLLECTION_POINT: 'var(--chart-1)',
-  READY_FOR_TRANSPORT: 'var(--chart-4)',
-  IN_TRANSIT: 'var(--warning)',
-  ARRIVED_DESTINATION_POINT: 'var(--chart-2)',
-  READY_FOR_PICKUP: 'var(--chart-5)',
-  DELIVERED: 'var(--success)',
-  CANCELLED: 'var(--destructive)',
-  RETURNED: 'var(--destructive)',
-};
 
 const RISK_STYLES: Record<RiskLevel, string> = {
   critical: 'border-destructive/40 bg-destructive/10 text-destructive',
@@ -99,8 +90,8 @@ export function SuperAdminDashboard() {
 
     try {
       const response = await getSuperAdminDashboard(token, {
-        startDate: formatApiDate(periodRange.from),
-        endDate: formatApiDate(periodRange.to),
+        startDate: formatDashboardDateParam(periodRange.from),
+        endDate: formatDashboardDateParam(periodRange.to),
       });
       setDashboard(response);
     } catch (err) {
@@ -168,27 +159,36 @@ export function SuperAdminDashboard() {
           icon={Building2}
           title={t('superAdmin.overview.metrics.companies')}
           value={snapshot.metrics.companies.toString()}
-          detail={t('superAdmin.overview.metrics.companiesDetail')}
+          detail={t('superAdmin.overview.metrics.companiesDetail', {
+            values: {
+              approved: snapshot.metrics.approvedCompanies,
+              exploitable: snapshot.metrics.exploitableCompanies,
+            },
+          })}
         />
         <MetricCard
           loading={loading}
           icon={Package}
           title={t('superAdmin.overview.metrics.shipments')}
           value={snapshot.metrics.shipments.toString()}
-          detail={t('superAdmin.overview.metrics.shipmentsDetail')}
+          detail={t('superAdmin.overview.metrics.shipmentsDetail', {
+            values: { delivered: snapshot.metrics.deliveredShipments },
+          })}
         />
         <MetricCard
           loading={loading}
           icon={WalletCards}
           title={t('superAdmin.overview.metrics.platformRevenue')}
           value={formatMoney(snapshot.metrics.platformRevenue)}
-          detail={t('superAdmin.overview.metrics.platformRevenueDetail')}
+          detail={t('superAdmin.overview.metrics.platformRevenueDetail', {
+            values: { gross: formatMoney(snapshot.metrics.grossShipmentRevenue) },
+          })}
         />
         <MetricCard
           loading={loading}
           icon={TrendingUp}
           title={t('superAdmin.overview.metrics.deliveryRate')}
-          value={`${snapshot.metrics.deliveryRate}%`}
+          value={formatPercent(snapshot.metrics.deliveryRate)}
           detail={t('superAdmin.overview.metrics.exceptionRate', {
             values: { rate: snapshot.metrics.exceptionRate },
           })}
@@ -207,8 +207,8 @@ export function SuperAdminDashboard() {
                 <AreaChart data={snapshot.trends.volume}>
                   <defs>
                     <linearGradient id="superAdminVolume" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.28} />
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                      <stop offset="5%" stopColor={DASHBOARD_CHART_COLORS.volume} stopOpacity={0.28} />
+                      <stop offset="95%" stopColor={DASHBOARD_CHART_COLORS.volume} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -218,7 +218,7 @@ export function SuperAdminDashboard() {
                   <Area
                     type="monotone"
                     dataKey="colis"
-                    stroke="var(--primary)"
+                    stroke={DASHBOARD_CHART_COLORS.volume}
                     strokeWidth={2}
                     fill="url(#superAdminVolume)"
                   />
@@ -246,7 +246,7 @@ export function SuperAdminDashboard() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {snapshot.statusDistribution.map((entry) => (
+                    {snapshot.statusDistribution.filter((item) => item.value > 0).map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
@@ -287,7 +287,7 @@ export function SuperAdminDashboard() {
                   <Tooltip
                     content={<ChartTooltip formatter={(value) => formatMoney(Number(value))} />}
                   />
-                  <Bar dataKey="revenue" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" fill={DASHBOARD_CHART_COLORS.revenue} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -325,11 +325,11 @@ export function SuperAdminDashboard() {
                             ? 'bg-warning'
                             : 'bg-success',
                       )}
-                      style={{ width: `${company.score}%` }}
+                      style={{ width: `${clampPercent(company.score)}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{company.deliveryRate}% livraison</span>
+                    <span>{formatPercent(company.deliveryRate)} livraison</span>
                     <span>{formatMoney(company.revenue)}</span>
                   </div>
                 </div>
@@ -472,10 +472,14 @@ function mapSuperAdminDashboard(
   return {
     metrics: {
       companies: round(metrics?.companyCount),
+      approvedCompanies: round(metrics?.approvedCompanyCount),
+      exploitableCompanies: round(metrics?.exploitableCompanyCount),
       shipments: round(metrics?.shipmentCount),
-      platformRevenue: round(metrics?.platformRevenue),
-      deliveryRate: round(metrics?.deliveryRatePercent),
-      exceptionRate: round(metrics?.exceptionRatePercent),
+      deliveredShipments: round(metrics?.deliveredShipmentCount),
+      platformRevenue: numberValue(metrics?.platformRevenue),
+      grossShipmentRevenue: numberValue(metrics?.grossShipmentRevenue),
+      deliveryRate: numberValue(metrics?.deliveryRatePercent),
+      exceptionRate: formatPercentNumber(metrics?.exceptionRatePercent),
     },
     trends: {
       volume: (dashboard?.shipmentVolumeByDay ?? []).map((item) => ({
@@ -484,7 +488,7 @@ function mapSuperAdminDashboard(
       })),
       revenue: (dashboard?.platformRevenueByDay ?? []).map((item) => ({
         name: formatChartDate(item.date),
-        revenue: round(item.platformRevenue),
+        revenue: getDailyRevenue(item),
       })),
     },
     statusDistribution: (dashboard?.statusDistribution ?? []).map((item) => ({
@@ -498,7 +502,9 @@ function mapSuperAdminDashboard(
       {
         label: t('superAdmin.overview.operations.users'),
         value: round(operations?.totalUserCount),
-        description: t('superAdmin.overview.operations.usersDetail'),
+        description: t('superAdmin.overview.operations.usersDetail', {
+          values: { active: round(operations?.activeUserCount), total: round(operations?.totalUserCount) },
+        }),
         icon: Users,
         colorClassName: 'bg-primary/15 text-primary',
       },
@@ -512,7 +518,12 @@ function mapSuperAdminDashboard(
       {
         label: t('superAdmin.overview.operations.paidCommissions'),
         value: round(operations?.paidCommissionCount),
-        description: t('superAdmin.overview.operations.paidCommissionsDetail'),
+        description: t('superAdmin.overview.operations.paidCommissionsDetail', {
+          values: {
+            generated: round(operations?.generatedCommissionCount),
+            amount: formatMoney(numberValue(dashboard?.commissions?.paidAmount)),
+          },
+        }),
         icon: CreditCard,
         colorClassName: 'bg-success/15 text-success',
       },
@@ -542,16 +553,16 @@ function mapSuperAdminDashboard(
 }
 
 function mapCompanyHealth(company: CompanyHealthMetric) {
-  const score = round(company.healthScorePercent);
+  const score = numberValue(company.healthScorePercent);
   return {
     id: String(company.companyId),
     name: company.companyName ?? '-',
     status: company.statusLabel ?? '-',
     score,
     shipments: round(company.shipmentCount),
-    revenue: round(company.platformRevenue),
-    deliveryRate: round(company.deliveryRatePercent),
-    risk: getRiskLevel(score, round(company.exceptionRatePercent), !company.exploitable),
+    revenue: numberValue(company.platformRevenue),
+    deliveryRate: numberValue(company.deliveryRatePercent),
+    risk: getRiskLevel(score, numberValue(company.exceptionRatePercent), !company.exploitable),
   };
 }
 
@@ -576,8 +587,7 @@ function getRiskLevel(score: number, exceptionRate: number, blocked: boolean): R
 }
 
 function getStatusColor(item: { key?: string; statuses?: string[] }) {
-  const status = item.statuses?.[0] ?? item.key ?? '';
-  return STATUS_COLORS[status] ?? 'var(--muted-foreground)';
+  return getStatusDistributionChartColor(item);
 }
 
 function formatChartDate(date: string) {
@@ -586,13 +596,37 @@ function formatChartDate(date: string) {
   return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function formatApiDate(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function getDailyRevenue(item: {
+  platformRevenue?: number;
+  estimatedRevenue?: number;
+  grossShipmentRevenue?: number;
+  revenue?: number;
+  amount?: number;
+}) {
+  return numberValue(
+    item.platformRevenue ?? item.estimatedRevenue ?? item.grossShipmentRevenue ?? item.revenue ?? item.amount,
+  );
 }
 
 function round(value?: number) {
-  return Math.round(value ?? 0);
+  return Math.round(numberValue(value));
+}
+
+function numberValue(value?: number | string | null) {
+  const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatPercent(value?: number | null) {
+  return `${formatPercentNumber(value)}%`;
+}
+
+function formatPercentNumber(value?: number | null) {
+  return new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: 1,
+  }).format(numberValue(value));
+}
+
+function clampPercent(value: number) {
+  return Math.min(Math.max(value, 0), 100);
 }
