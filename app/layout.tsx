@@ -6,15 +6,15 @@ import { I18nProvider } from '@/components/i18n-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  applicationName: 'SENDAMhub',
-  title: 'SENDAMhub - Dashboard',
+  applicationName: 'Sendamhub Dashboard',
+  title: 'Sendamhub Dashboard',
   description: 'Fast. Secure. Delivered. Plateforme SENDAMhub de gestion logistique de colis',
-  generator: 'SENDAMhub',
+  generator: 'Sendamhub Dashboard',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SENDAMhub',
+    title: 'Sendamhub Dashboard',
   },
   formatDetection: {
     telephone: false,

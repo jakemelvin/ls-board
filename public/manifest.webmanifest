@@ -1,6 +1,6 @@
 {
-  "name": "SENDAMhub Dashboard",
-  "short_name": "SAH",
+  "name": "Sendamhub Dashboard",
+  "short_name": "Sendamhub Dashboard",
   "description": "Plateforme SENDAMhub de gestion logistique de colis",
   "start_url": "/",
   "scope": "/",

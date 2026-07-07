@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sendam-pwa-v4';
+const CACHE_VERSION = 'sendam-pwa-v5';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const STATIC_ASSETS = [
   '/',
