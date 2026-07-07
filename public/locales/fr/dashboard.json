@@ -994,7 +994,6 @@
       "email": "Email",
       "name": "Nom",
       "paymentMode": "Encaissement",
-      "paymentNotes": "Politique de paiement",
       "phone": "Telephone",
       "website": "Site internet"
     },
@@ -1013,15 +1012,13 @@
         "COLLECTION_POINT": "Paiement au point de collecte",
         "PLATFORM": "Paiement via la plateforme"
       },
-      "title": "Paiement",
-      "unsyncedNote": "Ces notes ne sont pas encore envoyees: elles attendent un champ backend dedie."
+      "title": "Paiement"
     },
     "placeholders": {
       "address": "Adresse legale ou siege operationnel",
       "city": "Douala",
       "email": "contact@entreprise.com",
       "name": "Sendam Express",
-      "paymentNotes": "Ex: acompte requis, delai de paiement, exceptions B2B...",
       "phone": "+237 6 00 00 00 00",
       "website": "https://www.votre-entreprise.com"
     },

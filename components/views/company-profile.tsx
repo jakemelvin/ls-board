@@ -6,7 +6,6 @@ import {
   AlertCircle,
   Building2,
   CreditCard,
-  FileText,
   Globe2,
   ImagePlus,
   Mail,
@@ -49,7 +48,6 @@ interface CompanyProfileForm {
   address: string;
   city: string;
   paymentCollectionMode: PaymentCollectionMode;
-  paymentPolicyNotes: string;
 }
 
 interface CompanyProfileViewProps {
@@ -69,7 +67,6 @@ function createFormState(company: CompanyResponse | null): CompanyProfileForm {
     address: '',
     city: company?.city ?? '',
     paymentCollectionMode: company?.paymentCollectionMode ?? 'PLATFORM',
-    paymentPolicyNotes: '',
   };
 }
 
@@ -181,7 +178,6 @@ export function CompanyProfileView({
       setForm((current) => ({
         ...createFormState(updated),
         address: current.address,
-        paymentPolicyNotes: current.paymentPolicyNotes,
       }));
       onCompanyUpdated();
       toast.success(t('companyProfile.messages.saved'));
@@ -348,7 +344,7 @@ export function CompanyProfileView({
               </CardTitle>
               <CardDescription>{t('companyProfile.payment.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <CardContent className="grid gap-4 sm:grid-cols-2">
               <FieldShell icon={CreditCard} label={t('companyProfile.form.paymentMode')}>
                 <Select
                   value={form.paymentCollectionMode}
@@ -371,21 +367,6 @@ export function CompanyProfileView({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </FieldShell>
-
-              <FieldShell icon={FileText} label={t('companyProfile.form.paymentNotes')}>
-                <Textarea
-                  value={form.paymentPolicyNotes}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, paymentPolicyNotes: event.target.value }))
-                  }
-                  placeholder={t('companyProfile.placeholders.paymentNotes')}
-                  className="min-h-28"
-                />
-                <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                  {t('companyProfile.payment.unsyncedNote')}
-                </p>
               </FieldShell>
             </CardContent>
           </Card>
