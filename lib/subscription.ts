@@ -14,11 +14,13 @@ export interface SubscriptionQuotaSummary {
 }
 
 export function formatSubscriptionPrice(plan: Pick<SubscriptionPlan, 'monthlyPrice' | 'currency'>) {
+  const currencyLabel = plan.currency === 'XAF' ? 'FCFA' : plan.currency;
+
   if (plan.monthlyPrice === 0) {
-    return '0 EUR';
+    return `0 ${currencyLabel}`;
   }
 
-  return `${plan.monthlyPrice.toLocaleString('fr-FR')} ${plan.currency}`;
+  return `${plan.monthlyPrice.toLocaleString('fr-FR')} ${currencyLabel}`;
 }
 
 export function formatSubscriptionQuota(limit: number | null) {

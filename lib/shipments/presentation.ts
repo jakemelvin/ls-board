@@ -161,7 +161,7 @@ export function formatShipmentMoney(value?: number) {
 
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'XAF',
     maximumFractionDigits: 2,
   }).format(value);
 }

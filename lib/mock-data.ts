@@ -235,7 +235,7 @@ export interface SubscriptionPlan {
   name: string;
   description: string;
   monthlyPrice: number;
-  currency: 'EUR';
+  currency: 'XAF';
   nationalShipmentLimit: number | null;
   internationalShipmentLimit: number | null;
   trialDays?: number;
@@ -279,7 +279,7 @@ export interface CommissionEntry {
   rate: number;
   baseAmount: number;
   commissionAmount: number;
-  currency: 'EUR';
+  currency: 'XAF';
   status: CommissionStatus;
   earnedAt: Date;
   paidAt?: Date;
@@ -1533,7 +1533,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Free Trial',
     description: "Decouverte complete de l'application pendant 30 jours.",
     monthlyPrice: 0,
-    currency: 'EUR',
+    currency: 'XAF',
     nationalShipmentLimit: 50,
     internationalShipmentLimit: 5,
     trialDays: 30,
@@ -1551,7 +1551,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'National Limite',
     description: 'Pour les operations locales avec un volume mensuel controle.',
     monthlyPrice: 49,
-    currency: 'EUR',
+    currency: 'XAF',
     nationalShipmentLimit: 500,
     internationalShipmentLimit: 0,
     features: [
@@ -1568,7 +1568,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'National Illimite',
     description: 'Pour les entreprises qui expedient sans limite au niveau national.',
     monthlyPrice: 99,
-    currency: 'EUR',
+    currency: 'XAF',
     nationalShipmentLimit: null,
     internationalShipmentLimit: 0,
     features: [
@@ -1586,7 +1586,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'International Limite',
     description: 'Pour developper les flux internationaux avec une limite maitrisee.',
     monthlyPrice: 179,
-    currency: 'EUR',
+    currency: 'XAF',
     nationalShipmentLimit: null,
     internationalShipmentLimit: 300,
     features: [
@@ -1603,7 +1603,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'International Illimite',
     description: 'Pour les reseaux multi-pays sans limite operationnelle.',
     monthlyPrice: 299,
-    currency: 'EUR',
+    currency: 'XAF',
     nationalShipmentLimit: null,
     internationalShipmentLimit: null,
     features: [

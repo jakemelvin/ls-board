@@ -8,7 +8,7 @@ import type {
   Vehicle,
 } from '@/lib/mock-data';
 
-export function formatMoney(amount: number, currency: 'EUR' = 'EUR') {
+export function formatMoney(amount: number, currency: 'XAF' = 'XAF') {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency,
@@ -276,7 +276,7 @@ function createCommissionEntry(input: {
     rate: input.rate,
     baseAmount: input.baseAmount,
     commissionAmount: calculateCommissionAmount(input.baseAmount, input.rate),
-    currency: 'EUR',
+    currency: 'XAF',
     status: input.status,
     earnedAt: input.earnedAt,
     paidAt,
