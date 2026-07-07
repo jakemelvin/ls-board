@@ -1,0 +1,27 @@
+import { expect, test } from '@playwright/test';
+
+test.beforeEach(async ({ page }) => {
+  await page.route('https://dstest.easywaka.com/api/delivery/auth/login', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        token: 'playwright-smoke-token',
+        userId: 1,
+        role: 'SUPER_ADMIN',
+      }),
+    });
+  });
+});
+
+test('login opens the dashboard shell without the in-app browser', async ({ page }) => {
+  await page.goto('/login');
+
+  await page.getByLabel(/Identifiant|Username/).fill('admin');
+  await page.getByLabel(/Mot de passe|Password/).fill('1234');
+  await page.getByRole('button', { name: /Se connecter|Sign in/ }).click();
+
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Administration' })).toBeVisible();
+});

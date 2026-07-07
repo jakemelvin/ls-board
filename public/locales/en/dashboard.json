@@ -436,6 +436,7 @@
         "countryId": "Country",
         "criteria": "Criteria",
         "excludeUserIds": "Users to exclude",
+        "excludeUsersPlaceholder": "Select users to exclude",
         "includeAllUsers": "Explicitly send to the whole user base",
         "loadingCompanies": "Loading companies...",
         "loadingCountries": "Loading countries...",
@@ -444,6 +445,7 @@
         "noUsers": "No users available.",
         "role": "Role",
         "roles": "Roles",
+        "searchUsers": "Search a user...",
         "selected": "{{count}} selected user(s)",
         "status": "User status",
         "subtitle": "Choose recipients before sending.",
@@ -525,6 +527,10 @@
       "LOW": "Low",
       "NORMAL": "Normal",
       "URGENT": "Urgent"
+    },
+    "push": {
+      "denied": "Push blocked",
+      "enable": "Enable push"
     },
     "status": {
       "ALL": "All",

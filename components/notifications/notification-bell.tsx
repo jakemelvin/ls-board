@@ -24,6 +24,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
+import { useFirebasePushNotifications } from '@/hooks/use-firebase-push-notifications';
 import { ApiError } from '@/lib/api-client';
 import { useTranslation } from '@/lib/i18n';
 import {
@@ -42,6 +43,7 @@ import { cn } from '@/lib/utils';
 import {
   formatNotificationDate,
   NOTIFICATION_STATUSES,
+  notificationTypeMeta,
   priorityClassName,
 } from './notification-shared';
 
@@ -51,6 +53,7 @@ interface NotificationBellProps {
 
 export function NotificationBell({ token }: NotificationBellProps) {
   const { locale, t } = useTranslation('dashboard');
+  const push = useFirebasePushNotifications(token);
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<NotificationStatus>('ALL');
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
@@ -216,6 +219,24 @@ export function NotificationBell({ token }: NotificationBellProps) {
               </p>
             </div>
             <div className="flex items-center gap-1">
+              {push.state !== 'registered' && push.state !== 'unsupported' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={push.registerDevice}
+                  disabled={push.isRegistering || push.state === 'denied'}
+                >
+                  {push.isRegistering ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bell className="h-4 w-4" />
+                  )}
+                  {push.state === 'denied'
+                    ? t('notifications.push.denied')
+                    : t('notifications.push.enable')}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -290,6 +311,9 @@ export function NotificationBell({ token }: NotificationBellProps) {
             <div className="divide-y divide-border">
               {notifications.map((notification) => {
                 const busy = actionId === notification.id;
+                const typeMeta = notificationTypeMeta[notification.type];
+                const TypeIcon = typeMeta.icon;
+
                 return (
                   <article
                     key={notification.id}
@@ -301,10 +325,16 @@ export function NotificationBell({ token }: NotificationBellProps) {
                     <div className="flex items-start gap-3">
                       <span
                         className={cn(
-                          'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
-                          notification.read ? 'bg-muted' : 'bg-primary',
+                          'relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+                          typeMeta.className,
+                          notification.read && 'opacity-70',
                         )}
-                      />
+                      >
+                        <TypeIcon className="h-4 w-4" aria-hidden="true" />
+                        {!notification.read && !notification.archived && (
+                          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-primary" />
+                        )}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="min-w-0 flex-1 break-words text-sm font-semibold text-foreground">

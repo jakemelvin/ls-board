@@ -1,10 +1,13 @@
-const CACHE_VERSION = 'sendam-pwa-v2';
+const CACHE_VERSION = 'sendam-pwa-v4';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
   '/manifest.webmanifest',
-  '/icon.svg',
+  '/brand/sendamhub-logo.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
   '/apple-icon.png',
   '/icon-light-32x32.png',
   '/icon-dark-32x32.png'
@@ -80,6 +83,49 @@ self.addEventListener('fetch', (event) => {
         caches.open(APP_SHELL_CACHE).then((cache) => cache.put(request, clone));
         return response;
       });
+    })
+  );
+});
+
+self.addEventListener('push', (event) => {
+  const fallbackTitle = 'SENDAMhub';
+  let payload = {};
+
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = {};
+  }
+
+  const notification = payload.notification || {};
+  const data = payload.data || {};
+  const title = notification.title || data.title || fallbackTitle;
+  const options = {
+    body: notification.body || data.body || data.message,
+    icon: '/icon-512.png',
+    badge: '/icon-light-32x32.png',
+    data: {
+      url: data.url || data.click_action || '/',
+      ...data,
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const matchingClient = clients.find((client) => client.url === targetUrl);
+      if (matchingClient) {
+        return matchingClient.focus();
+      }
+
+      return self.clients.openWindow(targetUrl);
     })
   );
 });

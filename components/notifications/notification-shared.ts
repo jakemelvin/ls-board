@@ -1,3 +1,19 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Bell,
+  Building2,
+  CheckCircle2,
+  CreditCard,
+  Megaphone,
+  MessageSquareText,
+  PackageCheck,
+  PackagePlus,
+  Star,
+  Truck,
+  UserRound,
+  XCircle,
+} from 'lucide-react';
+
 import type {
   NotificationPriority,
   NotificationStatus,
@@ -38,6 +54,63 @@ export const priorityClassName: Record<NotificationPriority, string> = {
   NORMAL: 'border-primary/20 bg-primary/10 text-primary',
   HIGH: 'border-warning/30 bg-warning/10 text-warning',
   URGENT: 'border-destructive/30 bg-destructive/10 text-destructive',
+};
+
+export const notificationTypeMeta: Record<
+  NotificationType,
+  {
+    icon: LucideIcon;
+    className: string;
+  }
+> = {
+  SYSTEM: {
+    icon: Bell,
+    className: 'border-primary/20 bg-primary/10 text-primary',
+  },
+  ACCOUNT: {
+    icon: UserRound,
+    className: 'border-chart-3/20 bg-chart-3/10 text-chart-3',
+  },
+  PROMOTION: {
+    icon: Megaphone,
+    className: 'border-warning/30 bg-warning/10 text-warning',
+  },
+  COMPANY_ANNOUNCEMENT: {
+    icon: Building2,
+    className: 'border-chart-4/20 bg-chart-4/10 text-chart-4',
+  },
+  COMPANY_REVIEW: {
+    icon: Star,
+    className: 'border-warning/30 bg-warning/10 text-warning',
+  },
+  SHIPMENT_CREATED: {
+    icon: PackagePlus,
+    className: 'border-primary/20 bg-primary/10 text-primary',
+  },
+  SHIPMENT_IN_TRANSIT: {
+    icon: Truck,
+    className: 'border-chart-2/20 bg-chart-2/10 text-chart-2',
+  },
+  SHIPMENT_TRANSIT_NOTE: {
+    icon: MessageSquareText,
+    className: 'border-chart-5/20 bg-chart-5/10 text-chart-5',
+  },
+  SHIPMENT_READY_FOR_PICKUP: {
+    icon: PackageCheck,
+    className: 'border-success/30 bg-success/10 text-success',
+  },
+  SHIPMENT_DELIVERED: {
+    icon: CheckCircle2,
+    className: 'border-success/30 bg-success/10 text-success',
+  },
+  SHIPMENT_CANCELLED: {
+    icon: XCircle,
+    className: 'border-destructive/30 bg-destructive/10 text-destructive',
+  },
+  PAYMENT_STATUS_UPDATED: {
+    icon: CreditCard,
+    className: 'border-chart-1/20 bg-chart-1/10 text-chart-1',
+  },
 };
 
 export function formatNotificationDate(value: string | undefined, locale: string) {

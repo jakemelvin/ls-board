@@ -4,14 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Archive,
   Bell,
+  Check,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Loader2,
   RefreshCw,
   Send,
   Smartphone,
   Trash2,
+  X,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +22,19 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -66,6 +82,7 @@ import {
   NOTIFICATION_PRIORITIES,
   NOTIFICATION_STATUSES,
   NOTIFICATION_TYPES,
+  notificationTypeMeta,
   priorityClassName,
 } from '@/components/notifications/notification-shared';
 
@@ -107,7 +124,6 @@ interface ComposerForm {
   companyId: string;
   countryId: string;
   criteriaUserIds: string;
-  excludeUserIds: string;
   includeAllUsers: boolean;
   relatedEntityType: string;
   relatedEntityId: string;
@@ -129,7 +145,6 @@ function emptyComposerForm(): ComposerForm {
     companyId: '',
     countryId: '',
     criteriaUserIds: '',
-    excludeUserIds: '',
     includeAllUsers: false,
     relatedEntityType: '',
     relatedEntityId: '',
@@ -198,6 +213,122 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
+function userDisplayName(user: UserResponse) {
+  const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+  return fullName || user.username || `#${user.id}`;
+}
+
+function UserMultiSelect({
+  id,
+  users,
+  selectedIds,
+  onChange,
+  placeholder,
+  searchPlaceholder,
+  emptyLabel,
+  selectedLabel,
+  disabled,
+}: {
+  id: string;
+  users: UserResponse[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyLabel: string;
+  selectedLabel: string;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation('dashboard');
+  const selectedUsers = users.filter((user) => selectedIds.includes(user.id));
+
+  const toggleSelection = (idToToggle: number) => {
+    onChange(
+      selectedIds.includes(idToToggle)
+        ? selectedIds.filter((item) => item !== idToToggle)
+        : Array.from(new Set([...selectedIds, idToToggle])),
+    );
+  };
+
+  const removeSelection = (idToRemove: number) => {
+    onChange(selectedIds.filter((item) => item !== idToRemove));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            role="combobox"
+            disabled={disabled}
+            className="min-h-10 w-full justify-between gap-2 px-3 text-left font-normal"
+          >
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              {selectedIds.length > 0 ? selectedLabel : placeholder}
+            </span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder={searchPlaceholder} />
+            <CommandList>
+              <CommandEmpty>{emptyLabel}</CommandEmpty>
+              <CommandGroup>
+                {users.map((user) => {
+                  const selected = selectedIds.includes(user.id);
+
+                  return (
+                    <CommandItem
+                      key={user.id}
+                      value={`${userDisplayName(user)} ${user.username} ${user.id}`}
+                      onSelect={() => toggleSelection(user.id)}
+                    >
+                      <Check
+                        className={cn(
+                          'h-4 w-4 shrink-0',
+                          selected ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{userDisplayName(user)}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          @{user.username} - {t(roleLabelKey(user.role))}
+                        </span>
+                      </span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {selectedUsers.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedUsers.map((user) => (
+            <Badge key={user.id} variant="secondary" className="gap-1 rounded-full pr-1">
+              <span className="max-w-40 truncate">{userDisplayName(user)}</span>
+              <button
+                type="button"
+                className="rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+                onClick={() => removeSelection(user.id)}
+                aria-label={userDisplayName(user)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NotificationCard({
   notification,
   locale,
@@ -215,6 +346,8 @@ function NotificationCard({
 }) {
   const { t } = useTranslation('dashboard');
   const busy = actionId === notification.id;
+  const typeMeta = notificationTypeMeta[notification.type];
+  const TypeIcon = typeMeta.icon;
 
   return (
     <div
@@ -224,38 +357,49 @@ function NotificationCard({
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 gap-3">
+          <span
+            className={cn(
+              'relative mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
+              typeMeta.className,
+              notification.read && 'opacity-75',
+            )}
+          >
+            <TypeIcon className="h-5 w-5" aria-hidden="true" />
             {!notification.read && !notification.archived && (
-              <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-primary" />
             )}
-            <h3 className="break-words font-semibold text-foreground">{notification.title}</h3>
-            <Badge
-              variant="outline"
-              className={cn('rounded-full border', priorityClassName[notification.priority])}
-            >
-              {t(`notifications.priority.${notification.priority}`)}
-            </Badge>
-          </div>
-          <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
-            {notification.message}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">{t(`notifications.types.${notification.type}`)}</Badge>
-            {notification.archived && (
-              <Badge variant="outline">{t('notifications.status.ARCHIVED')}</Badge>
-            )}
-            {notification.createdAt && (
-              <span className="inline-flex items-center px-1">
-                {formatNotificationDate(notification.createdAt, locale)}
-              </span>
-            )}
-            {notification.relatedEntityType && (
-              <span className="inline-flex items-center px-1">
-                {notification.relatedEntityType}
-                {notification.relatedEntityId ? ` #${notification.relatedEntityId}` : ''}
-              </span>
-            )}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="break-words font-semibold text-foreground">{notification.title}</h3>
+              <Badge
+                variant="outline"
+                className={cn('rounded-full border', priorityClassName[notification.priority])}
+              >
+                {t(`notifications.priority.${notification.priority}`)}
+              </Badge>
+            </div>
+            <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
+              {notification.message}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">{t(`notifications.types.${notification.type}`)}</Badge>
+              {notification.archived && (
+                <Badge variant="outline">{t('notifications.status.ARCHIVED')}</Badge>
+              )}
+              {notification.createdAt && (
+                <span className="inline-flex items-center px-1">
+                  {formatNotificationDate(notification.createdAt, locale)}
+                </span>
+              )}
+              {notification.relatedEntityType && (
+                <span className="inline-flex items-center px-1">
+                  {notification.relatedEntityType}
+                  {notification.relatedEntityId ? ` #${notification.relatedEntityId}` : ''}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 justify-end gap-1">
@@ -523,6 +667,7 @@ function ComposerTab({ token }: { token: string }) {
   const [companies, setCompanies] = useState<CompanyResponse[]>([]);
   const [countries, setCountries] = useState<CountryResponse[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [excludedUserIds, setExcludedUserIds] = useState<number[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [countriesLoading, setCountriesLoading] = useState(false);
@@ -531,13 +676,38 @@ function ComposerTab({ token }: { token: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (form.targetMode !== 'users') return;
+    if (users.length > 0) return;
+    let cancelled = false;
+
+    async function loadUsers() {
+      const pageSize = 100;
+      const maxPages = 20;
+      const nextUsers: UserResponse[] = [];
+
+      for (let page = 0; page < maxPages; page += 1) {
+        const response = await getUsers(token, { page, size: pageSize });
+        nextUsers.push(...(response.content ?? []));
+        if (response.last || response.content.length < pageSize) break;
+      }
+
+      if (!cancelled) {
+        setUsers(nextUsers);
+      }
+    }
+
     setUsersLoading(true);
-    getUsers(token, { page: 0, size: 50 })
-      .then((page) => setUsers(page.content ?? []))
-      .catch(() => setUsers([]))
-      .finally(() => setUsersLoading(false));
-  }, [form.targetMode, token]);
+    loadUsers()
+      .catch(() => {
+        if (!cancelled) setUsers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setUsersLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, users.length]);
 
   useEffect(() => {
     if (form.targetMode !== 'criteria' || countries.length > 0) return;
@@ -600,7 +770,6 @@ function ComposerTab({ token }: { token: string }) {
     if (key === 'title') clearErrors('title');
     if (key === 'message') clearErrors('message');
     if (key === 'criteriaUserIds') clearErrors('criteriaUserIds', 'criteria');
-    if (key === 'excludeUserIds') clearErrors('excludeUserIds');
     if (key === 'companyId') clearErrors('companyId', 'criteria');
     if (key === 'countryId') clearErrors('countryId', 'criteria');
     if (key === 'city' || key === 'userStatus' || key === 'includeAllUsers') clearErrors('criteria');
@@ -622,6 +791,11 @@ function ComposerTab({ token }: { token: string }) {
     setSelectedUserIds((prev) =>
       checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id),
     );
+  };
+
+  const updateExcludedUsers = (ids: number[]) => {
+    clearErrors('excludeUserIds');
+    setExcludedUserIds(ids);
   };
 
   const toggleRole = (role: ApiRole, checked: boolean) => {
@@ -676,11 +850,6 @@ function ComposerTab({ token }: { token: string }) {
       nextErrors.criteriaUserIds = t('notifications.composer.validation.userIds');
     }
 
-    const excludeUserIds = parsePositiveIntegerList(form.excludeUserIds);
-    if (excludeUserIds.invalid) {
-      nextErrors.excludeUserIds = t('notifications.composer.validation.excludeUserIds');
-    }
-
     const userIds =
       form.targetMode === 'users'
         ? selectedUserIds
@@ -704,12 +873,12 @@ function ComposerTab({ token }: { token: string }) {
       form.targetMode === 'users'
         ? {
             userIds,
-            excludeUserIds: excludeUserIds.values,
+            excludeUserIds: excludedUserIds.length > 0 ? excludedUserIds : undefined,
             includeAllUsers: false,
           }
         : {
             userIds,
-            excludeUserIds: excludeUserIds.values,
+            excludeUserIds: excludedUserIds.length > 0 ? excludedUserIds : undefined,
             roles: form.roles.length > 0 ? form.roles : undefined,
             status: form.userStatus === 'ALL' ? undefined : form.userStatus,
             city: form.city.trim() || undefined,
@@ -758,6 +927,7 @@ function ComposerTab({ token }: { token: string }) {
       });
       setForm(emptyComposerForm());
       setSelectedUserIds([]);
+      setExcludedUserIds([]);
       setSubmitError(null);
     } catch (err) {
       const description = err instanceof ApiError ? err.message : t('common.genericError');
@@ -970,14 +1140,22 @@ function ComposerTab({ token }: { token: string }) {
               <Label htmlFor="notification-users-exclude">
                 {t('notifications.composer.target.excludeUserIds')}
               </Label>
-              <Input
+              <UserMultiSelect
                 id="notification-users-exclude"
-                value={form.excludeUserIds}
-                onChange={(event) => update('excludeUserIds', event.target.value)}
-                placeholder={t('notifications.composer.target.userIdsPlaceholder')}
-                aria-invalid={Boolean(fieldErrors.excludeUserIds)}
-                aria-describedby={fieldErrors.excludeUserIds ? 'notification-users-exclude-error' : undefined}
-                className={cn(fieldErrors.excludeUserIds && 'border-destructive focus-visible:ring-destructive/30')}
+                users={users}
+                selectedIds={excludedUserIds}
+                onChange={updateExcludedUsers}
+                placeholder={
+                  usersLoading
+                    ? t('notifications.composer.target.loadingUsers')
+                    : t('notifications.composer.target.excludeUsersPlaceholder')
+                }
+                searchPlaceholder={t('notifications.composer.target.searchUsers')}
+                emptyLabel={t('notifications.composer.target.noUsers')}
+                selectedLabel={t('notifications.composer.target.selected', {
+                  values: { count: excludedUserIds.length },
+                })}
+                disabled={usersLoading || users.length === 0}
               />
               <FieldError id="notification-users-exclude-error" message={fieldErrors.excludeUserIds} />
             </div>
@@ -1062,14 +1240,22 @@ function ComposerTab({ token }: { token: string }) {
                 <Label htmlFor="notification-exclude-user-ids">
                   {t('notifications.composer.target.excludeUserIds')}
                 </Label>
-                <Input
+                <UserMultiSelect
                   id="notification-exclude-user-ids"
-                  value={form.excludeUserIds}
-                  onChange={(event) => update('excludeUserIds', event.target.value)}
-                  placeholder={t('notifications.composer.target.userIdsPlaceholder')}
-                  aria-invalid={Boolean(fieldErrors.excludeUserIds)}
-                  aria-describedby={fieldErrors.excludeUserIds ? 'notification-exclude-user-ids-error' : undefined}
-                  className={cn(fieldErrors.excludeUserIds && 'border-destructive focus-visible:ring-destructive/30')}
+                  users={users}
+                  selectedIds={excludedUserIds}
+                  onChange={updateExcludedUsers}
+                  placeholder={
+                    usersLoading
+                      ? t('notifications.composer.target.loadingUsers')
+                      : t('notifications.composer.target.excludeUsersPlaceholder')
+                  }
+                  searchPlaceholder={t('notifications.composer.target.searchUsers')}
+                  emptyLabel={t('notifications.composer.target.noUsers')}
+                  selectedLabel={t('notifications.composer.target.selected', {
+                    values: { count: excludedUserIds.length },
+                  })}
+                  disabled={usersLoading || users.length === 0}
                 />
                 <FieldError id="notification-exclude-user-ids-error" message={fieldErrors.excludeUserIds} />
               </div>
