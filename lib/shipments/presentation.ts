@@ -34,6 +34,19 @@ export const SHIPMENT_PAYMENT_STATUS_LABELS: Record<ShipmentPaymentStatus, strin
   PAYMENT_AT_COLLECTION_POINT: 'Paiement au point',
 };
 
+export function getShipmentPaymentStatusClassName(status: ShipmentPaymentStatus) {
+  switch (status) {
+    case 'PAID':
+      return 'bg-success/15 text-success';
+    case 'PAYMENT_AT_COLLECTION_POINT':
+      return 'bg-primary/15 text-primary';
+    case 'UNPAID':
+      return 'bg-destructive/15 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
 export const SHIPMENT_COLLECTION_MODE_LABELS: Record<ShipmentPaymentCollectionMode, string> = {
   PLATFORM: 'Plateforme',
   COLLECTION_POINT: 'Point de collecte',

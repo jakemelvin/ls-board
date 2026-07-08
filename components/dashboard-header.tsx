@@ -1,12 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LogOut } from 'lucide-react';
 
 import { CompanyBrand } from '@/components/company-brand';
+import { DashboardProfileMenu } from '@/components/dashboard-profile-menu';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { NotificationBell } from '@/components/notifications/notification-bell';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { logout } from '@/lib/auth/api';
 import { useAuthStore } from '@/lib/auth/store';
 import type { CompanyResponse } from '@/lib/auth/types';
@@ -95,29 +94,7 @@ export function DashboardHeader({
 
         {token && <NotificationBell token={token} />}
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Avatar className="h-10 w-10 rounded-xl">
-            {currentUser.profilePhotoUrl && (
-              <AvatarImage src={currentUser.profilePhotoUrl} alt={currentUser.name} />
-            )}
-            <AvatarFallback className="rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-              {currentUser.avatar}
-            </AvatarFallback>
-          </Avatar>
-          <div className="hidden sm:block">
-            <p className="text-sm font-medium text-foreground">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{currentUser.email}</p>
-          </div>
-          <ChevronDown className="hidden h-4 w-4 text-muted-foreground sm:block" />
-        </div>
-
-        <button
-          onClick={handleLogout}
-          title={t('shell.logout')}
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <DashboardProfileMenu currentUser={currentUser} onLogout={() => void handleLogout()} />
       </div>
     </header>
   );

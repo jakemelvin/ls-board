@@ -65,6 +65,15 @@ function LoginForm() {
         token: response.token,
         userId: response.userId,
         role: response.role,
+        user: {
+          id: response.userId,
+          firstName: response.firstName,
+          lastName: response.lastName,
+          username: response.username,
+          email: response.email,
+          role: response.role,
+          profileImageUrl: response.profileImageUrl,
+        },
       });
 
       const from = searchParams.get('from') ?? '/';
@@ -144,6 +153,14 @@ function LoginForm() {
           {errors.password && (
             <p className="text-xs text-destructive">{errors.password.message}</p>
           )}
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('forgotPassword.link')}
+            </Link>
+          </div>
         </div>
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>

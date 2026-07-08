@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const AUTH_COOKIE = 'sendam_auth_token';
 
-const PUBLIC_PATHS = ['/login', '/register', '/pending'];
+const PUBLIC_PATHS = ['/login', '/register', '/pending', '/forgot-password'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

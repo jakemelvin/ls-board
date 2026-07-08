@@ -13,6 +13,9 @@
     "hide": "Masquer le mot de passe",
     "show": "Afficher le mot de passe"
   },
+  "forgotPassword": {
+    "link": "Mot de passe oublie ?"
+  },
   "actions": {
     "submit": "Se connecter",
     "submitting": "Connexion..."
@@ -30,5 +33,58 @@
   "validation": {
     "usernameRequired": "Nom d'utilisateur requis",
     "passwordRequired": "Mot de passe requis"
+  },
+  "reset": {
+    "title": "Reinitialiser le mot de passe",
+    "subtitle": "Recevez un code, verifiez-le, puis choisissez un nouveau mot de passe.",
+    "steps": {
+      "request": "Email",
+      "verify": "Code",
+      "reset": "Mot de passe"
+    },
+    "fields": {
+      "email": "Adresse email",
+      "code": "Code de verification",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe"
+    },
+    "placeholders": {
+      "email": "vous@entreprise.com",
+      "code": "0000",
+      "newPassword": "Au moins 8 caracteres",
+      "confirmPassword": "Repetez le nouveau mot de passe"
+    },
+    "actions": {
+      "backToLogin": "Retour a la connexion",
+      "changeEmail": "Changer",
+      "resendCode": "Renvoyer le code",
+      "resending": "Renvoi...",
+      "resetPassword": "Changer le mot de passe",
+      "resetting": "Changement...",
+      "sendCode": "Recevoir le code",
+      "sending": "Envoi...",
+      "verifyCode": "Verifier le code",
+      "verifying": "Verification..."
+    },
+    "messages": {
+      "codeSent": "Un code de verification a ete envoye.",
+      "codeVerified": "Code verifie. Choisissez votre nouveau mot de passe.",
+      "requestFailed": "Impossible d'envoyer le code de reinitialisation.",
+      "resendDone": "Un nouveau code a ete envoye.",
+      "resendFailed": "Impossible de renvoyer le code.",
+      "resetDone": "Votre mot de passe a ete mis a jour.",
+      "resetFailed": "Impossible de reinitialiser le mot de passe.",
+      "verifyFailed": "Impossible de verifier ce code."
+    },
+    "validation": {
+      "codeInvalid": "Le code doit contenir exactement 4 chiffres.",
+      "codeRequired": "Code requis",
+      "confirmPasswordRequired": "Confirmation requise",
+      "emailInvalid": "Adresse email invalide",
+      "emailRequired": "Adresse email requise",
+      "passwordMin": "Le mot de passe doit contenir au moins 8 caracteres.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "passwordRequired": "Nouveau mot de passe requis"
+    }
   }
 }

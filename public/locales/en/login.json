@@ -13,6 +13,9 @@
     "hide": "Hide password",
     "show": "Show password"
   },
+  "forgotPassword": {
+    "link": "Forgot password?"
+  },
   "actions": {
     "submit": "Sign in",
     "submitting": "Signing in..."
@@ -30,5 +33,58 @@
   "validation": {
     "usernameRequired": "Username is required",
     "passwordRequired": "Password is required"
+  },
+  "reset": {
+    "title": "Reset password",
+    "subtitle": "Receive a code, verify it, then choose a new password.",
+    "steps": {
+      "request": "Email",
+      "verify": "Code",
+      "reset": "Password"
+    },
+    "fields": {
+      "email": "Email address",
+      "code": "Verification code",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password"
+    },
+    "placeholders": {
+      "email": "you@company.com",
+      "code": "0000",
+      "newPassword": "At least 8 characters",
+      "confirmPassword": "Repeat the new password"
+    },
+    "actions": {
+      "backToLogin": "Back to sign in",
+      "changeEmail": "Change",
+      "resendCode": "Resend code",
+      "resending": "Resending...",
+      "resetPassword": "Change password",
+      "resetting": "Changing...",
+      "sendCode": "Receive code",
+      "sending": "Sending...",
+      "verifyCode": "Verify code",
+      "verifying": "Verifying..."
+    },
+    "messages": {
+      "codeSent": "A verification code has been sent.",
+      "codeVerified": "Code verified. Choose your new password.",
+      "requestFailed": "Unable to send the reset code.",
+      "resendDone": "A new code has been sent.",
+      "resendFailed": "Unable to resend the code.",
+      "resetDone": "Your password has been updated.",
+      "resetFailed": "Unable to reset the password.",
+      "verifyFailed": "Unable to verify this code."
+    },
+    "validation": {
+      "codeInvalid": "The code must contain exactly 4 digits.",
+      "codeRequired": "Code is required",
+      "confirmPasswordRequired": "Confirmation is required",
+      "emailInvalid": "Invalid email address",
+      "emailRequired": "Email address is required",
+      "passwordMin": "The password must contain at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordRequired": "New password is required"
+    }
   }
 }

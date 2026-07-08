@@ -20,6 +20,35 @@ export interface LoginResponse {
   token: string;
   userId: number;
   role: ApiRole;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+  profileImageUrl?: string;
+}
+
+export interface MessageResponse {
+  message?: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordVerifyRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
 }
 
 export interface CreateUserRequest {
@@ -58,6 +87,11 @@ export interface CountryResponse {
   isoCode: string;
 }
 
+export interface LanguageResponse {
+  languageCode?: string;
+  languageName?: string;
+}
+
 export interface CompanyResponse {
   id: number;
   name: string;
@@ -85,6 +119,7 @@ export interface UserResponse {
   idCardNumber?: string;
   commissionPercentage?: number;
   country?: CountryResponse;
+  language?: LanguageResponse;
   city?: string;
   address?: string;
   role: ApiRole;
@@ -93,9 +128,36 @@ export interface UserResponse {
   fcmToken?: string;
 }
 
+export interface UpdateUserProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  city?: string;
+  address?: string;
+  gender?: Gender;
+  language?: string;
+  idCardNumber?: string;
+}
+
+export interface AuthUser {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  address?: string;
+  idCardNumber?: string;
+  language?: string;
+  role?: ApiRole;
+  status?: UserStatus;
+  profileImageUrl?: string;
+}
+
 export interface AuthSession {
   token: string;
   userId: number;
   role: ApiRole;
   companyId?: number;
+  user?: AuthUser;
 }

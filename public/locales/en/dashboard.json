@@ -79,6 +79,33 @@
       "transportModes": "Transport modes"
     }
   },
+  "profile": {
+    "description": "Review the information returned by the API and update your profile.",
+    "fields": {
+      "address": "Address",
+      "city": "City",
+      "email": "Email",
+      "firstName": "First name",
+      "idCardNumber": "ID card number",
+      "language": "Language",
+      "lastName": "Last name",
+      "phone": "Phone",
+      "username": "Username"
+    },
+    "menu": {
+      "open": "View profile"
+    },
+    "messages": {
+      "loadFailed": "Unable to load the profile.",
+      "loading": "Loading profile...",
+      "saved": "Profile updated",
+      "savedDescription": "Your information has been synced with the backend.",
+      "saveFailed": "Unable to update profile",
+      "sessionExpired": "Session expired."
+    },
+    "photoHint": "The photo is sent through the backend profile endpoint.",
+    "title": "My profile"
+  },
   "collectorDashboard": {
     "location": {
       "address": "Address",

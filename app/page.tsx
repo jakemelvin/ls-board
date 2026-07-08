@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
@@ -37,7 +37,7 @@ import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { useCompanyContext } from '@/lib/company/use-company';
 import { useStore } from '@/lib/store';
-import type { ApiRole } from '@/lib/auth/types';
+import type { ApiRole, AuthUser } from '@/lib/auth/types';
 
 // Map roles to their default users
 const ROLE_USERS: Record<UserRole, User> = {
@@ -75,7 +75,7 @@ function mapApiRoleToUserRole(role: ApiRole | undefined): UserRole {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { token, role: authRole, isHydrated } = useAuthStore();
+  const { token, role: authRole, isHydrated, user: authUser } = useAuthStore();
   const { users } = useStore();
   const shouldShowCompanyBrand =
     authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY';
@@ -108,6 +108,18 @@ export default function DashboardPage() {
     didSyncRoleFromAuth.current = true;
   }, [authRole, isHydrated]);
 
+  const demoUser =
+    users.find((user) => user.role === currentRole) ?? ROLE_USERS[currentRole];
+
+  const currentUser = useMemo(() => {
+    const authenticatedRole = mapApiRoleToUserRole(authRole);
+    if (currentRole !== authenticatedRole) {
+      return demoUser;
+    }
+
+    return mergeAuthenticatedUser(demoUser, authUser);
+  }, [authRole, authUser, currentRole, demoUser]);
+
   if (!isHydrated || !token) {
     return (
       <div className="flex h-dvh items-center justify-center bg-background">
@@ -115,9 +127,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const currentUser =
-    users.find((user) => user.role === currentRole) ?? ROLE_USERS[currentRole];
 
   const handleRoleChange = (role: UserRole) => {
     setCurrentRole(role);
@@ -256,5 +265,41 @@ export default function DashboardPage() {
         company={shouldShowCompanyBrand ? company : null}
       />
     </div>
+  );
+}
+
+function mergeAuthenticatedUser(fallback: User, authUser?: AuthUser): User {
+  if (!authUser) {
+    return fallback;
+  }
+
+  const firstName = authUser.firstName ?? fallback.firstName;
+  const lastName = authUser.lastName ?? fallback.lastName;
+  const name = [firstName, lastName].filter(Boolean).join(' ').trim() || fallback.name;
+
+  return {
+    ...fallback,
+    id: String(authUser.id ?? fallback.id),
+    email: authUser.email ?? fallback.email,
+    name,
+    firstName,
+    lastName,
+    username: authUser.username ?? fallback.username,
+    phone: authUser.phone ?? fallback.phone,
+    cityId: authUser.city ?? fallback.cityId,
+    address: authUser.address ?? fallback.address,
+    avatar: getInitials(name),
+    profilePhotoUrl: authUser.profileImageUrl ?? fallback.profilePhotoUrl,
+  };
+}
+
+function getInitials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'U'
   );
 }

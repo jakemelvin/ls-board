@@ -46,6 +46,7 @@ import {
 } from '@/lib/shipments/api';
 import {
   formatShipmentDate,
+  getShipmentPaymentStatusClassName,
   getShipmentStatusClassName,
   getShipmentStatusLabel,
   SHIPMENT_PAYMENT_STATUS_LABELS,
@@ -135,9 +136,21 @@ export function CollectorReception() {
   }, [searchTerm, shipments]);
 
   const isReferenceReady = referenceInput.trim().length > 0;
-  const isReadyForFinalValidation = isIdentityChecked && isParcelChecked && isReferenceReady;
+  const selectedShipmentIsUnpaid = selectedShipment?.paymentStatus === 'UNPAID';
+  const isReadyForFinalValidation =
+    isIdentityChecked && isParcelChecked && isReferenceReady && !selectedShipmentIsUnpaid;
 
   const openValidateDialog = (shipment: CollectorIncomingShipment) => {
+    if (shipment.paymentStatus === 'UNPAID') {
+      toast({
+        title: 'Paiement requis',
+        description:
+          'Ce colis est impaye. Le collecteur ne peut pas valider sa reception tant que le paiement n est pas regularise.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSelectedShipment(shipment);
     setIsIdentityChecked(false);
     setIsParcelChecked(false);
@@ -185,6 +198,16 @@ export function CollectorReception() {
 
   const handleFinalValidation = async () => {
     if (!token || !selectedShipment || !isReadyForFinalValidation) {
+      return;
+    }
+
+    if (selectedShipment.paymentStatus === 'UNPAID') {
+      toast({
+        title: 'Validation bloquee',
+        description:
+          'Ce colis est impaye. Le paiement doit etre regularise avant la validation.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -329,13 +352,16 @@ export function CollectorReception() {
                       <TableHead className="text-muted-foreground">Colis</TableHead>
                       <TableHead className="text-muted-foreground">Client</TableHead>
                       <TableHead className="text-muted-foreground">Trajet</TableHead>
-                      <TableHead className="text-muted-foreground">Paiement</TableHead>
+                      <TableHead className="text-muted-foreground">Statut paiement</TableHead>
                       <TableHead className="text-muted-foreground">Statut</TableHead>
                       <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredShipments.map((shipment) => (
+                    {filteredShipments.map((shipment) => {
+                      const isUnpaid = shipment.paymentStatus === 'UNPAID';
+
+                      return (
                       <TableRow key={shipment.shipmentId} className="border-border">
                         <TableCell>
                           <div className="space-y-1">
@@ -376,11 +402,23 @@ export function CollectorReception() {
                             <p className="font-medium text-foreground">
                               {formatReceptionMoney(shipment.price)}
                             </p>
-                            <p className="text-muted-foreground">
-                              {shipment.paymentStatus
-                                ? SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]
-                                : 'Paiement non renseigne'}
-                            </p>
+                            {shipment.paymentStatus ? (
+                              <Badge
+                                className={cn(
+                                  'border-0',
+                                  getShipmentPaymentStatusClassName(shipment.paymentStatus),
+                                )}
+                              >
+                                {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Paiement non renseigne</Badge>
+                            )}
+                            {isUnpaid && (
+                              <p className="text-xs text-destructive">
+                                Validation bloquee tant que le colis est impaye.
+                              </p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -406,15 +444,22 @@ export function CollectorReception() {
                             <Button
                               size="sm"
                               className="gap-1 bg-success text-success-foreground hover:bg-success/90"
+                              disabled={isUnpaid}
+                              title={
+                                isUnpaid
+                                  ? 'Validation impossible pour un colis impaye'
+                                  : undefined
+                              }
                               onClick={() => openValidateDialog(shipment)}
                             >
                               <PackageCheck className="h-4 w-4" />
-                              Receptionner
+                              {isUnpaid ? 'Impaye' : 'Receptionner'}
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
 
                     {filteredShipments.length === 0 && (
                       <TableRow>
@@ -499,6 +544,11 @@ export function CollectorReception() {
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4">
+                {selectedShipmentIsUnpaid && (
+                  <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                    Ce colis est impaye. La validation de reception est bloquee.
+                  </div>
+                )}
                 <div className="mb-3 flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
                   <div>

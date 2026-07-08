@@ -79,6 +79,33 @@
       "transportModes": "Modes de transport"
     }
   },
+  "profile": {
+    "description": "Consultez les informations renvoyees par l'API et mettez a jour votre profil.",
+    "fields": {
+      "address": "Adresse",
+      "city": "Ville",
+      "email": "Email",
+      "firstName": "Prenom",
+      "idCardNumber": "Piece d'identite",
+      "language": "Langue",
+      "lastName": "Nom",
+      "phone": "Telephone",
+      "username": "Nom d'utilisateur"
+    },
+    "menu": {
+      "open": "Voir le profil"
+    },
+    "messages": {
+      "loadFailed": "Impossible de charger le profil.",
+      "loading": "Chargement du profil...",
+      "saved": "Profil mis a jour",
+      "savedDescription": "Vos informations ont ete synchronisees avec le backend.",
+      "saveFailed": "Mise a jour impossible",
+      "sessionExpired": "Session expiree."
+    },
+    "photoHint": "La photo est envoyee via l'endpoint profil du backend.",
+    "title": "Mon profil"
+  },
   "collectorDashboard": {
     "location": {
       "address": "Adresse",
