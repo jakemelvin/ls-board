@@ -87,7 +87,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Tableau de bord collecteur</h2>
@@ -265,41 +265,68 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           <CardDescription>Colis clients a verifier en priorite.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Reference</TableHead>
-                <TableHead className="text-muted-foreground">Expediteur</TableHead>
-                <TableHead className="text-muted-foreground">KYC</TableHead>
-                <TableHead className="text-muted-foreground">Destination</TableHead>
-                <TableHead className="text-muted-foreground">Poids</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(dashboard?.pendingReceptions ?? []).map((shipment) => (
-                <TableRow key={shipment.shipmentId} className="border-border">
-                  <TableCell className="font-mono text-foreground">
-                    {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
-                  </TableCell>
-                  <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {shipment.senderKycDocumentsAvailable ? 'Documents disponibles' : 'A verifier'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {shipment.destinationCollectionPointName ?? '-'}
-                  </TableCell>
-                  <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
+          <div className="space-y-3 p-4 md:hidden">
+            {(dashboard?.pendingReceptions ?? []).map((shipment) => (
+              <div key={shipment.shipmentId} className="rounded-xl border border-border bg-secondary/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-sm font-semibold text-foreground">
+                      {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
+                    </p>
+                    <p className="mt-1 truncate text-sm text-foreground">{shipment.senderFullName ?? '-'}</p>
+                  </div>
+                  <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
+                    {round(shipment.weightKg)} kg
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                  <span>{shipment.senderKycDocumentsAvailable ? 'Documents disponibles' : 'KYC a verifier'}</span>
+                  <span className="truncate">{shipment.destinationCollectionPointName ?? '-'}</span>
+                </div>
+              </div>
+            ))}
+            {!dashboard?.pendingReceptions?.length && (
+              <EmptyState label="Aucun colis client en attente de validation." />
+            )}
+          </div>
+
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Reference</TableHead>
+                  <TableHead className="text-muted-foreground">Expediteur</TableHead>
+                  <TableHead className="text-muted-foreground">KYC</TableHead>
+                  <TableHead className="text-muted-foreground">Destination</TableHead>
+                  <TableHead className="text-muted-foreground">Poids</TableHead>
                 </TableRow>
-              ))}
-              {!dashboard?.pendingReceptions?.length && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-20 text-center text-muted-foreground">
-                    Aucun colis client en attente de validation.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(dashboard?.pendingReceptions ?? []).map((shipment) => (
+                  <TableRow key={shipment.shipmentId} className="border-border">
+                    <TableCell className="font-mono text-foreground">
+                      {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
+                    </TableCell>
+                    <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {shipment.senderKycDocumentsAvailable ? 'Documents disponibles' : 'A verifier'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {shipment.destinationCollectionPointName ?? '-'}
+                    </TableCell>
+                    <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
+                  </TableRow>
+                ))}
+                {!dashboard?.pendingReceptions?.length && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-20 text-center text-muted-foreground">
+                      Aucun colis client en attente de validation.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

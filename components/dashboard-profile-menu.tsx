@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, ChevronDown, LogOut, RefreshCw, UserRound } from 'lucide-react';
+import { Camera, Check, ChevronDown, Languages, LogOut, RefreshCw, UserRound } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ import type {
   UpdateUserProfileRequest,
   UserResponse,
 } from '@/lib/auth/types';
-import { useTranslation } from '@/lib/i18n';
+import { locales, type Locale, useTranslation } from '@/lib/i18n';
 import type { User } from '@/lib/mock-data';
 import { resolveRemoteAssetUrl } from '@/lib/asset-url';
 import { cn } from '@/lib/utils';
@@ -62,8 +62,26 @@ const EMPTY_FORM: ProfileForm = {
   language: '',
 };
 
+const LANGUAGE_OPTIONS: Array<{
+  locale: Locale;
+  shortLabel: string;
+  translationKey: 'language.english' | 'language.french';
+}> = [
+  {
+    locale: 'fr',
+    shortLabel: 'FR',
+    translationKey: 'language.french',
+  },
+  {
+    locale: 'en',
+    shortLabel: 'EN',
+    translationKey: 'language.english',
+  },
+];
+
 export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfileMenuProps) {
   const { t } = useTranslation('dashboard');
+  const { locale, setLocale, t: tCommon } = useTranslation('common');
   const { token, userId, user: sessionUser, setUser } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ProfileForm>(() => formFromUser(sessionUser, currentUser));
@@ -82,6 +100,8 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
   const avatarUrl = photoPreview ?? resolveRemoteAssetUrl(displayUser.profileImageUrl);
   const displayName = getDisplayName(displayUser, currentUser.name);
   const roleLabel = getRoleLabel(displayUser.role, currentUser.role, t);
+  const currentLanguage =
+    LANGUAGE_OPTIONS.find((option) => option.locale === locale) ?? LANGUAGE_OPTIONS[0];
 
   useEffect(() => {
     sessionUserRef.current = sessionUser;
@@ -155,6 +175,12 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     setSelectedPhoto(file);
+  };
+
+  const handleLocaleChange = (nextLocale: Locale) => {
+    if (locales.includes(nextLocale) && nextLocale !== locale) {
+      setLocale(nextLocale);
+    }
   };
 
   const handleSave = async () => {
@@ -234,6 +260,31 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
             <UserRound className="h-4 w-4" />
             {t('profile.menu.open')}
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <Languages className="h-4 w-4" />
+              {tCommon('language.change')}
+            </span>
+            <span className="font-semibold text-foreground">{currentLanguage.shortLabel}</span>
+          </DropdownMenuLabel>
+          {LANGUAGE_OPTIONS.map((option) => {
+            const isSelected = option.locale === locale;
+
+            return (
+              <DropdownMenuItem
+                key={option.locale}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  handleLocaleChange(option.locale);
+                }}
+                className="justify-between"
+              >
+                <span>{tCommon(option.translationKey)}</span>
+                {isSelected && <Check className="h-4 w-4 text-primary" />}
+              </DropdownMenuItem>
+            );
+          })}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

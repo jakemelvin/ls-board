@@ -90,7 +90,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Tableau de bord transporteur</h2>
@@ -197,17 +197,17 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
               </div>
             </div>
             <div className="rounded-2xl border border-border bg-secondary/20 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Weight className="h-5 w-5 text-chart-1" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-foreground">Taux de charge</p>
                     <p className="text-sm text-muted-foreground">
                       {currentWeight.toFixed(1)} kg transportes actuellement
                     </p>
                   </div>
                 </div>
-                <span className="text-xl font-bold text-foreground">{loadRate}%</span>
+                <span className="shrink-0 text-xl font-bold text-foreground">{loadRate}%</span>
               </div>
               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-secondary">
                 <div
@@ -263,55 +263,91 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
           <CardDescription>Vue rapide sur votre tournee active.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Reference</TableHead>
-                <TableHead className="text-muted-foreground">Expediteur</TableHead>
-                <TableHead className="text-muted-foreground">Destinataire</TableHead>
-                <TableHead className="text-muted-foreground">Destination</TableHead>
-                <TableHead className="text-muted-foreground">Poids</TableHead>
-                <TableHead className="text-muted-foreground">Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(dashboard?.onboardShipments ?? []).map((shipment) => (
-                <TableRow key={shipment.shipmentId} className="border-border">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-foreground">
+          <div className="space-y-3 p-4 md:hidden">
+            {(dashboard?.onboardShipments ?? []).map((shipment) => (
+              <div key={shipment.shipmentId} className="rounded-xl border border-border bg-secondary/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-mono text-sm font-semibold text-foreground">
                         {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
                       </span>
                       {shipment.shipmentReference && (
                         <CopyTrackingNumberButton trackingNumber={shipment.shipmentReference} />
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
-                  <TableCell className="text-foreground">{shipment.receiverFullName ?? '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{shipment.destinationCollectionPointName ?? '-'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
-                  <TableCell>
-                    <span className="rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
-                      {shipment.status ?? '-'}
-                    </span>
-                  </TableCell>
+                    <p className="mt-1 truncate text-sm text-foreground">{shipment.senderFullName ?? '-'}</p>
+                  </div>
+                  <span className="shrink-0 rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
+                    {shipment.status ?? '-'}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                  <span className="truncate">Destinataire: {shipment.receiverFullName ?? '-'}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{shipment.destinationCollectionPointName ?? '-'}</span>
+                  </span>
+                  <span>{round(shipment.weightKg)} kg</span>
+                </div>
+              </div>
+            ))}
+            {!dashboard?.onboardShipments?.length && (
+              <EmptyState label="Aucun colis actuellement charge dans ce vehicule." />
+            )}
+          </div>
+
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Reference</TableHead>
+                  <TableHead className="text-muted-foreground">Expediteur</TableHead>
+                  <TableHead className="text-muted-foreground">Destinataire</TableHead>
+                  <TableHead className="text-muted-foreground">Destination</TableHead>
+                  <TableHead className="text-muted-foreground">Poids</TableHead>
+                  <TableHead className="text-muted-foreground">Statut</TableHead>
                 </TableRow>
-              ))}
-              {!dashboard?.onboardShipments?.length && (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
-                    Aucun colis actuellement charge dans ce vehicule.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(dashboard?.onboardShipments ?? []).map((shipment) => (
+                  <TableRow key={shipment.shipmentId} className="border-border">
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-foreground">
+                          {shipment.shipmentReference ?? `#${shipment.shipmentId}`}
+                        </span>
+                        {shipment.shipmentReference && (
+                          <CopyTrackingNumberButton trackingNumber={shipment.shipmentReference} />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
+                    <TableCell className="text-foreground">{shipment.receiverFullName ?? '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>{shipment.destinationCollectionPointName ?? '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
+                    <TableCell>
+                      <span className="rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
+                        {shipment.status ?? '-'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!dashboard?.onboardShipments?.length && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
+                      Aucun colis actuellement charge dans ce vehicule.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

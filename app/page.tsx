@@ -128,11 +128,6 @@ export default function DashboardPage() {
     );
   }
 
-  const handleRoleChange = (role: UserRole) => {
-    setCurrentRole(role);
-    setActiveSection(DEFAULT_SECTIONS[role]);
-  };
-
   const renderContent = () => {
     switch (activeSection) {
       // Admin sections
@@ -247,8 +242,6 @@ export default function DashboardPage() {
         {/* Header */}
         <DashboardHeader
           currentUser={currentUser}
-          currentRole={currentRole}
-          onRoleChange={handleRoleChange}
           company={shouldShowCompanyBrand ? company : null}
         />
 

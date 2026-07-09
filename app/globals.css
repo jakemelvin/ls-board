@@ -98,4 +98,36 @@
     min-height: 100dvh;
     overscroll-behavior-y: none;
   }
+
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+@layer components {
+  [data-slot='card'],
+  [data-slot='card-content'],
+  [data-slot='card-header'],
+  [data-slot='table-container'] {
+    min-width: 0;
+  }
+
+  [data-slot='table-container'] {
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+
+  .grid > *,
+  .flex > * {
+    min-width: 0;
+  }
 }
