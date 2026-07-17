@@ -1,6 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useAuthStore } from '@/lib/auth/store';
 import { getCurrentUserCompany } from '@/lib/company/api';
 import { ApiError } from '@/lib/api-client';
@@ -28,19 +36,35 @@ interface UseCompanyContextOptions {
   enabled?: boolean;
 }
 
+const SharedCompanyContext = createContext<CompanyContext | null>(null);
+
+export function CompanyContextProvider({
+  value,
+  children,
+}: {
+  value: CompanyContext;
+  children: ReactNode;
+}) {
+  return createElement(SharedCompanyContext.Provider, { value }, children);
+}
+
 export function useCompanyContext({ enabled = true }: UseCompanyContextOptions = {}): CompanyContext {
+  const sharedContext = useContext(SharedCompanyContext);
+  const localContext = useCompanyResolution({ enabled: sharedContext ? false : enabled });
+
+  return sharedContext ?? localContext;
+}
+
+function useCompanyResolution({ enabled }: Required<UseCompanyContextOptions>): CompanyContext {
   const token = useAuthStore((s) => s.token);
   const setCompanyId = useAuthStore((s) => s.setCompanyId);
 
-  const [status, setStatus] = useState<CompanyResolutionStatus>('loading');
+  const [status, setStatus] = useState<CompanyResolutionStatus>(enabled ? 'loading' : 'empty');
   const [company, setCompany] = useState<CompanyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const resolve = useCallback(async () => {
     if (!enabled) {
-      setCompany(null);
-      setStatus('empty');
-      setError(null);
       return;
     }
 
@@ -86,8 +110,10 @@ export function useCompanyContext({ enabled = true }: UseCompanyContextOptions =
   }, [enabled, token, setCompanyId]);
 
   useEffect(() => {
-    resolve();
-  }, [resolve]);
+    if (enabled) {
+      void resolve();
+    }
+  }, [enabled, resolve]);
 
   return {
     status,

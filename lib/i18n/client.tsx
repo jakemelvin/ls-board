@@ -44,6 +44,7 @@ type I18nContextValue = {
 
 const STORAGE_KEY = 'sendam_locale'
 const I18N_ASSET_VERSION = '2026-06-14-super-admin-shipments'
+const localeResourceRequests = new Map<Locale, Promise<TranslationResources>>()
 
 const bundledResources: Record<Locale, TranslationResources> = {
   fr: {
@@ -111,8 +112,17 @@ function getBundledResources(locale: Locale): TranslationResources {
   return bundledResources[locale] ?? bundledResources[defaultLocale]
 }
 
-async function loadLocaleResources(locale: Locale) {
-  const settledEntries = await Promise.allSettled(
+function areResourcesEqual(left: TranslationResources, right: TranslationResources) {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function loadLocaleResources(locale: Locale) {
+  const existingRequest = localeResourceRequests.get(locale)
+  if (existingRequest) {
+    return existingRequest
+  }
+
+  const request = Promise.allSettled(
     namespaces.map(async (namespace) => {
       const response = await fetch(
         `/locales/${locale}/${namespace}.json?v=${I18N_ASSET_VERSION}`,
@@ -125,15 +135,18 @@ async function loadLocaleResources(locale: Locale) {
 
       return [namespace, (await response.json()) as TranslationFile] as const
     }),
+  ).then((settledEntries) =>
+    Object.fromEntries(
+      settledEntries
+        .filter((entry): entry is PromiseFulfilledResult<readonly [Namespace, TranslationFile]> =>
+          entry.status === 'fulfilled',
+        )
+        .map((entry) => entry.value),
+    ) as TranslationResources,
   )
 
-  return Object.fromEntries(
-    settledEntries
-      .filter((entry): entry is PromiseFulfilledResult<readonly [Namespace, TranslationFile]> =>
-        entry.status === 'fulfilled',
-      )
-      .map((entry) => entry.value),
-  ) as TranslationResources
+  localeResourceRequests.set(locale, request)
+  return request
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -169,14 +182,21 @@ export function I18nProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        setResources({
+        const nextResources = {
           ...bundledLocaleResources,
           ...localeResources,
-        })
-        setFallbackResources({
+        }
+        const nextFallbackResources = {
           ...bundledFallbackResources,
           ...defaultLocaleResources,
-        })
+        }
+
+        setResources((current) =>
+          areResourcesEqual(current, nextResources) ? current : nextResources,
+        )
+        setFallbackResources((current) =>
+          areResourcesEqual(current, nextFallbackResources) ? current : nextFallbackResources,
+        )
       } catch {
         if (!isCurrent) {
           return
@@ -244,14 +264,15 @@ export function useI18n() {
 
 export function useTranslation(namespace: Namespace = defaultNamespace) {
   const i18n = useI18n()
+  const translate = i18n.t
 
   const t = useCallback(
     (key: string, options?: Omit<TranslateOptions, 'ns'>) =>
-      i18n.t(key, {
+      translate(key, {
         ...options,
         ns: namespace,
       }),
-    [i18n, namespace],
+    [namespace, translate],
   )
 
   return {

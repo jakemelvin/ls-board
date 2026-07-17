@@ -2,6 +2,12 @@ import { redirectToLoginAfterAuthFailure } from '@/lib/auth/session';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+// React can mount an effect more than once in development and several widgets can
+// legitimately ask for the same resource at the same time. Share only requests
+// that are currently in flight: unlike a response cache, this cannot serve stale
+// business data after a mutation or an explicit refresh.
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -12,9 +18,40 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+function request<T>(
   path: string,
   init: RequestInit = {},
+  token?: string | null,
+): Promise<T> {
+  const method = (init.method ?? 'GET').toUpperCase();
+
+  if (method !== 'GET') {
+    return executeRequest<T>(path, init, token);
+  }
+
+  const requestKey = `${token ?? ''}\u0000${path}`;
+  const existingRequest = inFlightGetRequests.get(requestKey) as Promise<T> | undefined;
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const pendingRequest = executeRequest<T>(path, init, token);
+  inFlightGetRequests.set(requestKey, pendingRequest);
+
+  void pendingRequest
+    .finally(() => {
+      if (inFlightGetRequests.get(requestKey) === pendingRequest) {
+        inFlightGetRequests.delete(requestKey);
+      }
+    })
+    .catch(() => undefined);
+
+  return pendingRequest;
+}
+
+async function executeRequest<T>(
+  path: string,
+  init: RequestInit,
   token?: string | null,
 ): Promise<T> {
   const headers = new Headers(init.headers);

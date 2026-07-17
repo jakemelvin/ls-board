@@ -89,19 +89,29 @@ export function NotificationBell({ token }: NotificationBellProps) {
   }, [status, t, token]);
 
   useEffect(() => {
-    void loadCount();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadCount();
+      }
+    };
+
+    refreshWhenVisible();
     const intervalId = window.setInterval(() => {
-      void loadCount();
+      refreshWhenVisible();
     }, 60000);
-    return () => window.clearInterval(intervalId);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [loadCount]);
 
   useEffect(() => {
     if (open) {
       void loadNotifications();
-      void loadCount();
     }
-  }, [loadCount, loadNotifications, open]);
+  }, [loadNotifications, open]);
 
   const badgeLabel = useMemo(() => {
     if (unreadCount > 99) return '99+';

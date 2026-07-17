@@ -35,7 +35,7 @@ import { NotificationsManagement } from '@/components/views/notifications-manage
 import { CompanyProfileView } from '@/components/views/company-profile';
 import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
-import { useCompanyContext } from '@/lib/company/use-company';
+import { CompanyContextProvider, useCompanyContext } from '@/lib/company/use-company';
 import { useStore } from '@/lib/store';
 import type { ApiRole, AuthUser } from '@/lib/auth/types';
 
@@ -79,14 +79,15 @@ export default function DashboardPage() {
   const { users } = useStore();
   const shouldShowCompanyBrand =
     authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY';
+  const companyContext = useCompanyContext({
+    enabled: isHydrated && Boolean(token) && shouldShowCompanyBrand,
+  });
   const {
     status: companyStatus,
     company,
     error: companyError,
     retry: retryCompany,
-  } = useCompanyContext({
-    enabled: isHydrated && Boolean(token) && shouldShowCompanyBrand,
-  });
+  } = companyContext;
   const didSyncRoleFromAuth = useRef(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
@@ -227,7 +228,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-background">
+    <CompanyContextProvider value={companyContext}>
+      <div className="fixed inset-0 flex overflow-hidden bg-background">
       {/* Sidebar */}
       <DashboardSidebar
         currentRole={currentRole}
@@ -251,13 +253,14 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      <DashboardMobileNav
-        currentRole={currentRole}
-        activeSection={activeSection}
-        onSectionChange={setActiveSection}
-        company={shouldShowCompanyBrand ? company : null}
-      />
-    </div>
+        <DashboardMobileNav
+          currentRole={currentRole}
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          company={shouldShowCompanyBrand ? company : null}
+        />
+      </div>
+    </CompanyContextProvider>
   );
 }
 
