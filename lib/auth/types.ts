@@ -128,6 +128,22 @@ export interface UserResponse {
   fcmToken?: string;
 }
 
+export interface UserSearchResponse {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  username: string;
+  phone?: string;
+  profileImageUrl?: string;
+  countryId?: number;
+  countryName?: string;
+  countryCode?: number;
+  city?: string;
+  address?: string;
+  role?: ApiRole;
+  status?: UserStatus;
+}
+
 export interface UpdateUserProfileRequest {
   firstName?: string;
   lastName?: string;

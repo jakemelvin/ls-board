@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, Check, ChevronDown, Languages, LogOut, RefreshCw, UserRound } from 'lucide-react';
+import { Banknote, Camera, Check, ChevronDown, Languages, LogOut, RefreshCw, UserRound } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import type {
   UserResponse,
 } from '@/lib/auth/types';
 import { locales, type Locale, useTranslation } from '@/lib/i18n';
+import { SUPPORTED_CURRENCIES, useCurrency, type Currency } from '@/lib/currency';
 import type { User } from '@/lib/mock-data';
 import { resolveRemoteAssetUrl } from '@/lib/asset-url';
 import { cn } from '@/lib/utils';
@@ -82,6 +83,7 @@ const LANGUAGE_OPTIONS: Array<{
 export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfileMenuProps) {
   const { t } = useTranslation('dashboard');
   const { locale, setLocale, t: tCommon } = useTranslation('common');
+  const { currency, rates, ratesLoading, ratesError, setCurrency } = useCurrency();
   const { token, userId, user: sessionUser, setUser } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ProfileForm>(() => formFromUser(sessionUser, currentUser));
@@ -225,7 +227,10 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex min-w-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-colors hover:bg-secondary sm:gap-3">
+          <button
+            aria-label={t('profile.menu.account')}
+            className="flex min-w-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-colors hover:bg-secondary sm:gap-3"
+          >
             <ProfileAvatar
               name={displayName}
               fallback={displayUser.avatar}
@@ -282,6 +287,36 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
               >
                 <span>{tCommon(option.translationKey)}</span>
                 {isSelected && <Check className="h-4 w-4 text-primary" />}
+              </DropdownMenuItem>
+            );
+          })}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <Banknote className="h-4 w-4" />
+              {tCommon('currency.change')}
+            </span>
+            <span className="font-semibold text-foreground">{currency}</span>
+          </DropdownMenuLabel>
+          {SUPPORTED_CURRENCIES.map((option) => {
+            const isSelected = option === currency;
+            const isUnavailable = option !== 'XAF' && !rates;
+            return (
+              <DropdownMenuItem
+                key={option}
+                disabled={isUnavailable}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setCurrency(option as Currency);
+                }}
+                className="justify-between"
+              >
+                <span>{tCommon(`currency.names.${option}`)}</span>
+                <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                  {isUnavailable && ratesLoading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                  {isUnavailable && !ratesLoading && ratesError && tCommon('currency.unavailable')}
+                  {isSelected && <Check className="h-4 w-4 text-primary" />}
+                </span>
               </DropdownMenuItem>
             );
           })}

@@ -93,6 +93,7 @@
       "username": "Nom d'utilisateur"
     },
     "menu": {
+      "account": "Menu du compte",
       "open": "Voir le profil"
     },
     "messages": {
@@ -784,7 +785,94 @@
       "empty": "Aucun utilisateur trouvé"
     }
   },
+  "collectionPointsMap": {
+    "actions": {
+      "locating": "Localisation...",
+      "nearMe": "Autour de moi",
+      "openMaps": "Ouvrir dans Google Maps",
+      "refresh": "Actualiser"
+    },
+    "badges": {
+      "assigned": "Assigne",
+      "sameCity": "Meme ville"
+    },
+    "empty": {
+      "initialDescription": "Utilisez votre position pour obtenir les points tries par distance par le backend, ou selectionnez un pays et une ville.",
+      "initialTitle": "Recherchez les points autour de vous",
+      "noResultsDescription": "Modifiez la recherche, la zone ou le filtre de reseau.",
+      "noResultsTitle": "Aucun point de collecte trouve"
+    },
+    "errors": {
+      "cities": "Impossible de charger les villes desservies.",
+      "countries": "Impossible de charger les pays desservis.",
+      "locationDenied": "La localisation a ete refusee. Utilisez la recherche par pays et ville.",
+      "locationFailed": "Impossible de recuperer votre position pour le moment.",
+      "locationTimeout": "La localisation n'a pas repondu. Verifiez que la localisation Windows et l'autorisation du navigateur sont activees, puis reessayez ou choisissez une ville.",
+      "search": "Impossible de charger les points de collecte.",
+      "unsupportedLocation": "La geolocalisation n'est pas disponible sur ce navigateur."
+    },
+    "filters": {
+      "city": "Ville",
+      "country": "Pays",
+      "loadingCities": "Chargement des villes...",
+      "search": "Rechercher un point, une entreprise ou une adresse...",
+      "selectCity": "Selectionner une ville",
+      "selectCountry": "Selectionner un pays"
+    },
+    "map": {
+      "description": "{{count}} point(s) renvoye(s), dont {{geocoded}} positionne(s).",
+      "showPoint": "Afficher {{name}}",
+      "title": "Vue geographique",
+      "yourPosition": "Votre position"
+    },
+    "messages": {
+      "locating": "Recherche de votre position...",
+      "locationResults": "{{count}} point(s) disponible(s) dans cette ville.",
+      "nearbyResults": "{{count}} point(s) trie(s) par distance par le backend.",
+      "noLocationResults": "Aucun point disponible dans cette ville.",
+      "noNearbyResults": "Aucun point trouve autour de cette position."
+    },
+    "metrics": {
+      "company": "Votre entreprise",
+      "nearby": "Points proches",
+      "network": "Reseau partenaire",
+      "open": "Ouverts maintenant",
+      "results": "Resultats"
+    },
+    "roleHint": "Vue API disponible pour le role {{role}}.",
+    "scopes": {
+      "ALL": "Tous",
+      "COMPANY": "Entreprise",
+      "NETWORK": "Reseau"
+    },
+    "status": {
+      "closed": "Ferme",
+      "open": "Ouvert"
+    },
+    "subtitle": "Points actifs fournis par le backend, par proximite GPS ou par ville.",
+    "title": "Carte des points de collecte"
+  },
+  "collectorReception": {
+    "payments": {
+      "blockedButton": "Frais en attente",
+      "blockedTitle": "Validation bloquee",
+      "collectAndReceive": "Encaisser et receptionner",
+      "collectCompanyPrice": "A encaisser sur place : {{amount}}",
+      "companyPriceDue": "Montant compagnie a encaisser : {{amount}}",
+      "companyPriceDueDescription": "Les frais plateforme sont deja regles. Apres votre confirmation, le backend enregistrera automatiquement le paiement COLLECTION_POINT et finalisera la transaction.",
+      "confirmCash": "Je confirme avoir encaisse {{amount}} pour le compte de la compagnie.",
+      "confirmCashAria": "Confirmer l'encaissement physique du prix compagnie",
+      "platformFeePending": "Frais plateforme non confirmes : reception bloquee.",
+      "platformFeeRequiredDescription": "Les frais plateforme doivent etre confirmes avant la reception du colis.",
+      "platformFeeRequiredTitle": "Frais plateforme requis"
+    }
+  },
   "parcelManagement": {
+    "finance": {
+      "expressSurcharge": "Supplement express",
+      "insurance": "Assurance",
+      "transactionStatus": "Statut transaction"
+    },
     "list": {
       "openDetailWithId": "Voir le detail du shipment #{{id}}",
       "openDetailWithReference": "Voir le detail du shipment {{reference}}"
@@ -984,7 +1072,36 @@
     "tabs": {
       "fees": "Frais shipment",
       "payments": "Modes paiement",
-      "promos": "Codes promo"
+      "promos": "Codes promo",
+      "traceability": "Transactions et paiements"
+    },
+    "trace": {
+      "allProviders": "Tous les fournisseurs",
+      "allStatuses": "Tous les statuts",
+      "amount": "Montant",
+      "attempts": "Lignes de paiement",
+      "cashReceived": "Encaissements confirmes",
+      "company": "Entreprise",
+      "details": "Details",
+      "empty": "Aucune donnee financiere disponible.",
+      "errors": { "load": "Impossible de charger la tracabilite financiere." },
+      "failedAttempts": "Tentatives echouees",
+      "filterProvider": "Filtrer par fournisseur",
+      "filterStatus": "Filtrer par statut",
+      "latestAttempts": "Dernieres lignes de paiement",
+      "latestTransactions": "Dernieres transactions",
+      "noPaymentLine": "Aucune ligne de paiement enregistree.",
+      "payer": "Payeur",
+      "promoCoverage": "Couverture code promo",
+      "provider": "Fournisseur",
+      "providerError": "Erreur fournisseur",
+      "reference": "Reference",
+      "shipment": "Shipment",
+      "status": "Statut",
+      "subtitle": "Suivi distinct de l'etat global, des encaissements reels, des couvertures promo et des erreurs fournisseur.",
+      "succeededRule": "Seules les lignes SUCCEEDED sont comptabilisees. PROMO_CODE est une couverture financiere, pas un encaissement cash.",
+      "title": "Tracabilite financiere",
+      "transactions": "Transactions"
     },
     "title": "Paramètres financiers plateforme"
   },

@@ -40,6 +40,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
+import { useCurrency } from '@/lib/currency';
 import {
   getCollectorIncomingShipments,
   rejectIncomingShipment,
@@ -50,8 +52,10 @@ import {
   getShipmentPaymentStatusClassName,
   getShipmentStatusClassName,
   getShipmentStatusLabel,
+  getShipmentTransactionStatusClassName,
   SHIPMENT_PAYMENT_STATUS_LABELS,
   SHIPMENT_PRIORITY_LABELS,
+  SHIPMENT_TRANSACTION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
 import type { CollectorIncomingShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
@@ -59,6 +63,8 @@ import { cn } from '@/lib/utils';
 const PAGE_SIZE = 20;
 
 export function CollectorReception() {
+  const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   const token = useAuthStore((state) => state.token);
   const [shipments, setShipments] = useState<CollectorIncomingShipment[]>([]);
   const [page, setPage] = useState(0);
@@ -74,6 +80,7 @@ export function CollectorReception() {
   const [selectedShipment, setSelectedShipment] = useState<CollectorIncomingShipment | null>(null);
   const [isIdentityChecked, setIsIdentityChecked] = useState(false);
   const [isParcelChecked, setIsParcelChecked] = useState(false);
+  const [isCompanyPaymentChecked, setIsCompanyPaymentChecked] = useState(false);
   const [referenceInput, setReferenceInput] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [validatedCount, setValidatedCount] = useState(0);
@@ -144,16 +151,26 @@ export function CollectorReception() {
   }, [searchTerm, shipments]);
 
   const isReferenceReady = referenceInput.trim().length > 0;
-  const selectedShipmentIsUnpaid = selectedShipment?.paymentStatus === 'UNPAID';
+  const selectedShipmentRequiresCollection =
+    selectedShipment?.paymentStatus === 'UNPAID' &&
+    selectedShipment.transactionStatus === 'PLATFORM_FEE_PAID';
+  const selectedShipmentPaymentIsBlocked =
+    selectedShipment?.paymentStatus === 'UNPAID' && !selectedShipmentRequiresCollection;
   const isReadyForFinalValidation =
-    isIdentityChecked && isParcelChecked && isReferenceReady && !selectedShipmentIsUnpaid;
+    isIdentityChecked &&
+    isParcelChecked &&
+    isReferenceReady &&
+    !selectedShipmentPaymentIsBlocked &&
+    (!selectedShipmentRequiresCollection || isCompanyPaymentChecked);
 
   const openValidateDialog = (shipment: CollectorIncomingShipment) => {
-    if (shipment.paymentStatus === 'UNPAID') {
+    if (
+      shipment.paymentStatus === 'UNPAID' &&
+      shipment.transactionStatus !== 'PLATFORM_FEE_PAID'
+    ) {
       toast({
-        title: 'Paiement requis',
-        description:
-          'Ce colis est impaye. Le collecteur ne peut pas valider sa reception tant que le paiement n est pas regularise.',
+        title: t('collectorReception.payments.platformFeeRequiredTitle'),
+        description: t('collectorReception.payments.platformFeeRequiredDescription'),
         variant: 'destructive',
       });
       return;
@@ -162,6 +179,7 @@ export function CollectorReception() {
     setSelectedShipment(shipment);
     setIsIdentityChecked(false);
     setIsParcelChecked(false);
+    setIsCompanyPaymentChecked(false);
     setReferenceInput('');
     setIsValidateDialogOpen(true);
   };
@@ -177,6 +195,7 @@ export function CollectorReception() {
     setSelectedShipment(null);
     setIsIdentityChecked(false);
     setIsParcelChecked(false);
+    setIsCompanyPaymentChecked(false);
     setReferenceInput('');
   };
 
@@ -209,11 +228,10 @@ export function CollectorReception() {
       return;
     }
 
-    if (selectedShipment.paymentStatus === 'UNPAID') {
+    if (selectedShipmentPaymentIsBlocked) {
       toast({
-        title: 'Validation bloquee',
-        description:
-          'Ce colis est impaye. Le paiement doit etre regularise avant la validation.',
+        title: t('collectorReception.payments.blockedTitle'),
+        description: t('collectorReception.payments.platformFeeRequiredDescription'),
         variant: 'destructive',
       });
       return;
@@ -367,7 +385,11 @@ export function CollectorReception() {
                   </TableHeader>
                   <TableBody>
                     {filteredShipments.map((shipment) => {
-                      const isUnpaid = shipment.paymentStatus === 'UNPAID';
+                      const requiresCollection =
+                        shipment.paymentStatus === 'UNPAID' &&
+                        shipment.transactionStatus === 'PLATFORM_FEE_PAID';
+                      const paymentBlocked =
+                        shipment.paymentStatus === 'UNPAID' && !requiresCollection;
 
                       return (
                       <TableRow key={shipment.shipmentId} className="border-border">
@@ -408,7 +430,7 @@ export function CollectorReception() {
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p className="font-medium text-foreground">
-                              {formatReceptionMoney(shipment.price)}
+                              {formatMoney(shipment.price, { fallback: 'Non renseigne' })}
                             </p>
                             {shipment.paymentStatus ? (
                               <Badge
@@ -422,9 +444,26 @@ export function CollectorReception() {
                             ) : (
                               <Badge variant="outline">Paiement non renseigne</Badge>
                             )}
-                            {isUnpaid && (
+                            {shipment.transactionStatus && (
+                              <Badge
+                                className={cn(
+                                  'border-0',
+                                  getShipmentTransactionStatusClassName(shipment.transactionStatus),
+                                )}
+                              >
+                                {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
+                              </Badge>
+                            )}
+                            {requiresCollection && (
+                              <p className="text-xs font-medium text-warning">
+                                {t('collectorReception.payments.collectCompanyPrice', {
+                                  values: { amount: formatMoney(shipment.companyPrice) },
+                                })}
+                              </p>
+                            )}
+                            {paymentBlocked && (
                               <p className="text-xs text-destructive">
-                                Validation bloquee tant que le colis est impaye.
+                                {t('collectorReception.payments.platformFeePending')}
                               </p>
                             )}
                           </div>
@@ -452,16 +491,20 @@ export function CollectorReception() {
                             <Button
                               size="sm"
                               className="gap-1 bg-success text-success-foreground hover:bg-success/90"
-                              disabled={isUnpaid}
+                              disabled={paymentBlocked}
                               title={
-                                isUnpaid
-                                  ? 'Validation impossible pour un colis impaye'
+                                paymentBlocked
+                                  ? t('collectorReception.payments.platformFeeRequiredTitle')
                                   : undefined
                               }
                               onClick={() => openValidateDialog(shipment)}
                             >
                               <PackageCheck className="h-4 w-4" />
-                              {isUnpaid ? 'Impaye' : 'Receptionner'}
+                              {requiresCollection
+                                ? t('collectorReception.payments.collectAndReceive')
+                                : paymentBlocked
+                                  ? t('collectorReception.payments.blockedButton')
+                                  : 'Receptionner'}
                             </Button>
                           </div>
                         </TableCell>
@@ -546,15 +589,27 @@ export function CollectorReception() {
                         ? SHIPMENT_PRIORITY_LABELS[selectedShipment.priority]
                         : undefined,
                     ],
-                    ['Prix', formatReceptionMoney(selectedShipment.price)],
+                    ['Prix', formatMoney(selectedShipment.price, { fallback: 'Non renseigne' })],
                   ]}
                 />
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4">
-                {selectedShipmentIsUnpaid && (
+                {selectedShipmentPaymentIsBlocked && (
                   <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-                    Ce colis est impaye. La validation de reception est bloquee.
+                    {t('collectorReception.payments.platformFeeRequiredDescription')}
+                  </div>
+                )}
+                {selectedShipmentRequiresCollection && (
+                  <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-3 text-sm text-foreground">
+                    <p className="font-semibold">
+                      {t('collectorReception.payments.companyPriceDue', {
+                        values: { amount: formatMoney(selectedShipment.companyPrice) },
+                      })}
+                    </p>
+                    <p className="mt-1 text-muted-foreground">
+                      {t('collectorReception.payments.companyPriceDueDescription')}
+                    </p>
                   </div>
                 )}
                 <div className="mb-3 flex items-start gap-3">
@@ -610,6 +665,21 @@ export function CollectorReception() {
                       J&apos;ai verifie l&apos;identite du deposant et la coherence avec le colis.
                     </span>
                   </label>
+                  {selectedShipmentRequiresCollection && (
+                    <label className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 px-3 py-3">
+                      <Checkbox
+                        checked={isCompanyPaymentChecked}
+                        onCheckedChange={(checked) => setIsCompanyPaymentChecked(checked === true)}
+                        disabled={actionLoading}
+                        aria-label={t('collectorReception.payments.confirmCashAria')}
+                      />
+                      <span className="text-sm text-foreground">
+                        {t('collectorReception.payments.confirmCash', {
+                          values: { amount: formatMoney(selectedShipment.companyPrice) },
+                        })}
+                      </span>
+                    </label>
+                  )}
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
                       checked={isParcelChecked}
@@ -744,16 +814,4 @@ function ReceptionInfoPanel({
       </div>
     </div>
   );
-}
-
-function formatReceptionMoney(value?: number) {
-  if (value == null) {
-    return 'Non renseigne';
-  }
-
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XAF',
-    maximumFractionDigits: 0,
-  }).format(value);
 }

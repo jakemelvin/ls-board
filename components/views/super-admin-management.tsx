@@ -60,7 +60,7 @@ import {
 import { getCompanyDashboard } from '@/lib/dashboard/api';
 import { getCountries, registerCompany } from '@/lib/auth/api';
 import { resolveRemoteAssetUrl } from '@/lib/asset-url';
-import { formatMoney } from '@/lib/commissions';
+import { useCurrency } from '@/lib/currency';
 import {
   formatDashboardDateParam,
   getDefaultDashboardPeriod,
@@ -1047,6 +1047,7 @@ function CompanyDetailsView({
   onOpenReadiness: (readiness: CompanyOperationalReadiness) => void;
 }) {
   const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   const [snapshot, setSnapshot] = useState<CompanyDetailSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -24,4 +24,13 @@ test('login opens the dashboard shell without the in-app browser', async ({ page
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Administration' })).toBeVisible();
+
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    const mobileNav = page.getByRole('navigation');
+
+    await expect(mobileNav.getByRole('button', { name: /Dashboard|Tableau de bord/ })).toHaveCount(0);
+    await expect(mobileNav.getByRole('button', { name: /Carte|Map/ })).toHaveCount(0);
+    await expect(mobileNav.getByRole('button', { name: 'Administration' })).toBeVisible();
+    await expect(mobileNav.getByRole('button', { name: /Shipments|Colis/ })).toBeVisible();
+  }
 });

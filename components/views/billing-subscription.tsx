@@ -28,7 +28,6 @@ import {
 import { Progress } from '@/components/ui/progress';
 import type { SubscriptionPlan, SubscriptionStatus } from '@/lib/mock-data';
 import {
-  formatSubscriptionPrice,
   formatSubscriptionQuota,
   getRecommendedUpgradePlan,
   getSubscriptionQuotaSummaries,
@@ -37,6 +36,7 @@ import {
 } from '@/lib/subscription';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { SUPPORTED_CURRENCIES, useCurrency, type Currency } from '@/lib/currency';
 
 const statusLabels: Record<SubscriptionStatus, string> = {
   TRIALING: 'Essai gratuit',
@@ -125,6 +125,7 @@ function PlanLimitLine({ label, limit }: { label: string; limit: number | null }
 }
 
 export function BillingSubscriptionView() {
+  const { formatMoney } = useCurrency();
   const {
     subscriptionPlans,
     companySubscription,
@@ -132,6 +133,12 @@ export function BillingSubscriptionView() {
     changeSubscriptionPlan,
   } = useStore();
   const [pendingPlan, setPendingPlan] = useState<SubscriptionPlan | null>(null);
+  const formatPlanPrice = (plan: Pick<SubscriptionPlan, 'monthlyPrice' | 'currency'>) =>
+    formatMoney(plan.monthlyPrice, {
+      sourceCurrency: SUPPORTED_CURRENCIES.includes(plan.currency as Currency)
+        ? plan.currency as Currency
+        : 'XAF',
+    });
 
   const currentPlan = useMemo(
     () =>
@@ -233,7 +240,7 @@ export function BillingSubscriptionView() {
               </div>
               <div className="text-left lg:text-right">
                 <p className="text-3xl font-bold text-foreground">
-                  {formatSubscriptionPrice(currentPlan)}
+                  {formatPlanPrice(currentPlan)}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {currentPlan.monthlyPrice === 0 ? 'pendant la periode essai' : 'par mois'}
@@ -341,7 +348,7 @@ export function BillingSubscriptionView() {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="text-3xl font-bold text-foreground">
-                      {formatSubscriptionPrice(plan)}
+                      {formatPlanPrice(plan)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {plan.monthlyPrice === 0 ? `${plan.trialDays} jours` : 'par mois'}
@@ -397,7 +404,7 @@ export function BillingSubscriptionView() {
               <p className="text-sm text-muted-foreground">Nouveau plan</p>
               <p className="mt-1 text-lg font-semibold text-foreground">{pendingPlan.name}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatSubscriptionPrice(pendingPlan)} / mois
+                {formatPlanPrice(pendingPlan)} / mois
               </p>
             </div>
           )}

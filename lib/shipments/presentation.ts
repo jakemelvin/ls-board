@@ -6,6 +6,7 @@ import type {
   ShipmentPaymentStatus,
   ShipmentPriority,
   ShipmentStatus,
+  ShipmentTransactionStatus,
   ShipmentTransmissionStatus,
 } from './types';
 
@@ -51,6 +52,30 @@ export const SHIPMENT_COLLECTION_MODE_LABELS: Record<ShipmentPaymentCollectionMo
   PLATFORM: 'Plateforme',
   COLLECTION_POINT: 'Point de collecte',
 };
+
+export const SHIPMENT_TRANSACTION_STATUS_LABELS: Record<ShipmentTransactionStatus, string> = {
+  INITIATED: 'Paiement initie',
+  PLATFORM_FEE_PAID: 'Frais plateforme payes',
+  COMPLETED: 'Transaction terminee',
+  FAILED: 'Transaction echouee',
+  CANCELLED: 'Transaction annulee',
+};
+
+export function getShipmentTransactionStatusClassName(status: ShipmentTransactionStatus) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'bg-success/15 text-success';
+    case 'PLATFORM_FEE_PAID':
+      return 'bg-warning/15 text-warning';
+    case 'INITIATED':
+      return 'bg-primary/15 text-primary';
+    case 'FAILED':
+    case 'CANCELLED':
+      return 'bg-destructive/15 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
 
 export function getShipmentStatusLabel(status: ShipmentStatus) {
   return SHIPMENT_STATUS_LABELS[status] ?? status;
@@ -165,18 +190,6 @@ export function formatShipmentDate(value?: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
-}
-
-export function formatShipmentMoney(value?: number) {
-  if (value == null) {
-    return 'Non renseigne';
-  }
-
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XAF',
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 export function getShipmentSenderName(shipment: Shipment) {

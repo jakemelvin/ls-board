@@ -12,6 +12,7 @@ import type {
   ResetPasswordRequest,
   UpdateUserProfileRequest,
   UserResponse,
+  UserSearchResponse,
 } from './types';
 
 export async function login(data: LoginRequest): Promise<LoginResponse> {
@@ -87,6 +88,28 @@ export async function registerCompany(
 
 export async function getCountries(): Promise<CountryResponse[]> {
   return apiClient.getCached<CountryResponse[]>('/api/countries', null, 30 * 60_000);
+}
+
+export async function getOperationalServedCountries(): Promise<CountryResponse[]> {
+  return apiClient.getCached<CountryResponse[]>(
+    '/api/countries/operational-served',
+    null,
+    10 * 60_000,
+  );
+}
+
+export async function searchUsers(
+  token: string,
+  query: { username?: string; phone?: string },
+): Promise<UserSearchResponse[]> {
+  const search = new URLSearchParams();
+  if (query.username) search.set('username', query.username);
+  if (query.phone) search.set('phone', query.phone);
+
+  return apiClient.get<UserSearchResponse[]>(
+    `/api/delivery/users/search?${search.toString()}`,
+    token,
+  );
 }
 
 export async function approveCompany(

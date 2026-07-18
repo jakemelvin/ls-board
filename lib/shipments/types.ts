@@ -19,6 +19,13 @@ export type ShipmentPaymentStatus = 'UNPAID' | 'PAID' | 'PAYMENT_AT_COLLECTION_P
 
 export type ShipmentPaymentCollectionMode = 'PLATFORM' | 'COLLECTION_POINT';
 
+export type ShipmentTransactionStatus =
+  | 'INITIATED'
+  | 'PLATFORM_FEE_PAID'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
+
 export interface ShipmentCollectionPoint {
   id: number;
   reference?: string;
@@ -90,9 +97,12 @@ export interface Shipment {
   weightKg?: number;
   status: ShipmentStatus;
   paymentStatus?: ShipmentPaymentStatus;
+  transactionStatus?: ShipmentTransactionStatus;
   paymentCollectionMode?: ShipmentPaymentCollectionMode;
   companyPrice?: number;
   feeAmount?: number;
+  expressSurchargeAmount?: number;
+  insuranceAmount?: number;
   discountAmount?: number;
   price?: number;
   qrCodeUrl?: string;
@@ -189,6 +199,8 @@ export interface ShipmentPriceSimulationResponse {
   feeAmount?: number;
   discountAmount?: number;
   totalBeforeDiscount?: number;
+  platformAmountBeforeDiscount?: number;
+  collectionPointAmountToPay?: number;
   totalToPay?: number;
   promoCode?: string;
   promoCodeApplied?: boolean;
@@ -207,6 +219,7 @@ export interface CollectorIncomingShipment {
   priority?: ShipmentPriority;
   status?: ShipmentStatus;
   paymentStatus?: ShipmentPaymentStatus;
+  transactionStatus?: ShipmentTransactionStatus;
   senderFullName?: string;
   receiverFullName?: string;
   originCollectionPointName?: string;
@@ -233,6 +246,7 @@ export interface ShipmentReceptionActionResponse {
   shipmentId?: number;
   actionType?: 'VALIDATED' | 'REJECTED';
   currentShipmentStatus?: ShipmentStatus;
+  transactionStatus?: ShipmentTransactionStatus;
   submittedReference?: string;
   rejectionReason?: string;
   collectorUsername?: string;
@@ -547,6 +561,17 @@ export interface ShipmentAvailableCompany {
   companyLogoUrl?: string;
   originCollectionPointCount: number;
   destinationCollectionPointCount: number;
+  companyUrl?: string;
+  paymentCollectionMode?: ShipmentPaymentCollectionMode;
+  deliveredShipmentCount?: number;
+  reviews?: {
+    reviewCount?: number;
+    averageRating?: number;
+  };
+  pricings?: Array<{
+    parcelTypeId?: number;
+    parcelTypeName?: string;
+  }>;
 }
 
 export type ShipmentCollectionPointOption = ShipmentCollectionPoint;

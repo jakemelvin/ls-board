@@ -33,6 +33,15 @@
     "english": "Anglais",
     "french": "Français"
   },
+  "currency": {
+    "change": "Changer de devise",
+    "names": {
+      "EUR": "Euro (EUR)",
+      "USD": "Dollar américain (USD)",
+      "XAF": "Franc CFA (XAF)"
+    },
+    "unavailable": "Indisponible"
+  },
   "navigation": {
     "back": "Retour",
     "logout": "Se déconnecter"

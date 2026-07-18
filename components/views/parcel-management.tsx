@@ -48,17 +48,19 @@ import {
 } from '@/lib/parcel-privacy';
 import {
   formatShipmentDate,
-  formatShipmentMoney,
   getShipmentDestinationLabel,
   getShipmentOriginLabel,
   getShipmentReceiverName,
   getShipmentSenderName,
   getShipmentStatusClassName,
   getShipmentStatusLabel,
+  getShipmentTransactionStatusClassName,
   SHIPMENT_COLLECTION_MODE_LABELS,
   SHIPMENT_PAYMENT_STATUS_LABELS,
   SHIPMENT_PRIORITY_LABELS,
+  SHIPMENT_TRANSACTION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
+import { useCurrency } from '@/lib/currency';
 import { getShipment, getShipments } from '@/lib/shipments/api';
 import type {
   Shipment,
@@ -656,6 +658,7 @@ function ShipmentDetailView({
 }) {
   const statusHistory = shipment?.statusHistory ?? [];
   const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   const canShowReference = shipment
     ? canShowShipmentReference(shipment, currentRole)
     : false;
@@ -741,6 +744,16 @@ function ShipmentDetailView({
                         {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
                       </Badge>
                     )}
+                    {shipment.transactionStatus && (
+                      <Badge
+                        className={cn(
+                          'border-0',
+                          getShipmentTransactionStatusClassName(shipment.transactionStatus),
+                        )}
+                      >
+                        {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
+                      </Badge>
+                    )}
                   </div>
 
                   {shipment.description && (
@@ -793,7 +806,7 @@ function ShipmentDetailView({
                 />
                 <DetailMetric
                   label="Tarif final"
-                  value={formatShipmentMoney(shipment.price)}
+                  value={formatMoney(shipment.price, { fallback: 'Non renseigne' })}
                   description={
                     shipment.paymentCollectionMode
                       ? SHIPMENT_COLLECTION_MODE_LABELS[shipment.paymentCollectionMode]
@@ -841,14 +854,28 @@ function ShipmentDetailView({
               title="Tarification"
               icon={ShieldCheck}
               items={[
-                { label: 'Prix entreprise', value: formatShipmentMoney(shipment.companyPrice) },
-                { label: 'Frais', value: formatShipmentMoney(shipment.feeAmount) },
-                { label: 'Remise', value: formatShipmentMoney(shipment.discountAmount) },
-                { label: 'Prix final', value: formatShipmentMoney(shipment.price) },
+                { label: 'Prix entreprise', value: formatMoney(shipment.companyPrice, { fallback: 'Non renseigne' }) },
+                { label: 'Frais', value: formatMoney(shipment.feeAmount, { fallback: 'Non renseigne' }) },
+                {
+                  label: t('parcelManagement.finance.expressSurcharge'),
+                  value: formatMoney(shipment.expressSurchargeAmount, { fallback: 'Non renseigne' }),
+                },
+                {
+                  label: t('parcelManagement.finance.insurance'),
+                  value: formatMoney(shipment.insuranceAmount, { fallback: 'Non renseigne' }),
+                },
+                { label: 'Remise', value: formatMoney(shipment.discountAmount, { fallback: 'Non renseigne' }) },
+                { label: 'Prix final', value: formatMoney(shipment.price, { fallback: 'Non renseigne' }) },
                 {
                   label: 'Statut paiement',
                   value: shipment.paymentStatus
                     ? SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]
+                    : undefined,
+                },
+                {
+                  label: t('parcelManagement.finance.transactionStatus'),
+                  value: shipment.transactionStatus
+                    ? SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]
                     : undefined,
                 },
                 {

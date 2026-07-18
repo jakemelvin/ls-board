@@ -239,6 +239,16 @@ export function getCities(): Promise<CityResponse[]> {
   return apiClient.getCached<CityResponse[]>('/api/cities', null, 30 * 60_000);
 }
 
+export function getOperationalServedCitiesByCountry(
+  countryId: number,
+): Promise<CityResponse[]> {
+  return apiClient.getCached<CityResponse[]>(
+    `/api/cities/countries/${countryId}/operational-served`,
+    null,
+    10 * 60_000,
+  );
+}
+
 export function createCity(token: string, payload: CityRequest): Promise<CityResponse> {
   return apiClient.post<CityResponse>('/api/cities', payload, token);
 }

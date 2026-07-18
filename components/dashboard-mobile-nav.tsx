@@ -47,7 +47,14 @@ export function DashboardMobileNav({
   const { t } = useTranslation('dashboard');
   const isSuperAdmin = authRole === 'SUPER_ADMIN' || currentRole === 'SUPER_ADMIN';
   const availableItems = SIDEBAR_ITEMS.filter((item) => item.roles.includes(currentRole));
-  const isMenuActive = !primaryItems.some((item) => item.id === activeSection);
+  const mobilePrimaryItems = isSuperAdmin
+    ? SUPER_ADMIN_ITEMS.filter((item) =>
+        ['super-admin', 'super-admin-shipments'].includes(item.id),
+      )
+    : primaryItems.filter((item) =>
+        availableItems.some((availableItem) => availableItem.id === item.id),
+      );
+  const isMenuActive = !mobilePrimaryItems.some((item) => item.id === activeSection);
 
   const handleSectionChange = (section: string) => {
     onSectionChange(section);
@@ -58,7 +65,7 @@ export function DashboardMobileNav({
     <>
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
-          {primaryItems.map((item) => {
+          {mobilePrimaryItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
 

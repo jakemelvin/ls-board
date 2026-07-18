@@ -8,14 +8,6 @@ import type {
   Vehicle,
 } from '@/lib/mock-data';
 
-export function formatMoney(amount: number, currency: 'XAF' = 'XAF') {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 export function getParcelRevenueBase(parcel: Parcel) {
   if (typeof parcel.estimatedPrice === 'number' && Number.isFinite(parcel.estimatedPrice)) {
     return parcel.estimatedPrice;

@@ -39,7 +39,7 @@ import type { CompanyOperationalReadiness } from '@/lib/admin/types';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
 import { useCompanyContext } from '@/lib/company/use-company';
-import { formatMoney } from '@/lib/commissions';
+import { useCurrency } from '@/lib/currency';
 import { getCompanyDashboard } from '@/lib/dashboard/api';
 import {
   DASHBOARD_CHART_COLORS,
@@ -58,6 +58,7 @@ const referenceDate = new Date();
 
 export function AdminDashboard() {
   const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   const token = useAuthStore((state) => state.token);
   const {
     status: companyStatus,

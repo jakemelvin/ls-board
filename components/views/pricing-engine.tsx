@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/currency';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import {
@@ -176,11 +177,6 @@ function parseNumber(value: string) {
   if (value.trim() === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
-function formatMoney(value?: number | null) {
-  if (value == null || !Number.isFinite(value)) return '-';
-  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)} FCFA`;
 }
 
 function formatDate(value?: string) {
@@ -511,6 +507,7 @@ function PricingList({
   onSearchChange: (value: string) => void;
   onSelect: (pricing: CompanyPricingResponse) => void;
 }) {
+  const { formatMoney } = useCurrency();
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase();
     if (!normalized) return pricing;
@@ -668,6 +665,7 @@ function CompanyPricingInner({
   companyId: number;
   companyName: string;
 }) {
+  const { formatMoney } = useCurrency();
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
 

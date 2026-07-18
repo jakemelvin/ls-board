@@ -47,11 +47,11 @@ import { useAuthStore } from '@/lib/auth/store';
 import { useTranslation } from '@/lib/i18n';
 import {
   formatShipmentDate,
-  formatShipmentMoney,
   getShipmentDestinationLabel,
   getShipmentOriginLabel,
   getShipmentStatusClassName,
 } from '@/lib/shipments/presentation';
+import { useCurrency } from '@/lib/currency';
 import type { Shipment, ShipmentStatus } from '@/lib/shipments/types';
 import {
   getSuperAdminShipment,
@@ -541,6 +541,7 @@ function SuperAdminShipmentDetail({
   onRetry: () => void;
 }) {
   const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -660,7 +661,7 @@ function SuperAdminShipmentDetail({
                 />
                 <DetailMetric
                   label={t('superAdminShipments.detail.price')}
-                  value={formatShipmentMoney(shipment.price)}
+                  value={formatMoney(shipment.price, { fallback: t('superAdminShipments.detail.notProvided') })}
                   description={
                     shipment.paymentCollectionMode
                       ? t(`superAdminShipments.collectionModes.${shipment.paymentCollectionMode}`)
@@ -719,8 +720,8 @@ function SuperAdminShipmentDetail({
                   label={t('superAdminShipments.detail.volume')}
                   value={shipment.volumeM3 != null ? `${shipment.volumeM3} m3` : undefined}
                 />
-                <InfoTile label={t('superAdminShipments.detail.companyPrice')} value={formatShipmentMoney(shipment.companyPrice)} />
-                <InfoTile label={t('superAdminShipments.detail.fee')} value={formatShipmentMoney(shipment.feeAmount)} />
+                <InfoTile label={t('superAdminShipments.detail.companyPrice')} value={formatMoney(shipment.companyPrice, { fallback: t('superAdminShipments.detail.notProvided') })} />
+                <InfoTile label={t('superAdminShipments.detail.fee')} value={formatMoney(shipment.feeAmount, { fallback: t('superAdminShipments.detail.notProvided') })} />
               </CardContent>
             </Card>
           </div>

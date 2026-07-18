@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import { I18nProvider } from '@/components/i18n-provider'
+import { CurrencyProvider } from '@/lib/currency'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -51,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className="bg-background">
       <body className="font-sans antialiased">
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider><CurrencyProvider>{children}</CurrencyProvider></I18nProvider>
         <Toaster />
         <PwaServiceWorkerRegister />
         {process.env.NODE_ENV === 'production' && <Analytics />}

@@ -93,6 +93,7 @@
       "username": "Username"
     },
     "menu": {
+      "account": "Account menu",
       "open": "View profile"
     },
     "messages": {
@@ -784,7 +785,94 @@
       "empty": "No users found"
     }
   },
+  "collectionPointsMap": {
+    "actions": {
+      "locating": "Locating...",
+      "nearMe": "Near me",
+      "openMaps": "Open in Google Maps",
+      "refresh": "Refresh"
+    },
+    "badges": {
+      "assigned": "Assigned",
+      "sameCity": "Same city"
+    },
+    "empty": {
+      "initialDescription": "Use your position to get points sorted by distance by the backend, or select a country and city.",
+      "initialTitle": "Find collection points around you",
+      "noResultsDescription": "Change the search, location, or network filter.",
+      "noResultsTitle": "No collection point found"
+    },
+    "errors": {
+      "cities": "Unable to load served cities.",
+      "countries": "Unable to load served countries.",
+      "locationDenied": "Location access was denied. Use the country and city search.",
+      "locationFailed": "Unable to retrieve your location right now.",
+      "locationTimeout": "Location did not respond. Check that Windows location and the browser permission are enabled, then try again or select a city.",
+      "search": "Unable to load collection points.",
+      "unsupportedLocation": "Geolocation is not available in this browser."
+    },
+    "filters": {
+      "city": "City",
+      "country": "Country",
+      "loadingCities": "Loading cities...",
+      "search": "Search for a point, company, or address...",
+      "selectCity": "Select a city",
+      "selectCountry": "Select a country"
+    },
+    "map": {
+      "description": "{{count}} returned point(s), including {{geocoded}} positioned point(s).",
+      "showPoint": "Show {{name}}",
+      "title": "Geographic view",
+      "yourPosition": "Your position"
+    },
+    "messages": {
+      "locating": "Retrieving your position...",
+      "locationResults": "{{count}} point(s) available in this city.",
+      "nearbyResults": "{{count}} point(s) sorted by distance by the backend.",
+      "noLocationResults": "No point available in this city.",
+      "noNearbyResults": "No point found around this position."
+    },
+    "metrics": {
+      "company": "Your company",
+      "nearby": "Nearby points",
+      "network": "Partner network",
+      "open": "Open now",
+      "results": "Results"
+    },
+    "roleHint": "API view available for the {{role}} role.",
+    "scopes": {
+      "ALL": "All",
+      "COMPANY": "Company",
+      "NETWORK": "Network"
+    },
+    "status": {
+      "closed": "Closed",
+      "open": "Open"
+    },
+    "subtitle": "Active points supplied by the backend, by GPS proximity or city.",
+    "title": "Collection points map"
+  },
+  "collectorReception": {
+    "payments": {
+      "blockedButton": "Fee pending",
+      "blockedTitle": "Validation blocked",
+      "collectAndReceive": "Collect and receive",
+      "collectCompanyPrice": "Collect on site: {{amount}}",
+      "companyPriceDue": "Company amount to collect: {{amount}}",
+      "companyPriceDueDescription": "The platform fee is already settled. After confirmation, the backend will automatically record the COLLECTION_POINT payment and complete the transaction.",
+      "confirmCash": "I confirm that I collected {{amount}} on behalf of the company.",
+      "confirmCashAria": "Confirm physical collection of the company price",
+      "platformFeePending": "Platform fee not confirmed: reception blocked.",
+      "platformFeeRequiredDescription": "The platform fee must be confirmed before receiving the parcel.",
+      "platformFeeRequiredTitle": "Platform fee required"
+    }
+  },
   "parcelManagement": {
+    "finance": {
+      "expressSurcharge": "Express surcharge",
+      "insurance": "Insurance",
+      "transactionStatus": "Transaction status"
+    },
     "list": {
       "openDetailWithId": "Open shipment #{{id}} detail",
       "openDetailWithReference": "Open shipment {{reference}} detail"
@@ -984,7 +1072,36 @@
     "tabs": {
       "fees": "Shipment fees",
       "payments": "Payment modes",
-      "promos": "Promo codes"
+      "promos": "Promo codes",
+      "traceability": "Transactions and payments"
+    },
+    "trace": {
+      "allProviders": "All providers",
+      "allStatuses": "All statuses",
+      "amount": "Amount",
+      "attempts": "Payment lines",
+      "cashReceived": "Confirmed cash receipts",
+      "company": "Company",
+      "details": "Details",
+      "empty": "No financial data available.",
+      "errors": { "load": "Unable to load financial traceability." },
+      "failedAttempts": "Failed attempts",
+      "filterProvider": "Filter by provider",
+      "filterStatus": "Filter by status",
+      "latestAttempts": "Latest payment lines",
+      "latestTransactions": "Latest transactions",
+      "noPaymentLine": "No payment line recorded.",
+      "payer": "Payer",
+      "promoCoverage": "Promo code coverage",
+      "provider": "Provider",
+      "providerError": "Provider error",
+      "reference": "Reference",
+      "shipment": "Shipment",
+      "status": "Status",
+      "subtitle": "Separate monitoring of global status, actual receipts, promo coverage, and provider errors.",
+      "succeededRule": "Only SUCCEEDED lines are counted. PROMO_CODE is financial coverage, not a cash receipt.",
+      "title": "Financial traceability",
+      "transactions": "Transactions"
     },
     "title": "Platform finance settings"
   },

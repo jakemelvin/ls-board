@@ -15,16 +15,22 @@ import defaultDashboard from '@/public/locales/fr/dashboard.json'
 import defaultLogin from '@/public/locales/fr/login.json'
 import defaultPending from '@/public/locales/fr/pending.json'
 import defaultRegister from '@/public/locales/fr/register.json'
+import defaultShipmentCreate from '@/public/locales/fr/shipment-create.json'
 import englishCommon from '@/public/locales/en/common.json'
 import englishDashboard from '@/public/locales/en/dashboard.json'
 import englishLogin from '@/public/locales/en/login.json'
 import englishPending from '@/public/locales/en/pending.json'
 import englishRegister from '@/public/locales/en/register.json'
+import englishShipmentCreate from '@/public/locales/en/shipment-create.json'
 
 import { defaultLocale, defaultNamespace, fallbackNamespace, locales, namespaces } from './settings'
 import type { Locale, Namespace } from './settings'
 
-type TranslationValue = string | Record<string, TranslationValue>
+interface TranslationObject {
+  [key: string]: TranslationValue
+}
+
+type TranslationValue = string | TranslationObject
 type TranslationFile = Record<string, TranslationValue>
 type TranslationResources = Partial<Record<Namespace, TranslationFile>>
 type TranslationValues = Record<string, number | string>
@@ -53,6 +59,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     login: defaultLogin as TranslationFile,
     pending: defaultPending as TranslationFile,
     register: defaultRegister as TranslationFile,
+    'shipment-create': defaultShipmentCreate as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -60,6 +67,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     login: englishLogin as TranslationFile,
     pending: englishPending as TranslationFile,
     register: englishRegister as TranslationFile,
+    'shipment-create': englishShipmentCreate as TranslationFile,
   },
 }
 

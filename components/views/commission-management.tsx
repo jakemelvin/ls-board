@@ -32,12 +32,12 @@ import {
 } from '@/components/ui/table';
 import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
 import {
-  formatMoney,
   getCommissionRoleLabel,
   getCommissionStatusClassName,
   getCommissionStatusLabel,
   getCommissionSummary,
 } from '@/lib/commissions';
+import { useCurrency } from '@/lib/currency';
 import {
   getDashboardPeriodRange,
   isDateInRange,
@@ -52,6 +52,7 @@ type StatusFilter = CommissionStatus | 'ALL';
 type RoleFilter = CommissionBeneficiaryRole | 'ALL';
 
 export function CommissionManagement() {
+  const { formatMoney } = useCurrency();
   const { commissions, markCommissionAsPaid, markCommissionAsPayable } = useStore();
   const referenceDate = useMemo(() => getLatestCommissionDate(commissions), [commissions]);
   const [periodPreset, setPeriodPreset] = useState<DashboardPeriodPreset>('CURRENT_MONTH');

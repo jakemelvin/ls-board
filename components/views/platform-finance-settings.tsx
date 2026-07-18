@@ -14,6 +14,7 @@ import {
   CreditCard,
   Globe2,
   HandCoins,
+  ListChecks,
   Pencil,
   Plus,
   RefreshCw,
@@ -22,6 +23,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PlatformPaymentTraceability } from '@/components/views/platform-payment-traceability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,9 +61,10 @@ import type {
   ShipmentFeeResponse,
 } from '@/lib/platform-finance/types';
 import { useTranslation } from '@/lib/i18n';
+import { useCurrency } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 
-type TabId = 'fees' | 'promos' | 'payments';
+type TabId = 'fees' | 'promos' | 'payments' | 'traceability';
 type DeleteTarget =
   | { kind: 'fee'; item: ShipmentFeeResponse }
   | { kind: 'promo'; item: PromoCodeResponse }
@@ -97,6 +100,7 @@ const TABS: { id: TabId; labelKey: string; icon: ElementType }[] = [
   { id: 'fees', labelKey: 'platformFinance.tabs.fees', icon: HandCoins },
   { id: 'promos', labelKey: 'platformFinance.tabs.promos', icon: BadgePercent },
   { id: 'payments', labelKey: 'platformFinance.tabs.payments', icon: CreditCard },
+  { id: 'traceability', labelKey: 'platformFinance.tabs.traceability', icon: ListChecks },
 ];
 
 const EMPTY_FEE: FeeForm = { originCountryId: '', amount: '', active: true };
@@ -112,15 +116,6 @@ const EMPTY_PROMO: PromoForm = {
   expiresAt: '',
 };
 const EMPTY_PAYMENT: PaymentModeForm = { name: '', active: true };
-
-function formatMoney(value?: number) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return '--';
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XAF',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatDate(value?: string | null) {
   if (!value) return 'Non defini';
@@ -493,7 +488,7 @@ export function PlatformFinanceSettings() {
         <Metric icon={CreditCard} label={t('platformFinance.metrics.payments')} value={activePayments.length} />
       </div>
 
-      <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-grid sm:grid-cols-3">
+      <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-grid sm:grid-cols-4">
         {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
@@ -560,6 +555,8 @@ export function PlatformFinanceSettings() {
           onDelete={(item) => setDeleteTarget({ kind: 'payment', item })}
         />
       )}
+
+      {activeTab === 'traceability' && <PlatformPaymentTraceability />}
     </div>
   );
 }
@@ -610,6 +607,8 @@ function FeesPanel({
   onSave: () => void;
   onDelete: (item: ShipmentFeeResponse) => void;
 }) {
+  const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
       <Card ref={formRef} className="scroll-mt-4 border-border bg-card md:scroll-mt-6">
@@ -727,6 +726,7 @@ function PromosPanel({
   onDelete: (item: PromoCodeResponse) => void;
 }) {
   const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
       <Card ref={formRef} className="scroll-mt-4 border-border bg-card md:scroll-mt-6">

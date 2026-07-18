@@ -1,5 +1,11 @@
 import { apiClient } from '@/lib/api-client';
 import type {
+  AdminPaymentAttemptPage,
+  AdminPaymentAttemptResponse,
+  AdminTransactionPage,
+  AdminTransactionPaymentResponse,
+  GetAdminPaymentsParams,
+  GetAdminTransactionsParams,
   PaymentModeRequest,
   PaymentModeResponse,
   PromoCodeRequest,
@@ -7,6 +13,57 @@ import type {
   ShipmentFeeRequest,
   ShipmentFeeResponse,
 } from './types';
+
+function toQuery(params: object) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+      query.set(key, String(value));
+    }
+  });
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
+export function getAdminTransactions(
+  token: string,
+  params: GetAdminTransactionsParams = {},
+): Promise<AdminTransactionPage> {
+  return apiClient.get<AdminTransactionPage>(
+    `/api/delivery/admin/transactions${toQuery(params)}`,
+    token,
+  );
+}
+
+export function getAdminTransaction(
+  token: string,
+  transactionId: number,
+): Promise<AdminTransactionPaymentResponse> {
+  return apiClient.get<AdminTransactionPaymentResponse>(
+    `/api/delivery/admin/transactions/${transactionId}`,
+    token,
+  );
+}
+
+export function getAdminPayments(
+  token: string,
+  params: GetAdminPaymentsParams = {},
+): Promise<AdminPaymentAttemptPage> {
+  return apiClient.get<AdminPaymentAttemptPage>(
+    `/api/delivery/admin/payments${toQuery(params)}`,
+    token,
+  );
+}
+
+export function getAdminPayment(
+  token: string,
+  paymentReference: string,
+): Promise<AdminPaymentAttemptResponse> {
+  return apiClient.get<AdminPaymentAttemptResponse>(
+    `/api/delivery/admin/payments/${encodeURIComponent(paymentReference)}`,
+    token,
+  );
+}
 
 export function getShipmentFees(token?: string | null): Promise<ShipmentFeeResponse[]> {
   return apiClient.getCached<ShipmentFeeResponse[]>('/api/delivery/shipment-fees', token, 2 * 60_000);

@@ -55,7 +55,7 @@ import {
   type DateRange,
 } from '@/lib/dashboard-period';
 import { useAuthStore } from '@/lib/auth/store';
-import { formatMoney } from '@/lib/commissions';
+import { useCurrency } from '@/lib/currency';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
@@ -74,6 +74,7 @@ const RISK_DOT_STYLES: Record<RiskLevel, string> = {
 };
 
 export function SuperAdminDashboard() {
+  const { formatMoney } = useCurrency();
   const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const [periodPreset, setPeriodPreset] = useState<DashboardPeriodPreset>('CURRENT_MONTH');
@@ -115,7 +116,10 @@ export function SuperAdminDashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
-  const snapshot = useMemo(() => mapSuperAdminDashboard(dashboard, t), [dashboard, t]);
+  const snapshot = useMemo(
+    () => mapSuperAdminDashboard(dashboard, t, formatMoney),
+    [dashboard, formatMoney, t],
+  );
 
   const handlePeriodChange = (preset: DashboardPeriodPreset, range: DateRange) => {
     setPeriodPreset(preset);
@@ -474,6 +478,7 @@ function ChartTooltip({
 function mapSuperAdminDashboard(
   dashboard: SuperAdminDashboardResponse | null,
   t: ReturnType<typeof useTranslation>['t'],
+  formatMoney: ReturnType<typeof useCurrency>['formatMoney'],
 ) {
   const metrics = dashboard?.metrics;
   const operations = dashboard?.operations;

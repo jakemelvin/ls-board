@@ -91,6 +91,7 @@ export default function DashboardPage() {
   const didSyncRoleFromAuth = useRef(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
+  const [hasSyncedRoleFromAuth, setHasSyncedRoleFromAuth] = useState(false);
 
   useEffect(() => {
     if (isHydrated && !token) {
@@ -106,6 +107,7 @@ export default function DashboardPage() {
     const mappedRole = mapApiRoleToUserRole(authRole);
     setCurrentRole(mappedRole);
     setActiveSection(DEFAULT_SECTIONS[mappedRole]);
+    setHasSyncedRoleFromAuth(true);
     didSyncRoleFromAuth.current = true;
   }, [authRole, isHydrated]);
 
@@ -121,7 +123,7 @@ export default function DashboardPage() {
     return mergeAuthenticatedUser(demoUser, authUser);
   }, [authRole, authUser, currentRole, demoUser]);
 
-  if (!isHydrated || !token) {
+  if (!isHydrated || !token || !hasSyncedRoleFromAuth) {
     return (
       <div className="flex h-dvh items-center justify-center bg-background">
         <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

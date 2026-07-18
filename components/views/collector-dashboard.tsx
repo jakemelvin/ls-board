@@ -26,7 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAuthStore } from '@/lib/auth/store';
-import { formatMoney } from '@/lib/commissions';
+import { useCurrency } from '@/lib/currency';
 import { getCollectorDashboard } from '@/lib/dashboard/api';
 import type { CollectorDashboardResponse, OpeningHourSnapshot } from '@/lib/dashboard/types';
 import { useTranslation } from '@/lib/i18n';
@@ -360,6 +360,7 @@ function DashboardMetric({
 }
 
 function CommissionGrid({ commissions }: { commissions: NonNullable<CollectorDashboardResponse['commissions']> }) {
+  const { formatMoney } = useCurrency();
   return (
     <div className="grid gap-4 md:grid-cols-4">
       <InfoTile title="Taux configure" value={`${round(commissions.configuredPercentage)}%`} />

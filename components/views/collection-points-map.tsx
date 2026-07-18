@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
@@ -10,608 +10,550 @@ import {
   LocateFixed,
   MapPin,
   Navigation,
+  RefreshCw,
   Search,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useLatestRequest } from '@/hooks/use-latest-request';
+import { ApiError } from '@/lib/api-client';
+import { getOperationalServedCountries } from '@/lib/auth/api';
+import { useAuthStore } from '@/lib/auth/store';
+import type { CountryResponse } from '@/lib/auth/types';
 import {
-  formatOpeningHours,
-  getCollectionPointStatusClassName,
-  getCollectionPointStatusLabel,
-} from '@/lib/collection-point-availability';
-import {
-  calculateDistanceKm,
-  formatCollectionPointGeoLocation,
-  formatDistanceKm,
-  getCollectionPointFullAddress,
-  getCollectionPointLocationLabel,
-  getGoogleMapsUrl,
-  hasCollectionPointGeoLocation,
-} from '@/lib/collection-point-location';
+  searchCollectionPointsByLocation,
+  searchNearbyCollectionPoints,
+} from '@/lib/collection-points-map/api';
 import type {
-  CollectionPoint,
-  CollectionPointMapScope,
-  NetworkCollectionPoint,
-  User,
-  UserRole,
-} from '@/lib/mock-data';
-import { useStore } from '@/lib/store';
+  GeoCoordinates,
+  PlatformCollectionPointSearchResponse,
+} from '@/lib/collection-points-map/types';
+import { calculateDistanceKm, formatDistanceKm } from '@/lib/collection-point-location';
+import { getOperationalServedCitiesByCountry } from '@/lib/company/api';
+import type {
+  CityResponse,
+  CollectionPointAvailabilityStatus,
+  CollectionPointDayOfWeek,
+  CollectionPointOpeningHourResponse,
+} from '@/lib/company/types';
+import { useTranslation } from '@/lib/i18n';
+import type { User, UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
-type MapPoint = (CollectionPoint | NetworkCollectionPoint) & {
-  mapScope: CollectionPointMapScope;
-  organizationName: string;
-  services?: string[];
-};
-
-type ScopeFilter = 'ALL' | CollectionPointMapScope;
+type ScopeFilter = 'ALL' | 'COMPANY' | 'NETWORK';
+type SearchMode = 'NEARBY' | 'LOCATION';
 
 interface CollectionPointsMapProps {
   currentRole: UserRole;
   currentUser: User;
 }
 
-const scopeFilters: { value: ScopeFilter; label: string }[] = [
-  { value: 'ALL', label: 'Tous' },
-  { value: 'COMPANY', label: 'Entreprise' },
-  { value: 'NETWORK', label: 'Reseau' },
-];
+const SCOPE_FILTERS: ScopeFilter[] = ['ALL', 'COMPANY', 'NETWORK'];
+const GEOLOCATION_CACHE_MAX_AGE_MS = 15 * 60_000;
+const GEOLOCATION_TIMEOUT_MS = 30_000;
+const WEEKDAY_LABELS: Record<CollectionPointDayOfWeek, string> = {
+  MONDAY: 'Lun',
+  TUESDAY: 'Mar',
+  WEDNESDAY: 'Mer',
+  THURSDAY: 'Jeu',
+  FRIDAY: 'Ven',
+  SATURDAY: 'Sam',
+  SUNDAY: 'Dim',
+};
 
-const pointScopeStyles: Record<
-  CollectionPointMapScope,
-  {
-    marker: string;
-    markerDot: string;
-    markerSelectedRing: string;
-    badge: string;
-    card: string;
-    iconSurface: string;
-    icon: string;
-    hover: string;
-  }
-> = {
+const SCOPE_STYLES = {
   COMPANY: {
     marker: 'border-sky-500 bg-sky-500 text-white',
-    markerDot: 'bg-sky-500',
-    markerSelectedRing: 'ring-sky-500/30',
+    dot: 'bg-sky-500',
     badge: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
-    card: 'border-l-4 border-l-sky-500',
-    iconSurface: 'bg-sky-500/15',
-    icon: 'text-sky-600 dark:text-sky-300',
-    hover: 'hover:border-sky-500/70',
+    card: 'border-l-sky-500',
   },
   NETWORK: {
     marker: 'border-orange-500 bg-orange-500 text-white',
-    markerDot: 'bg-orange-500',
-    markerSelectedRing: 'ring-orange-500/30',
+    dot: 'bg-orange-500',
     badge: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
-    card: 'border-l-4 border-l-orange-500',
-    iconSurface: 'bg-orange-500/15',
-    icon: 'text-orange-600 dark:text-orange-300',
-    hover: 'hover:border-orange-500/70',
+    card: 'border-l-orange-500',
   },
-};
+} as const;
 
-function getPointPosition(
-  point: Pick<MapPoint, 'geoLocation'>,
-  bounds: { minLatitude: number; maxLatitude: number; minLongitude: number; maxLongitude: number }
-) {
-  if (!hasCollectionPointGeoLocation(point)) {
-    return { left: 50, top: 50 };
-  }
+function pointKey(item: PlatformCollectionPointSearchResponse) {
+  return `${item.companyId}:${item.collectionPoint.id}`;
+}
 
-  const longitudeRange = Math.max(bounds.maxLongitude - bounds.minLongitude, 0.000001);
-  const latitudeRange = Math.max(bounds.maxLatitude - bounds.minLatitude, 0.000001);
-  const left = ((point.geoLocation.longitude - bounds.minLongitude) / longitudeRange) * 100;
-  const top = 100 - ((point.geoLocation.latitude - bounds.minLatitude) / latitudeRange) * 100;
+function hasCoordinates(item: PlatformCollectionPointSearchResponse) {
+  return (
+    typeof item.collectionPoint.latitude === 'number' &&
+    Number.isFinite(item.collectionPoint.latitude) &&
+    typeof item.collectionPoint.longitude === 'number' &&
+    Number.isFinite(item.collectionPoint.longitude)
+  );
+}
 
+function getCoordinates(item: PlatformCollectionPointSearchResponse): GeoCoordinates | null {
+  if (!hasCoordinates(item)) return null;
   return {
-    left: Math.min(Math.max(left, 4), 96),
-    top: Math.min(Math.max(top, 4), 96),
+    latitude: item.collectionPoint.latitude!,
+    longitude: item.collectionPoint.longitude!,
   };
 }
 
+function getGoogleMapsUrl(item: PlatformCollectionPointSearchResponse) {
+  const coordinates = getCoordinates(item);
+  if (!coordinates) return undefined;
+  return `https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}`;
+}
+
+function getMarkerPosition(
+  item: PlatformCollectionPointSearchResponse,
+  bounds: { minLatitude: number; maxLatitude: number; minLongitude: number; maxLongitude: number },
+) {
+  const coordinates = getCoordinates(item);
+  if (!coordinates) return { left: 50, top: 50 };
+  const longitudeRange = Math.max(bounds.maxLongitude - bounds.minLongitude, 0.000001);
+  const latitudeRange = Math.max(bounds.maxLatitude - bounds.minLatitude, 0.000001);
+  return {
+    left: Math.min(Math.max(((coordinates.longitude - bounds.minLongitude) / longitudeRange) * 100, 4), 96),
+    top: Math.min(Math.max(100 - ((coordinates.latitude - bounds.minLatitude) / latitudeRange) * 100, 4), 96),
+  };
+}
+
+function formatOpeningHours(hours: CollectionPointOpeningHourResponse[]) {
+  const openDays = hours.filter((item) => !item.closed);
+  if (openDays.length === 0) return null;
+  const firstSchedule = openDays.find((item) => item.openingTime && item.closingTime);
+  const days = openDays.map((item) => WEEKDAY_LABELS[item.dayOfWeek]).join(', ');
+  return firstSchedule
+    ? `${days} · ${firstSchedule.openingTime} - ${firstSchedule.closingTime}`
+    : days;
+}
+
+function statusClassName(status?: CollectionPointAvailabilityStatus, openNow?: boolean) {
+  if (openNow || status === 'OPEN') return 'bg-success/15 text-success';
+  if (status === 'MANUALLY_CLOSED') return 'bg-warning/15 text-warning';
+  return 'bg-destructive/15 text-destructive';
+}
+
 export function CollectionPointsMap({ currentRole, currentUser }: CollectionPointsMapProps) {
-  const {
-    collectionPoints,
-    networkCollectionPoints,
-    countries,
-    cities,
-    zones,
-  } = useStore();
+  const { t } = useTranslation('dashboard');
+  const token = useAuthStore((state) => state.token);
+  const companyId = useAuthStore((state) => state.companyId);
+  const [countries, setCountries] = useState<CountryResponse[]>([]);
+  const [cities, setCities] = useState<CityResponse[]>([]);
+  const [countryId, setCountryId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [metadataLoading, setMetadataLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [results, setResults] = useState<PlatformCollectionPointSearchResponse[]>([]);
+  const [searchMode, setSearchMode] = useState<SearchMode | null>(null);
+  const [userLocation, setUserLocation] = useState<GeoCoordinates | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('ALL');
-  const [selectedPointId, setSelectedPointId] = useState<string | null>(
-    currentUser.assignedPointId ?? null
-  );
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
-    null
-  );
-  const [locationMessage, setLocationMessage] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
+  const [selectedPointKey, setSelectedPointKey] = useState<string | null>(null);
+  const { beginRequest, isLatestRequest } = useLatestRequest();
 
-  const companyMapPoints = useMemo<MapPoint[]>(
-    () =>
-      collectionPoints.map((point) => ({
-        ...point,
-        mapScope: 'COMPANY',
-        organizationName: point.organizationName ?? 'Votre entreprise',
-      })),
-    [collectionPoints]
-  );
+  useEffect(() => {
+    let isCurrent = true;
+    getOperationalServedCountries()
+      .then((response) => {
+        if (isCurrent) setCountries(response);
+      })
+      .catch(() => {
+        if (isCurrent) setError(t('collectionPointsMap.errors.countries'));
+      })
+      .finally(() => {
+        if (isCurrent) setMetadataLoading(false);
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [t]);
 
-  const networkMapPoints = useMemo<MapPoint[]>(
-    () =>
-      networkCollectionPoints.map((point) => ({
-        ...point,
-        mapScope: 'NETWORK',
-      })),
-    [networkCollectionPoints]
+  const getScope = useCallback(
+    (item: PlatformCollectionPointSearchResponse): Exclude<ScopeFilter, 'ALL'> =>
+      companyId && item.companyId === companyId ? 'COMPANY' : 'NETWORK',
+    [companyId],
   );
 
-  const allMapPoints = useMemo(
-    () => [...companyMapPoints, ...networkMapPoints],
-    [companyMapPoints, networkMapPoints]
-  );
+  const setSearchResults = useCallback((items: PlatformCollectionPointSearchResponse[]) => {
+    setResults(items);
+    setSelectedPointKey(items[0] ? pointKey(items[0]) : null);
+  }, []);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-
-  const filteredPoints = useMemo(() => {
-    const points = allMapPoints.filter((point) => {
-      if (scopeFilter !== 'ALL' && point.mapScope !== scopeFilter) {
-        return false;
+  const loadByLocation = useCallback(
+    async (nextCountryId: number, nextCityId: number) => {
+      if (!token) return;
+      const requestId = beginRequest();
+      setResultsLoading(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const response = await searchCollectionPointsByLocation(token, {
+          countryId: nextCountryId,
+          cityId: nextCityId,
+        });
+        if (!isLatestRequest(requestId)) return;
+        setSearchMode('LOCATION');
+        setUserLocation(null);
+        setSearchResults(response);
+        setMessage(
+          response.length > 0
+            ? t('collectionPointsMap.messages.locationResults', { values: { count: response.length } })
+            : t('collectionPointsMap.messages.noLocationResults'),
+        );
+      } catch (cause) {
+        if (isLatestRequest(requestId)) {
+          setError(cause instanceof ApiError ? cause.message : t('collectionPointsMap.errors.search'));
+        }
+      } finally {
+        if (isLatestRequest(requestId)) setResultsLoading(false);
       }
+    },
+    [beginRequest, isLatestRequest, setSearchResults, t, token],
+  );
 
-      if (!normalizedSearch) {
-        return true;
+  const handleCountryChange = async (value: string) => {
+    setCountryId(value);
+    setCityId('');
+    setCities([]);
+    if (!value) return;
+    setCitiesLoading(true);
+    setError(null);
+    try {
+      setCities(await getOperationalServedCitiesByCountry(Number(value)));
+    } catch {
+      setError(t('collectionPointsMap.errors.cities'));
+    } finally {
+      setCitiesLoading(false);
+    }
+  };
+
+  const handleCityChange = (value: string) => {
+    setCityId(value);
+    if (countryId && value) void loadByLocation(Number(countryId), Number(value));
+  };
+
+  const loadNearby = useCallback(
+    async (coordinates: GeoCoordinates) => {
+      if (!token) return;
+      const requestId = beginRequest();
+      setResultsLoading(true);
+      setError(null);
+      try {
+        const response = await searchNearbyCollectionPoints(token, coordinates);
+        if (!isLatestRequest(requestId)) return;
+        setSearchMode('NEARBY');
+        setUserLocation(coordinates);
+        setSearchResults(response);
+        setMessage(
+          response.length > 0
+            ? t('collectionPointsMap.messages.nearbyResults', { values: { count: response.length } })
+            : t('collectionPointsMap.messages.noNearbyResults'),
+        );
+      } catch (cause) {
+        if (isLatestRequest(requestId)) {
+          setError(cause instanceof ApiError ? cause.message : t('collectionPointsMap.errors.search'));
+        }
+      } finally {
+        if (isLatestRequest(requestId)) {
+          setResultsLoading(false);
+          setIsLocating(false);
+        }
       }
+    },
+    [beginRequest, isLatestRequest, setSearchResults, t, token],
+  );
 
-      const locationLabel = getCollectionPointLocationLabel(point, zones, cities, countries);
-      const fullAddress = getCollectionPointFullAddress(point, zones, cities, countries);
+  const handleLocateUser = () => {
+    if (!('geolocation' in navigator)) {
+      setError(t('collectionPointsMap.errors.unsupportedLocation'));
+      return;
+    }
+    setIsLocating(true);
+    setError(null);
+    setMessage(t('collectionPointsMap.messages.locating'));
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        void loadNearby({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (geolocationError) => {
+        setIsLocating(false);
+        setMessage(null);
+        setError(
+          geolocationError.code === geolocationError.PERMISSION_DENIED
+            ? t('collectionPointsMap.errors.locationDenied')
+            : geolocationError.code === geolocationError.TIMEOUT
+              ? t('collectionPointsMap.errors.locationTimeout')
+              : t('collectionPointsMap.errors.locationFailed'),
+        );
+      },
+      {
+        // A coarse position is enough for the backend proximity search and is
+        // substantially faster on desktop browsers that rely on Windows location.
+        enableHighAccuracy: false,
+        maximumAge: GEOLOCATION_CACHE_MAX_AGE_MS,
+        timeout: GEOLOCATION_TIMEOUT_MS,
+      },
+    );
+  };
 
+  const refreshResults = () => {
+    if (searchMode === 'NEARBY' && userLocation) void loadNearby(userLocation);
+    if (searchMode === 'LOCATION' && countryId && cityId) {
+      void loadByLocation(Number(countryId), Number(cityId));
+    }
+  };
+
+  const filteredResults = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return results.filter((item) => {
+      if (scopeFilter !== 'ALL' && getScope(item) !== scopeFilter) return false;
+      if (!query) return true;
+      const point = item.collectionPoint;
       return [
         point.name,
+        point.reference,
         point.address,
-        point.organizationName,
-        locationLabel,
-        fullAddress,
-        formatCollectionPointGeoLocation(point),
+        point.phone,
+        point.city?.cityName,
+        point.zone?.name,
+        item.companyName,
       ]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSearch);
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
     });
+  }, [getScope, results, scopeFilter, searchTerm]);
 
-    return points.sort((left, right) => {
-      const leftGeoLocation = left.geoLocation;
-      const rightGeoLocation = right.geoLocation;
-
-      if (userLocation && leftGeoLocation && rightGeoLocation) {
-        return (
-          calculateDistanceKm(userLocation, leftGeoLocation) -
-          calculateDistanceKm(userLocation, rightGeoLocation)
-        );
-      }
-
-      if (left.mapScope !== right.mapScope) {
-        return left.mapScope === 'COMPANY' ? -1 : 1;
-      }
-
-      return left.name.localeCompare(right.name);
-    });
-  }, [allMapPoints, cities, countries, normalizedSearch, scopeFilter, userLocation, zones]);
-
-  const pointsWithGeoLocation = filteredPoints.filter(hasCollectionPointGeoLocation);
+  const pointsWithCoordinates = filteredResults.filter(hasCoordinates);
   const selectedPoint =
-    filteredPoints.find((point) => point.id === selectedPointId) ?? filteredPoints[0] ?? null;
+    filteredResults.find((item) => pointKey(item) === selectedPointKey) ?? filteredResults[0] ?? null;
 
   const mapBounds = useMemo(() => {
-    const latitudes = pointsWithGeoLocation.flatMap((point) =>
-      point.geoLocation ? [point.geoLocation.latitude] : []
-    );
-    const longitudes = pointsWithGeoLocation.flatMap((point) =>
-      point.geoLocation ? [point.geoLocation.longitude] : []
-    );
-
-    if (userLocation) {
-      latitudes.push(userLocation.latitude);
-      longitudes.push(userLocation.longitude);
+    const coordinates = pointsWithCoordinates.flatMap((item) => {
+      const value = getCoordinates(item);
+      return value ? [value] : [];
+    });
+    if (userLocation) coordinates.push(userLocation);
+    if (coordinates.length === 0) {
+      return { minLatitude: 0, maxLatitude: 1, minLongitude: 0, maxLongitude: 1 };
     }
-
-    if (latitudes.length === 0 || longitudes.length === 0) {
-      return {
-        minLatitude: 0,
-        maxLatitude: 1,
-        minLongitude: 0,
-        maxLongitude: 1,
-      };
-    }
-
-    const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.14, 0.04);
-    const longitudePadding = Math.max(
-      (Math.max(...longitudes) - Math.min(...longitudes)) * 0.14,
-      0.04
-    );
-
+    const latitudes = coordinates.map((item) => item.latitude);
+    const longitudes = coordinates.map((item) => item.longitude);
+    const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.14, 0.02);
+    const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.14, 0.02);
     return {
       minLatitude: Math.min(...latitudes) - latitudePadding,
       maxLatitude: Math.max(...latitudes) + latitudePadding,
       minLongitude: Math.min(...longitudes) - longitudePadding,
       maxLongitude: Math.max(...longitudes) + longitudePadding,
     };
-  }, [pointsWithGeoLocation, userLocation]);
+  }, [pointsWithCoordinates, userLocation]);
 
   const userPosition = userLocation
-    ? getPointPosition(
-        {
-          geoLocation: {
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
-            source: 'GPS_CAPTURE',
-            capturedAt: new Date(),
-          },
-        },
-        mapBounds
-      )
+    ? (() => {
+        const longitudeRange = Math.max(mapBounds.maxLongitude - mapBounds.minLongitude, 0.000001);
+        const latitudeRange = Math.max(mapBounds.maxLatitude - mapBounds.minLatitude, 0.000001);
+        return {
+          left: Math.min(Math.max(((userLocation.longitude - mapBounds.minLongitude) / longitudeRange) * 100, 4), 96),
+          top: Math.min(Math.max(100 - ((userLocation.latitude - mapBounds.minLatitude) / latitudeRange) * 100, 4), 96),
+        };
+      })()
     : null;
 
-  const handleLocateUser = () => {
-    if (!('geolocation' in navigator)) {
-      setLocationMessage("La geolocalisation n'est pas disponible sur ce navigateur.");
-      return;
-    }
-
-    setIsLocating(true);
-    setLocationMessage('Recherche de votre position...');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setIsLocating(false);
-        setLocationMessage('Points tries du plus proche au plus eloigne.');
-      },
-      (error) => {
-        const message =
-          error.code === error.PERMISSION_DENIED
-            ? 'Autorisez la localisation pour trier les points autour de vous.'
-            : error.code === error.TIMEOUT
-              ? 'La localisation a pris trop de temps. Reessayez dans un instant.'
-              : "Impossible de recuperer votre position pour l'instant.";
-
-        setIsLocating(false);
-        setLocationMessage(message);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 60000,
-        timeout: 12000,
-      }
-    );
+  const getDistance = (item: PlatformCollectionPointSearchResponse) => {
+    if (typeof item.distanceKm === 'number') return item.distanceKm;
+    const coordinates = getCoordinates(item);
+    return userLocation && coordinates ? calculateDistanceKm(userLocation, coordinates) : null;
   };
 
-  const getDistanceLabel = (point: MapPoint) => {
-    if (!userLocation || !hasCollectionPointGeoLocation(point)) {
-      return null;
-    }
-
-    return formatDistanceKm(calculateDistanceKm(userLocation, point.geoLocation));
-  };
-
-  const companyPointCount = allMapPoints.filter((point) => point.mapScope === 'COMPANY').length;
-  const networkPointCount = allMapPoints.filter((point) => point.mapScope === 'NETWORK').length;
-  const visibleOpenCount = filteredPoints.filter((point) => point.isOpen).length;
-  const assignedPointVisible = currentUser.assignedPointId
-    ? allMapPoints.find((point) => point.id === currentUser.assignedPointId)
-    : null;
+  const companyPointCount = filteredResults.filter((item) => getScope(item) === 'COMPANY').length;
+  const networkPointCount = filteredResults.filter((item) => getScope(item) === 'NETWORK').length;
+  const openPointCount = filteredResults.filter((item) => item.collectionPoint.openNow).length;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Carte des points de collecte</h2>
-          <p className="text-muted-foreground">
-            Points internes et points reseau consultables par tous les roles operationnels.
-          </p>
+          <h2 className="text-2xl font-bold text-foreground">{t('collectionPointsMap.title')}</h2>
+          <p className="text-muted-foreground">{t('collectionPointsMap.subtitle')}</p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row xl:shrink-0">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Rechercher un point, une ville, une adresse..."
-              className="bg-secondary pl-10"
-            />
+        <Button className="min-h-11 gap-2" onClick={handleLocateUser} disabled={isLocating || resultsLoading}>
+          {isLocating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+          {isLocating ? t('collectionPointsMap.actions.locating') : t('collectionPointsMap.actions.nearMe')}
+        </Button>
+      </div>
+
+      <Card className="border-border bg-card">
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+          <label className="space-y-2 text-sm font-medium text-foreground">
+            {t('collectionPointsMap.filters.country')}
+            <select
+              value={countryId}
+              onChange={(event) => void handleCountryChange(event.target.value)}
+              disabled={metadataLoading}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">{t('collectionPointsMap.filters.selectCountry')}</option>
+              {countries.map((country) => <option key={country.countryId} value={country.countryId}>{country.countryName}</option>)}
+            </select>
+          </label>
+          <label className="space-y-2 text-sm font-medium text-foreground">
+            {t('collectionPointsMap.filters.city')}
+            <select
+              value={cityId}
+              onChange={(event) => handleCityChange(event.target.value)}
+              disabled={!countryId || citiesLoading}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">{citiesLoading ? t('collectionPointsMap.filters.loadingCities') : t('collectionPointsMap.filters.selectCity')}</option>
+              {cities.map((city) => <option key={city.cityId} value={city.cityId}>{city.cityName}</option>)}
+            </select>
+          </label>
+          <Button variant="outline" onClick={refreshResults} disabled={!searchMode || resultsLoading} className="gap-2">
+            <RefreshCw className={cn('h-4 w-4', resultsLoading && 'animate-spin')} />
+            {t('collectionPointsMap.actions.refresh')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {error && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
+      {message && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">{message}</div>}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <MapMetric icon={Building2} value={companyPointCount} label={t('collectionPointsMap.metrics.company')} />
+        <MapMetric icon={Globe2} value={networkPointCount} label={t('collectionPointsMap.metrics.network')} />
+        <MapMetric icon={CheckCircle2} value={openPointCount} label={t('collectionPointsMap.metrics.open')} />
+        <MapMetric icon={Navigation} value={filteredResults.length} label={searchMode === 'NEARBY' ? t('collectionPointsMap.metrics.nearby') : t('collectionPointsMap.metrics.results')} />
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {SCOPE_FILTERS.map((scope) => (
+            <Button key={scope} size="sm" variant={scopeFilter === scope ? 'default' : 'outline'} onClick={() => setScopeFilter(scope)}>
+              {t(`collectionPointsMap.scopes.${scope}`)}
+            </Button>
+          ))}
+        </div>
+        <div className="relative w-full lg:w-96">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={t('collectionPointsMap.filters.search')} className="bg-secondary pl-9" />
+        </div>
+      </div>
+
+      {resultsLoading ? (
+        <Card className="border-border bg-card"><CardContent className="flex min-h-80 items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+      ) : !searchMode ? (
+        <EmptyMap icon={Crosshair} title={t('collectionPointsMap.empty.initialTitle')} description={t('collectionPointsMap.empty.initialDescription')} />
+      ) : filteredResults.length === 0 ? (
+        <EmptyMap icon={MapPin} title={t('collectionPointsMap.empty.noResultsTitle')} description={t('collectionPointsMap.empty.noResultsDescription')} />
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_420px] xl:gap-6">
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle>{t('collectionPointsMap.map.title')}</CardTitle>
+              <CardDescription>{t('collectionPointsMap.map.description', { values: { count: filteredResults.length, geocoded: pointsWithCoordinates.length } })}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-6">
+              <div className="relative min-h-[55dvh] overflow-hidden rounded-2xl border border-border bg-secondary/20 sm:min-h-[520px]">
+                <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] [background-size:72px_72px]" />
+                <div className="absolute inset-6 rounded-[2rem] border border-border/70" />
+                {pointsWithCoordinates.map((item) => {
+                  const key = pointKey(item);
+                  const scope = getScope(item);
+                  const position = getMarkerPosition(item, mapBounds);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-label={t('collectionPointsMap.map.showPoint', { values: { name: item.collectionPoint.name } })}
+                      onClick={() => setSelectedPointKey(key)}
+                      className={cn(
+                        'absolute z-10 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 shadow-lg transition-transform hover:scale-110',
+                        SCOPE_STYLES[scope].marker,
+                        selectedPoint && pointKey(selectedPoint) === key && 'scale-125 ring-4 ring-primary/25',
+                      )}
+                      style={{ left: `${position.left}%`, top: `${position.top}%` }}
+                    >
+                      <MapPin className="h-5 w-5" />
+                    </button>
+                  );
+                })}
+                {userPosition && (
+                  <div aria-label={t('collectionPointsMap.map.yourPosition')} className="absolute z-20 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-warning bg-warning text-warning-foreground shadow-lg" style={{ left: `${userPosition.left}%`, top: `${userPosition.top}%` }}>
+                    <Crosshair className="h-5 w-5" />
+                  </div>
+                )}
+                {selectedPoint && <MapPopup item={selectedPoint} scope={getScope(selectedPoint)} distance={getDistance(selectedPoint)} t={t} />}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="max-h-[720px] space-y-3 overflow-y-auto pr-1">
+            {filteredResults.map((item) => (
+              <PointCard
+                key={pointKey(item)}
+                item={item}
+                scope={getScope(item)}
+                selected={selectedPoint ? pointKey(selectedPoint) === pointKey(item) : false}
+                assigned={String(item.collectionPoint.id) === currentUser.assignedPointId}
+                distance={getDistance(item)}
+                onSelect={() => setSelectedPointKey(pointKey(item))}
+                t={t}
+              />
+            ))}
           </div>
-          <Button className="min-h-11 gap-2" onClick={handleLocateUser} disabled={isLocating}>
-            <LocateFixed className="h-4 w-4" />
-            {isLocating ? 'Localisation...' : 'Autour de moi'}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-            <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', pointScopeStyles.COMPANY.iconSurface)}>
-              <Building2 className={cn('h-5 w-5', pointScopeStyles.COMPANY.icon)} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{companyPointCount}</p>
-              <p className="text-xs text-muted-foreground">Points entreprise</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-            <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', pointScopeStyles.NETWORK.iconSurface)}>
-              <Globe2 className={cn('h-5 w-5', pointScopeStyles.NETWORK.icon)} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{networkPointCount}</p>
-              <p className="text-xs text-muted-foreground">Autres points</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/20">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{visibleOpenCount}</p>
-              <p className="text-xs text-muted-foreground">Ouverts affiches</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/20">
-              <Navigation className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">
-                {assignedPointVisible ? assignedPointVisible.name : currentRole}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {assignedPointVisible ? 'Point assigne' : 'Vue reseau'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {scopeFilters.map((filter) => (
-          <Button
-            key={filter.value}
-            variant={scopeFilter === filter.value ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setScopeFilter(filter.value)}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
-
-      {locationMessage && (
-        <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
-          {locationMessage}
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_420px] xl:gap-6">
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <CardTitle>Vue carte</CardTitle>
-              <CardDescription>
-                {filteredPoints.length} point(s) affiche(s), {pointsWithGeoLocation.length} avec coordonnees.
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="inline-flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-muted-foreground">
-                <span className={cn('h-2.5 w-2.5 rounded-full', pointScopeStyles.COMPANY.markerDot)} />
-                Entreprise
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-muted-foreground">
-                <span className={cn('h-2.5 w-2.5 rounded-full', pointScopeStyles.NETWORK.markerDot)} />
-                Reseau
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6">
-            <div className="relative min-h-[55dvh] overflow-hidden rounded-2xl border border-border bg-secondary/20 sm:min-h-[520px]">
-              <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] [background-size:72px_72px]" />
-              <div className="absolute inset-6 rounded-[2rem] border border-border/70" />
-              <div className="absolute left-8 right-8 top-1/2 h-px bg-border" />
-              <div className="absolute bottom-8 top-8 left-1/2 w-px bg-border" />
-
-              {pointsWithGeoLocation.map((point) => {
-                const position = getPointPosition(point, mapBounds);
-                const isSelected = selectedPoint?.id === point.id;
-                const isAssigned = currentUser.assignedPointId === point.id;
-                const scopeStyle = pointScopeStyles[point.mapScope];
-
-                return (
-                  <button
-                    key={point.id}
-                    type="button"
-                    aria-label={`Afficher ${point.name}`}
-                    onClick={() => setSelectedPointId(point.id)}
-                    className={cn(
-                      'absolute z-10 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 shadow-lg transition-transform hover:scale-110',
-                      scopeStyle.marker,
-                      isSelected && cn('scale-125 ring-4', scopeStyle.markerSelectedRing),
-                      isAssigned && 'ring-4 ring-warning/30'
-                    )}
-                    style={{ left: `${position.left}%`, top: `${position.top}%` }}
-                  >
-                    <MapPin className="h-5 w-5" />
-                  </button>
-                );
-              })}
-
-              {userPosition && (
-                <div
-                  className="absolute z-20 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-warning bg-warning text-warning-foreground shadow-lg"
-                  style={{ left: `${userPosition.left}%`, top: `${userPosition.top}%` }}
-                >
-                  <Crosshair className="h-5 w-5" />
-                </div>
-              )}
-
-              {selectedPoint && (
-                <div className="absolute bottom-3 left-3 right-3 z-30 rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur sm:bottom-4 sm:left-4 sm:right-4 sm:p-4 md:left-auto md:w-[360px]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{selectedPoint.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {selectedPoint.organizationName}
-                      </p>
-                    </div>
-                    <Badge
-                      className={pointScopeStyles[selectedPoint.mapScope].badge}
-                    >
-                      {selectedPoint.mapScope === 'COMPANY' ? 'Entreprise' : 'Reseau'}
-                    </Badge>
-                  </div>
-                  <p className="mt-3 text-sm text-foreground">
-                    {getCollectionPointFullAddress(selectedPoint, zones, cities, countries)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        'inline-flex rounded-lg px-2 py-1 text-xs font-medium',
-                        getCollectionPointStatusClassName(selectedPoint)
-                      )}
-                    >
-                      {getCollectionPointStatusLabel(selectedPoint)}
-                    </span>
-                    {getDistanceLabel(selectedPoint) && (
-                      <span className="rounded-lg bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                        {getDistanceLabel(selectedPoint)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3 sm:space-y-4">
-          {filteredPoints.map((point) => {
-            const mapsUrl = getGoogleMapsUrl(point);
-            const distanceLabel = getDistanceLabel(point);
-            const isSelected = selectedPoint?.id === point.id;
-            const isAssigned = currentUser.assignedPointId === point.id;
-            const scopeStyle = pointScopeStyles[point.mapScope];
-
-            return (
-              <button
-                key={point.id}
-                type="button"
-                onClick={() => setSelectedPointId(point.id)}
-                className={cn(
-                  'w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-colors',
-                  scopeStyle.card,
-                  scopeStyle.hover,
-                  isSelected && (point.mapScope === 'COMPANY' ? 'border-sky-500' : 'border-orange-500'),
-                  isAssigned && 'ring-2 ring-warning/30'
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-foreground">{point.name}</p>
-                      {isAssigned && (
-                        <Badge className="bg-warning/20 text-warning">Assigne</Badge>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{point.organizationName}</p>
-                  </div>
-                  <Badge
-                    className={scopeStyle.badge}
-                  >
-                    {point.mapScope === 'COMPANY' ? 'Entreprise' : 'Reseau'}
-                  </Badge>
-                </div>
-
-                <div className="mt-3 space-y-2 text-sm">
-                  <p className="text-foreground">
-                    {getCollectionPointFullAddress(point, zones, cities, countries)}
-                  </p>
-                  <p className="text-muted-foreground">{formatOpeningHours(point)}</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {formatCollectionPointGeoLocation(point)}
-                  </p>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      'inline-flex rounded-lg px-2 py-1 text-xs font-medium',
-                      getCollectionPointStatusClassName(point)
-                    )}
-                  >
-                    {getCollectionPointStatusLabel(point)}
-                  </span>
-                  <span className="rounded-lg bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                    {getCollectionPointLocationLabel(point, zones, cities, countries)}
-                  </span>
-                  {distanceLabel && (
-                    <span className="rounded-lg bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                      {distanceLabel}
-                    </span>
-                  )}
-                </div>
-
-                {Array.isArray(point.services) && point.services.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {point.services.map((service) => (
-                      <span
-                        key={service}
-                        className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {mapsUrl && (
-                  <div className="mt-4">
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
-                      <a href={mapsUrl} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                        Ouvrir dans Google Maps
-                      </a>
-                    </Button>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-
-          {filteredPoints.length === 0 && (
-            <Card className="border-border bg-card">
-              <CardContent className="flex min-h-48 flex-col items-center justify-center gap-3 p-8 text-center">
-                <MapPin className="h-10 w-10 text-muted-foreground" />
-                <p className="font-medium text-foreground">Aucun point trouve</p>
-                <p className="text-sm text-muted-foreground">
-                  Modifiez la recherche ou affichez toutes les sources.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+      <p className="text-xs text-muted-foreground">{t('collectionPointsMap.roleHint', { values: { role: currentRole } })}</p>
     </div>
   );
+}
+
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function MapMetric({ icon: Icon, value, label }: { icon: typeof MapPin; value: number; label: string }) {
+  return (
+    <Card className="border-border bg-card"><CardContent className="flex items-center gap-3 p-4"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><div><p className="text-2xl font-bold text-foreground">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div></CardContent></Card>
+  );
+}
+
+function MapPopup({ item, scope, distance, t }: { item: PlatformCollectionPointSearchResponse; scope: Exclude<ScopeFilter, 'ALL'>; distance: number | null; t: Translate }) {
+  return (
+    <div className="absolute bottom-3 left-3 right-3 z-30 rounded-2xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur md:left-auto md:w-[370px]">
+      <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-foreground">{item.collectionPoint.name}</p><p className="text-sm text-muted-foreground">{item.companyName}</p></div><Badge className={SCOPE_STYLES[scope].badge}>{t(`collectionPointsMap.scopes.${scope}`)}</Badge></div>
+      <p className="mt-3 text-sm text-foreground">{[item.collectionPoint.address, item.collectionPoint.city?.cityName].filter(Boolean).join(', ')}</p>
+      <div className="mt-3 flex flex-wrap gap-2"><Badge className={statusClassName(item.collectionPoint.availabilityStatus, item.collectionPoint.openNow)}>{item.collectionPoint.availabilityMessage ?? (item.collectionPoint.openNow ? t('collectionPointsMap.status.open') : t('collectionPointsMap.status.closed'))}</Badge>{distance != null && <Badge variant="outline">{formatDistanceKm(distance)}</Badge>}</div>
+    </div>
+  );
+}
+
+function PointCard({ item, scope, selected, assigned, distance, onSelect, t }: { item: PlatformCollectionPointSearchResponse; scope: Exclude<ScopeFilter, 'ALL'>; selected: boolean; assigned: boolean; distance: number | null; onSelect: () => void; t: Translate }) {
+  const point = item.collectionPoint;
+  const mapsUrl = getGoogleMapsUrl(item);
+  const hours = formatOpeningHours(point.openingHours ?? []);
+  return (
+    <Card className={cn('border-l-4 bg-card transition-colors', SCOPE_STYLES[scope].card, selected && 'border-primary ring-1 ring-primary/30')}>
+      <CardContent className="p-4">
+        <button type="button" onClick={onSelect} className="w-full text-left">
+          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-foreground">{point.name}</p>{assigned && <Badge className="bg-warning/15 text-warning">{t('collectionPointsMap.badges.assigned')}</Badge>}</div><p className="text-sm text-muted-foreground">{item.companyName}</p></div><Badge className={SCOPE_STYLES[scope].badge}>{t(`collectionPointsMap.scopes.${scope}`)}</Badge></div>
+          <div className="mt-3 space-y-1.5 text-sm"><p className="text-foreground">{[point.address, point.city?.cityName].filter(Boolean).join(', ')}</p>{point.phone && <p className="text-muted-foreground">{point.phone}</p>}{hours && <p className="text-muted-foreground">{hours}</p>}</div>
+          <div className="mt-3 flex flex-wrap gap-2"><Badge className={statusClassName(point.availabilityStatus, point.openNow)}>{point.availabilityMessage ?? (point.openNow ? t('collectionPointsMap.status.open') : t('collectionPointsMap.status.closed'))}</Badge>{distance != null && <Badge variant="outline">{formatDistanceKm(distance)}</Badge>}{item.sameCity && <Badge variant="outline">{t('collectionPointsMap.badges.sameCity')}</Badge>}</div>
+        </button>
+        {mapsUrl && <Button variant="outline" size="sm" className="mt-4 gap-2" asChild><a href={mapsUrl} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" />{t('collectionPointsMap.actions.openMaps')}</a></Button>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyMap({ icon: Icon, title, description }: { icon: typeof MapPin; title: string; description: string }) {
+  return <Card className="border-border bg-card"><CardContent className="flex min-h-80 flex-col items-center justify-center gap-3 p-8 text-center"><Icon className="h-10 w-10 text-muted-foreground" /><p className="font-semibold text-foreground">{title}</p><p className="max-w-xl text-sm text-muted-foreground">{description}</p></CardContent></Card>;
 }
