@@ -70,7 +70,7 @@ export function updateCompanyProfile(
 // Parcel types - global catalog
 
 export function getParcelTypes(token: string): Promise<ParcelTypeResponse[]> {
-  return apiClient.get<ParcelTypeResponse[]>('/api/delivery/parcel-types', token);
+  return apiClient.getCached<ParcelTypeResponse[]>('/api/delivery/parcel-types', token);
 }
 
 export function createParcelType(token: string, name: string): Promise<ParcelTypeResponse> {
@@ -146,7 +146,7 @@ export function removeCompanyParcelType(
 // Transport modes - global catalog
 
 export function getTransportModes(token: string): Promise<TransportModeResponse[]> {
-  return apiClient.get<TransportModeResponse[]>('/api/delivery/transport-modes', token);
+  return apiClient.getCached<TransportModeResponse[]>('/api/delivery/transport-modes', token);
 }
 
 export function createTransportMode(token: string, name: string): Promise<TransportModeResponse> {
@@ -236,7 +236,7 @@ export function createCompanySubAccount(
 // Cities and zones
 
 export function getCities(): Promise<CityResponse[]> {
-  return apiClient.get<CityResponse[]>('/api/cities');
+  return apiClient.getCached<CityResponse[]>('/api/cities', null, 30 * 60_000);
 }
 
 export function createCity(token: string, payload: CityRequest): Promise<CityResponse> {

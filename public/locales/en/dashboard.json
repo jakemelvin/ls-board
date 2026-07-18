@@ -468,6 +468,8 @@
         "loadingCompanies": "Loading companies...",
         "loadingCountries": "Loading countries...",
         "loadingUsers": "Loading users...",
+        "loadMoreCompanies": "Load more companies",
+        "loadMoreUsers": "Load more users",
         "noCompanies": "No company available",
         "noUsers": "No users available.",
         "role": "Role",

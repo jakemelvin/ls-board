@@ -1,5 +1,7 @@
 'use client';
 
+// cSpell:words colis
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
 import {
@@ -34,6 +36,7 @@ import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { getSuperAdminDashboard } from '@/lib/dashboard/api';
 import {
   DASHBOARD_CHART_COLORS,
@@ -42,6 +45,7 @@ import {
 import type {
   CompanyHealthMetric,
   PriorityAlert,
+  StatusDistributionMetric,
   SuperAdminDashboardResponse,
 } from '@/lib/dashboard/types';
 import {
@@ -79,11 +83,14 @@ export function SuperAdminDashboard() {
   const [dashboard, setDashboard] = useState<SuperAdminDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { beginRequest, isLatestRequest } = useLatestRequest();
 
   const loadDashboard = useCallback(async () => {
     if (!token) {
       return;
     }
+
+    const requestId = beginRequest();
 
     setLoading(true);
     setError(null);
@@ -93,14 +100,16 @@ export function SuperAdminDashboard() {
         startDate: formatDashboardDateParam(periodRange.from),
         endDate: formatDashboardDateParam(periodRange.to),
       });
-      setDashboard(response);
+      if (isLatestRequest(requestId)) setDashboard(response);
     } catch (err) {
-      setDashboard(null);
-      setError(err instanceof Error ? err.message : t('common.genericError'));
+      if (isLatestRequest(requestId)) {
+        setDashboard(null);
+        setError(err instanceof Error ? err.message : t('common.genericError'));
+      }
     } finally {
-      setLoading(false);
+      if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [periodRange.from, periodRange.to, t, token]);
+  }, [beginRequest, isLatestRequest, periodRange.from, periodRange.to, t, token]);
 
   useEffect(() => {
     void loadDashboard();
@@ -202,7 +211,7 @@ export function SuperAdminDashboard() {
             <CardDescription>{t('superAdmin.overview.charts.volumeDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[220px] sm:h-[280px]">
+            <div className="h-55 sm:h-70">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={snapshot.trends.volume}>
                   <defs>
@@ -234,7 +243,7 @@ export function SuperAdminDashboard() {
             <CardDescription>{t('superAdmin.overview.charts.statusDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[220px]">
+            <div className="h-55">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -278,7 +287,7 @@ export function SuperAdminDashboard() {
             <CardDescription>{t('superAdmin.overview.charts.revenueDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[220px] sm:h-[250px]">
+            <div className="h-55 sm:h-62.5">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={snapshot.trends.revenue}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -586,7 +595,7 @@ function getRiskLevel(score: number, exceptionRate: number, blocked: boolean): R
   return 'info';
 }
 
-function getStatusColor(item: { key?: string; statuses?: string[] }) {
+function getStatusColor(item: Pick<StatusDistributionMetric, 'key' | 'statuses'>) {
   return getStatusDistributionChartColor(item);
 }
 

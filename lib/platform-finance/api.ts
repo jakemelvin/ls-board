@@ -9,7 +9,7 @@ import type {
 } from './types';
 
 export function getShipmentFees(token?: string | null): Promise<ShipmentFeeResponse[]> {
-  return apiClient.get<ShipmentFeeResponse[]>('/api/delivery/shipment-fees', token);
+  return apiClient.getCached<ShipmentFeeResponse[]>('/api/delivery/shipment-fees', token, 2 * 60_000);
 }
 
 export function getShipmentFee(
@@ -46,7 +46,7 @@ export function deleteShipmentFee(token: string, shipmentFeeId: number): Promise
 }
 
 export function getPromoCodes(token?: string | null): Promise<PromoCodeResponse[]> {
-  return apiClient.get<PromoCodeResponse[]>('/api/delivery/promo-codes', token);
+  return apiClient.getCached<PromoCodeResponse[]>('/api/delivery/promo-codes', token, 2 * 60_000);
 }
 
 export function getPromoCode(token: string, promoCodeId: number): Promise<PromoCodeResponse> {
@@ -77,7 +77,7 @@ export function deletePromoCode(token: string, promoCodeId: number): Promise<voi
 }
 
 export function getPaymentModes(token?: string | null): Promise<PaymentModeResponse[]> {
-  return apiClient.get<PaymentModeResponse[]>('/api/delivery/payment-modes', token);
+  return apiClient.getCached<PaymentModeResponse[]>('/api/delivery/payment-modes', token, 2 * 60_000);
 }
 
 export function getPaymentMode(

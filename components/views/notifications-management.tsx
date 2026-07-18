@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -459,19 +460,23 @@ function InboxTab({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<number | null>(null);
+  const { beginRequest, isLatestRequest } = useLatestRequest();
 
   const load = useCallback(async () => {
+    const requestId = beginRequest();
     setLoading(true);
     setError(null);
     try {
       const response = await getMyNotifications(token, { status, page, size: 12 });
-      setData(response);
+      if (isLatestRequest(requestId)) setData(response);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('notifications.errors.load'));
+      if (isLatestRequest(requestId)) {
+        setError(err instanceof ApiError ? err.message : t('notifications.errors.load'));
+      }
     } finally {
-      setLoading(false);
+      if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [page, status, t, token]);
+  }, [beginRequest, isLatestRequest, page, status, t, token]);
 
   useEffect(() => {
     void load();
@@ -674,24 +679,22 @@ function ComposerTab({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<ComposerErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [usersNextPage, setUsersNextPage] = useState(0);
+  const [usersHasMore, setUsersHasMore] = useState(true);
+  const [companiesNextPage, setCompaniesNextPage] = useState(0);
+  const [companiesHasMore, setCompaniesHasMore] = useState(true);
 
   useEffect(() => {
     if (users.length > 0) return;
     let cancelled = false;
 
     async function loadUsers() {
-      const pageSize = 100;
-      const maxPages = 20;
-      const nextUsers: UserResponse[] = [];
-
-      for (let page = 0; page < maxPages; page += 1) {
-        const response = await getUsers(token, { page, size: pageSize });
-        nextUsers.push(...(response.content ?? []));
-        if (response.last || response.content.length < pageSize) break;
-      }
+      const response = await getUsers(token, { page: 0, size: 100 });
 
       if (!cancelled) {
-        setUsers(nextUsers);
+        setUsers(response.content ?? []);
+        setUsersNextPage(1);
+        setUsersHasMore(!response.last);
       }
     }
 
@@ -709,6 +712,25 @@ function ComposerTab({ token }: { token: string }) {
     };
   }, [token, users.length]);
 
+  const loadMoreUsers = async () => {
+    if (usersLoading || !usersHasMore) return;
+    setUsersLoading(true);
+    try {
+      const response = await getUsers(token, { page: usersNextPage, size: 100 });
+      setUsers((current) => mergeById(current, response.content ?? []));
+      setUsersNextPage((current) => current + 1);
+      setUsersHasMore(!response.last);
+    } catch (err) {
+      toast({
+        title: t('notifications.errors.load'),
+        description: err instanceof ApiError ? err.message : t('common.genericError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (form.targetMode !== 'criteria' || countries.length > 0) return;
     setCountriesLoading(true);
@@ -723,18 +745,12 @@ function ComposerTab({ token }: { token: string }) {
     let cancelled = false;
 
     async function loadCompanies() {
-      const pageSize = 100;
-      const maxPages = 20;
-      const nextCompanies: CompanyResponse[] = [];
-
-      for (let page = 0; page < maxPages; page += 1) {
-        const response = await getCompanies(token, { page, size: pageSize });
-        nextCompanies.push(...(response.content ?? []));
-        if (response.last || response.content.length < pageSize) break;
-      }
+      const response = await getCompanies(token, { page: 0, size: 100 });
 
       if (!cancelled) {
-        setCompanies(nextCompanies);
+        setCompanies(response.content ?? []);
+        setCompaniesNextPage(1);
+        setCompaniesHasMore(!response.last);
       }
     }
 
@@ -751,6 +767,25 @@ function ComposerTab({ token }: { token: string }) {
       cancelled = true;
     };
   }, [companies.length, form.targetMode, token]);
+
+  const loadMoreCompanies = async () => {
+    if (companiesLoading || !companiesHasMore) return;
+    setCompaniesLoading(true);
+    try {
+      const response = await getCompanies(token, { page: companiesNextPage, size: 100 });
+      setCompanies((current) => mergeById(current, response.content ?? []));
+      setCompaniesNextPage((current) => current + 1);
+      setCompaniesHasMore(!response.last);
+    } catch (err) {
+      toast({
+        title: t('notifications.errors.load'),
+        description: err instanceof ApiError ? err.message : t('common.genericError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
   const clearErrors = (...keys: ComposerErrorKey[]) => {
     setFieldErrors((prev) => {
@@ -1130,6 +1165,12 @@ function ComposerTab({ token }: { token: string }) {
                 ))}
               </div>
             )}
+            {usersHasMore && (
+              <Button type="button" variant="outline" className="w-full" onClick={loadMoreUsers} disabled={usersLoading}>
+                {usersLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t('notifications.composer.target.loadMoreUsers')}
+              </Button>
+            )}
             <p className="text-xs text-muted-foreground">
               {t('notifications.composer.target.selected', {
                 values: { count: selectedUserIds.length },
@@ -1296,6 +1337,19 @@ function ComposerTab({ token }: { token: string }) {
                   </SelectContent>
                 </Select>
                 <FieldError id="notification-company-id-error" message={fieldErrors.companyId} />
+                {companiesHasMore && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={loadMoreCompanies}
+                    disabled={companiesLoading}
+                  >
+                    {companiesLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {t('notifications.composer.target.loadMoreCompanies')}
+                  </Button>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notification-country-id">
@@ -1380,6 +1434,12 @@ function ComposerTab({ token }: { token: string }) {
       </aside>
     </div>
   );
+}
+
+function mergeById<T extends { id: number }>(current: T[], incoming: T[]) {
+  const items = new Map(current.map((item) => [item.id, item]));
+  incoming.forEach((item) => items.set(item.id, item));
+  return Array.from(items.values());
 }
 
 function DevicesTab({ token }: { token: string }) {

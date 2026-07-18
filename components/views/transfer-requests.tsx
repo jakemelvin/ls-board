@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -89,6 +90,9 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [note, setNote] = useState('');
   const [rejectReason, setRejectReason] = useState('');
+  const { beginRequest, isLatestRequest } = useLatestRequest();
+  const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
+    useLatestRequest();
 
   const canUseScreen = currentRole === 'COLLECTOR' || currentRole === 'TRANSPORTER';
 
@@ -97,6 +101,8 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       setLoading(false);
       return;
     }
+
+    const requestId = beginRequest();
 
     setLoading(true);
     setError(null);
@@ -107,22 +113,26 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
           ? await getCollectorTransmissionRequests(token, { page, size: PAGE_SIZE })
           : await getTransporterTransmissionRequests(token, { page, size: PAGE_SIZE });
 
-      setRequests(response.content ?? []);
-      setTotalPages(response.totalPages ?? 0);
-      setTotalElements(response.totalElements ?? 0);
+      if (isLatestRequest(requestId)) {
+        setRequests(response.content ?? []);
+        setTotalPages(response.totalPages ?? 0);
+        setTotalElements(response.totalElements ?? 0);
+      }
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Impossible de charger les demandes de prise.',
-      );
-      setRequests([]);
-      setTotalPages(0);
-      setTotalElements(0);
+      if (isLatestRequest(requestId)) {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : 'Impossible de charger les demandes de prise.',
+        );
+        setRequests([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      }
     } finally {
-      setLoading(false);
+      if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [canUseScreen, currentRole, page, token]);
+  }, [beginRequest, canUseScreen, currentRole, isLatestRequest, page, token]);
 
   useEffect(() => {
     void loadRequests();
@@ -147,28 +157,34 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
   ) => {
     if (!token) return;
 
+    const requestId = beginDetailRequest();
+
     setActionLoading(true);
     setError(null);
 
     try {
       const detail = await getTransmissionRequest(token, request.requestId);
-      setSelectedRequest(detail);
-      setSelectedShipmentIds(
-        detail.items?.filter((item) => !item.embarked).map((item) => item.shipmentId) ?? [],
-      );
-      setNote('');
-      setRejectReason('');
-      setActionMode(nextActionMode);
-      setDetailOpen(nextActionMode == null);
+      if (isLatestDetailRequest(requestId)) {
+        setSelectedRequest(detail);
+        setSelectedShipmentIds(
+          detail.items?.filter((item) => !item.embarked).map((item) => item.shipmentId) ?? [],
+        );
+        setNote('');
+        setRejectReason('');
+        setActionMode(nextActionMode);
+        setDetailOpen(nextActionMode == null);
+      }
     } catch (err) {
-      toast({
-        title: 'Detail indisponible',
-        description:
-          err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
-        variant: 'destructive',
-      });
+      if (isLatestDetailRequest(requestId)) {
+        toast({
+          title: 'Detail indisponible',
+          description:
+            err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setActionLoading(false);
+      if (isLatestDetailRequest(requestId)) setActionLoading(false);
     }
   };
 

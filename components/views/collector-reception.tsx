@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -77,6 +78,7 @@ export function CollectorReception() {
   const [rejectReason, setRejectReason] = useState('');
   const [validatedCount, setValidatedCount] = useState(0);
   const [rejectedCount, setRejectedCount] = useState(0);
+  const { beginRequest, isLatestRequest } = useLatestRequest();
 
   const loadIncomingShipments = useCallback(async () => {
     if (!token) {
@@ -84,6 +86,8 @@ export function CollectorReception() {
       setLoading(false);
       return;
     }
+
+    const requestId = beginRequest();
 
     setLoading(true);
     setError(null);
@@ -94,22 +98,26 @@ export function CollectorReception() {
         size: PAGE_SIZE,
       });
 
-      setShipments(response.content ?? []);
-      setTotalPages(response.totalPages ?? 0);
-      setTotalElements(response.totalElements ?? 0);
+      if (isLatestRequest(requestId)) {
+        setShipments(response.content ?? []);
+        setTotalPages(response.totalPages ?? 0);
+        setTotalElements(response.totalElements ?? 0);
+      }
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Impossible de charger les colis a receptionner.',
-      );
-      setShipments([]);
-      setTotalPages(0);
-      setTotalElements(0);
+      if (isLatestRequest(requestId)) {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : 'Impossible de charger les colis a receptionner.',
+        );
+        setShipments([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      }
     } finally {
-      setLoading(false);
+      if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [page, token]);
+  }, [beginRequest, isLatestRequest, page, token]);
 
   useEffect(() => {
     void loadIncomingShipments();

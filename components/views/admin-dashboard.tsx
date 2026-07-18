@@ -34,6 +34,7 @@ import { DashboardPeriodFilter } from '@/components/dashboard-period-filter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCompanyOperationalReadiness } from '@/lib/admin/api';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import type { CompanyOperationalReadiness } from '@/lib/admin/types';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
@@ -71,6 +72,7 @@ export function AdminDashboard() {
   const [dashboard, setDashboard] = useState<CompanyDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { beginRequest, isLatestRequest } = useLatestRequest();
   const companyId = company?.id;
 
   const loadDashboard = useCallback(async () => {
@@ -78,6 +80,8 @@ export function AdminDashboard() {
       setLoading(companyStatus === 'loading');
       return;
     }
+
+    const requestId = beginRequest();
 
     setLoading(true);
     setError(null);
@@ -87,14 +91,16 @@ export function AdminDashboard() {
         startDate: formatDashboardDateParam(periodRange.from),
         endDate: formatDashboardDateParam(periodRange.to),
       });
-      setDashboard(response);
+      if (isLatestRequest(requestId)) setDashboard(response);
     } catch (err) {
-      setDashboard(null);
-      setError(err instanceof Error ? err.message : t('common.genericError'));
+      if (isLatestRequest(requestId)) {
+        setDashboard(null);
+        setError(err instanceof Error ? err.message : t('common.genericError'));
+      }
     } finally {
-      setLoading(false);
+      if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [companyId, companyStatus, periodRange.from, periodRange.to, t, token]);
+  }, [beginRequest, companyId, companyStatus, isLatestRequest, periodRange.from, periodRange.to, t, token]);
 
   useEffect(() => {
     void loadDashboard();

@@ -468,6 +468,8 @@
         "loadingCompanies": "Chargement des entreprises...",
         "loadingCountries": "Chargement des pays...",
         "loadingUsers": "Chargement des utilisateurs...",
+        "loadMoreCompanies": "Charger plus d'entreprises",
+        "loadMoreUsers": "Charger plus d'utilisateurs",
         "noCompanies": "Aucune entreprise disponible",
         "noUsers": "Aucun utilisateur disponible.",
         "role": "Rôle",

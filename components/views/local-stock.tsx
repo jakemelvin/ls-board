@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -87,6 +88,8 @@ export function LocalStock() {
   const [shipmentReference, setShipmentReference] = useState('');
   const [shipmentCode, setShipmentCode] = useState('');
   const [deliverNote, setDeliverNote] = useState('');
+  const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
+    useLatestRequest();
 
   const loadStock = useCallback(async () => {
     if (!token) {
@@ -141,25 +144,31 @@ export function LocalStock() {
   const openReview = async (request: ShipmentDestinationDepositRequestSummary) => {
     if (!token) return;
 
+    const requestId = beginDetailRequest();
+
     setActionLoading(true);
 
     try {
       const detail = await getDestinationDepositRequest(token, request.requestId);
-      const pendingItems = detail.items?.filter((item) => item.status !== 'REJECTED') ?? [];
-      setSelectedDeposit(detail);
-      setAcceptedIds(pendingItems.map((item) => item.shipmentId));
-      setRejectionReasons({});
-      setReviewNote('');
-      setIsReviewOpen(true);
+      if (isLatestDetailRequest(requestId)) {
+        const pendingItems = detail.items?.filter((item) => item.status !== 'REJECTED') ?? [];
+        setSelectedDeposit(detail);
+        setAcceptedIds(pendingItems.map((item) => item.shipmentId));
+        setRejectionReasons({});
+        setReviewNote('');
+        setIsReviewOpen(true);
+      }
     } catch (err) {
-      toast({
-        title: 'Detail indisponible',
-        description:
-          err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
-        variant: 'destructive',
-      });
+      if (isLatestDetailRequest(requestId)) {
+        toast({
+          title: 'Detail indisponible',
+          description:
+            err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setActionLoading(false);
+      if (isLatestDetailRequest(requestId)) setActionLoading(false);
     }
   };
 

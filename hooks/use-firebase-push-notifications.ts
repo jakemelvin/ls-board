@@ -8,6 +8,16 @@ import { getFirebaseMessagingToken, onFirebaseForegroundMessage } from '@/lib/fi
 
 type PushState = 'unsupported' | 'default' | 'denied' | 'granted' | 'registered' | 'error';
 
+const pushRegistrationsInFlight = new Map<string, Promise<unknown>>();
+
+function registrationStorageKey(token: string, deviceId: string) {
+  let hash = 0;
+  for (let index = 0; index < token.length; index += 1) {
+    hash = (hash * 31 + token.charCodeAt(index)) | 0;
+  }
+  return `sendam-push-registration:${hash.toString(36)}:${deviceId}`;
+}
+
 function getDeviceId() {
   const key = 'sendam-device-id';
   const existing = window.localStorage.getItem(key);
@@ -71,12 +81,32 @@ export function useFirebasePushNotifications(token: string | null) {
         return;
       }
 
-      await registerNotificationDevice(token, {
-        fcmToken,
-        platform: 'WEB',
-        deviceId: getDeviceId(),
-        deviceName: getDeviceName(),
-      });
+      const deviceId = getDeviceId();
+      const storageKey = registrationStorageKey(token, deviceId);
+      if (window.sessionStorage.getItem(storageKey) === fcmToken) {
+        setState('registered');
+        return;
+      }
+
+      let registrationRequest = pushRegistrationsInFlight.get(storageKey);
+      if (!registrationRequest) {
+        registrationRequest = registerNotificationDevice(token, {
+          fcmToken,
+          platform: 'WEB',
+          deviceId,
+          deviceName: getDeviceName(),
+        });
+        pushRegistrationsInFlight.set(storageKey, registrationRequest);
+      }
+
+      try {
+        await registrationRequest;
+        window.sessionStorage.setItem(storageKey, fcmToken);
+      } finally {
+        if (pushRegistrationsInFlight.get(storageKey) === registrationRequest) {
+          pushRegistrationsInFlight.delete(storageKey);
+        }
+      }
       setState('registered');
     } catch (error) {
       console.error('[Notifications] Push registration failed:', error);

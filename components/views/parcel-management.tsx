@@ -23,6 +23,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
+import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -118,6 +119,10 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const { beginRequest: beginListRequest, isLatestRequest: isLatestListRequest } =
+    useLatestRequest();
+  const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
+    useLatestRequest();
 
   useEffect(() => {
     setStatusFilter(currentRole === 'TRANSPORTER' ? 'IN_TRANSIT' : 'ALL');
@@ -136,6 +141,8 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       return;
     }
 
+    const requestId = beginListRequest();
+
     setLoading(true);
     setError(null);
 
@@ -146,15 +153,19 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         status: statusFilter === 'ALL' ? undefined : statusFilter,
       });
 
-      setShipments(response.content);
-      setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
+      if (isLatestListRequest(requestId)) {
+        setShipments(response.content);
+        setTotalPages(response.totalPages);
+        setTotalElements(response.totalElements);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impossible de charger les shipments.');
+      if (isLatestListRequest(requestId)) {
+        setError(err instanceof ApiError ? err.message : 'Impossible de charger les shipments.');
+      }
     } finally {
-      setLoading(false);
+      if (isLatestListRequest(requestId)) setLoading(false);
     }
-  }, [page, statusFilter, token]);
+  }, [beginListRequest, isLatestListRequest, page, statusFilter, token]);
 
   useEffect(() => {
     loadShipments();
@@ -167,6 +178,8 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         return;
       }
 
+      const requestId = beginDetailRequest();
+
       setSelectedShipmentId(shipmentId);
       setSelectedShipment(null);
       setDetailLoading(true);
@@ -174,16 +187,18 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
 
       try {
         const shipment = await getShipment(token, shipmentId);
-        setSelectedShipment(shipment);
+        if (isLatestDetailRequest(requestId)) setSelectedShipment(shipment);
       } catch (err) {
-        setDetailError(
-          err instanceof ApiError ? err.message : 'Impossible de charger le detail du shipment.',
-        );
+        if (isLatestDetailRequest(requestId)) {
+          setDetailError(
+            err instanceof ApiError ? err.message : 'Impossible de charger le detail du shipment.',
+          );
+        }
       } finally {
-        setDetailLoading(false);
+        if (isLatestDetailRequest(requestId)) setDetailLoading(false);
       }
     },
-    [token],
+    [beginDetailRequest, isLatestDetailRequest, token],
   );
 
   const closeShipmentDetail = useCallback(() => {
@@ -200,11 +215,12 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       setSelectedShipment(shipment);
       setDetailError(null);
       setDetailLoading(false);
+      const filtersWillChange = statusFilter !== 'ALL' || page !== 0;
       setStatusFilter('ALL');
       setPage(0);
-      void loadShipments();
+      if (!filtersWillChange) void loadShipments();
     },
-    [loadShipments],
+    [loadShipments, page, statusFilter],
   );
 
   const filteredShipments = useMemo(() => {

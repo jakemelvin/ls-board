@@ -86,7 +86,7 @@ export async function registerCompany(
 }
 
 export async function getCountries(): Promise<CountryResponse[]> {
-  return apiClient.get<CountryResponse[]>('/api/countries');
+  return apiClient.getCached<CountryResponse[]>('/api/countries', null, 30 * 60_000);
 }
 
 export async function approveCompany(

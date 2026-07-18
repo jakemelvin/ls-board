@@ -7,6 +7,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 // that are currently in flight: unlike a response cache, this cannot serve stale
 // business data after a mutation or an explicit refresh.
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
+const cachedGetResponses = new Map<string, { expiresAt: number; value: unknown }>();
+let responseCacheVersion = 0;
 
 export class ApiError extends Error {
   constructor(
@@ -49,6 +51,31 @@ function request<T>(
   return pendingRequest;
 }
 
+function cachedRequest<T>(
+  path: string,
+  token: string | null | undefined,
+  ttlMs: number,
+): Promise<T> {
+  const requestKey = `${token ?? ''}\u0000${path}`;
+  const cached = cachedGetResponses.get(requestKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.value as T);
+  }
+
+  if (cached) {
+    cachedGetResponses.delete(requestKey);
+  }
+
+  const cacheVersionAtRequestStart = responseCacheVersion;
+  return request<T>(path, { method: 'GET' }, token).then((value) => {
+    if (responseCacheVersion === cacheVersionAtRequestStart) {
+      cachedGetResponses.set(requestKey, { expiresAt: Date.now() + ttlMs, value });
+    }
+    return value;
+  });
+}
+
 async function executeRequest<T>(
   path: string,
   init: RequestInit,
@@ -83,6 +110,10 @@ async function executeRequest<T>(
   }
 
   const text = await response.text();
+  if ((init.method ?? 'GET').toUpperCase() !== 'GET') {
+    responseCacheVersion += 1;
+    cachedGetResponses.clear();
+  }
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
 }
@@ -98,6 +129,9 @@ function isAuthFailure(status: number, message: string) {
 export const apiClient = {
   get: <T>(path: string, token?: string | null) =>
     request<T>(path, { method: 'GET' }, token),
+
+  getCached: <T>(path: string, token?: string | null, ttlMs = 5 * 60_000) =>
+    cachedRequest<T>(path, token, ttlMs),
 
   post: <T>(path: string, body: unknown, token?: string | null) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }, token),
