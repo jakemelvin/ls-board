@@ -121,8 +121,9 @@ export interface PaymentAttemptResponse {
   providerCurrency?: string;
   exchangeRate?: number;
   providerTransactionId?: string;
+  providerReference?: string;
   providerStatus?: string;
-  maskedPayerMsisdn?: string;
+  payerMsisdnMasked?: string;
   approvalUrl?: string;
   failureCode?: string;
   failureReason?: string;
@@ -142,6 +143,9 @@ export interface ShipmentTransactionResponse {
   companyId?: number;
   companyName?: string;
   paymentCollectionMode?: ShipmentPaymentCollectionMode;
+  paymentModeId?: number;
+  paymentModeName?: string;
+  promoCodeId?: number;
   promoCode?: string;
   status: ShipmentTransactionStatus;
   grossAmount?: number;
@@ -178,12 +182,15 @@ export interface AdminTransactionPaymentResponse {
 
 export type AdminTransactionPage = Page<AdminTransactionPaymentResponse>;
 export type AdminPaymentAttemptPage = Page<AdminPaymentAttemptResponse>;
+export type TransactionPage = Page<ShipmentTransactionResponse>;
 
 export interface GetAdminTransactionsParams {
   status?: ShipmentTransactionStatus;
   page?: number;
   size?: number;
 }
+
+export type GetTransactionsParams = GetAdminTransactionsParams;
 
 export interface GetAdminPaymentsParams {
   provider?: PaymentProvider;

@@ -30,6 +30,7 @@ import { SuperAdminManagement } from '@/components/views/super-admin-management'
 import { SuperAdminShipmentsView } from '@/components/views/super-admin-shipments';
 import { CatalogManagement } from '@/components/views/catalog-management';
 import { PlatformFinanceSettings } from '@/components/views/platform-finance-settings';
+import { CompanyPaymentTraceability } from '@/components/views/platform-payment-traceability';
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { NotificationsManagement } from '@/components/views/notifications-management';
 import { CompanyProfileView } from '@/components/views/company-profile';
@@ -154,6 +155,8 @@ export default function DashboardPage() {
         return isAdminLikeRole(currentRole) ? <RouteExceptionsView /> : <AdminDashboard />;
       case 'billing':
         return isAdminLikeRole(currentRole) ? <BillingSubscriptionView /> : <AdminDashboard />;
+      case 'financial-operations':
+        return isAdminLikeRole(currentRole) ? <CompanyPaymentTraceability /> : <AdminDashboard />;
       case 'commissions':
         return isAdminLikeRole(currentRole) ? <CommissionManagement /> : <AdminDashboard />;
       case 'team':

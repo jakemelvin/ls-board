@@ -6,12 +6,15 @@ import type {
   AdminTransactionPaymentResponse,
   GetAdminPaymentsParams,
   GetAdminTransactionsParams,
+  GetTransactionsParams,
   PaymentModeRequest,
   PaymentModeResponse,
   PromoCodeRequest,
   PromoCodeResponse,
   ShipmentFeeRequest,
   ShipmentFeeResponse,
+  ShipmentTransactionResponse,
+  TransactionPage,
 } from './types';
 
 function toQuery(params: object) {
@@ -31,6 +34,26 @@ export function getAdminTransactions(
 ): Promise<AdminTransactionPage> {
   return apiClient.get<AdminTransactionPage>(
     `/api/delivery/admin/transactions${toQuery(params)}`,
+    token,
+  );
+}
+
+export function getTransactions(
+  token: string,
+  params: GetTransactionsParams = {},
+): Promise<TransactionPage> {
+  return apiClient.get<TransactionPage>(
+    `/api/delivery/transactions${toQuery(params)}`,
+    token,
+  );
+}
+
+export function getTransaction(
+  token: string,
+  transactionId: number,
+): Promise<ShipmentTransactionResponse> {
+  return apiClient.get<ShipmentTransactionResponse>(
+    `/api/delivery/transactions/${transactionId}`,
     token,
   );
 }
