@@ -18,8 +18,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="flex min-h-dvh bg-background">
-      <div className="relative hidden overflow-hidden border-r border-border p-12 lg:flex lg:w-[480px] lg:flex-col lg:justify-between">
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <div className="relative hidden h-full overflow-hidden border-r border-border p-12 lg:flex lg:w-[480px] lg:flex-col lg:justify-between">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(96,165,250,0.12),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(91,145,255,0.08),transparent_60%)]" />
 
         <div className="relative">
@@ -56,16 +56,18 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </p>
       </div>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-16">
+      <main className="relative flex h-full min-h-0 flex-1 touch-pan-y flex-col items-center overflow-y-auto overscroll-y-contain px-6 py-12 lg:px-16">
         <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
           <LanguageSwitcher />
         </div>
 
-        <div className="mb-8 lg:hidden">
-          <SendamLogo />
+        <div className="my-auto flex w-full flex-col items-center">
+          <div className="mb-8 lg:hidden">
+            <SendamLogo />
+          </div>
+          {children}
         </div>
-        {children}
-      </div>
+      </main>
     </div>
   );
 }

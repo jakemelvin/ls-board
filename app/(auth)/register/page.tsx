@@ -248,6 +248,9 @@ function CompanyStep({
           <Label htmlFor="comp-phone">{t('fields.phone')}</Label>
           <Input
             id="comp-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             placeholder={t('placeholders.phone')}
             {...register('phone')}
             className={cn(errors.phone && 'border-destructive')}
@@ -493,6 +496,9 @@ function AdminStep({
           <Label htmlFor="admin-phone">{t('fields.phone')}</Label>
           <Input
             id="admin-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             placeholder={t('placeholders.phone')}
             {...register('phone')}
             className={cn(errors.phone && 'border-destructive')}
