@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ShipmentCreateView } from '@/components/views/shipment-create';
+import { ShipmentPaymentDialog } from '@/components/payments/shipment-payment-dialog';
 import {
   Table,
   TableBody,
@@ -121,6 +122,8 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [recentlyCreatedOwnedShipmentId, setRecentlyCreatedOwnedShipmentId] = useState<number | null>(null);
   const { beginRequest: beginListRequest, isLatestRequest: isLatestListRequest } =
     useLatestRequest();
   const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
@@ -134,6 +137,8 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     setSelectedShipmentId(null);
     setSelectedShipment(null);
     setDetailError(null);
+    setPaymentDialogOpen(false);
+    setRecentlyCreatedOwnedShipmentId(null);
   }, [currentRole]);
 
   const loadShipments = useCallback(async () => {
@@ -208,13 +213,16 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     setSelectedShipment(null);
     setDetailError(null);
     setDetailLoading(false);
+    setPaymentDialogOpen(false);
   }, []);
 
   const handleShipmentCreated = useCallback(
-    (shipment: Shipment) => {
+    (shipment: Shipment, options: { payPlatformFeeNow: boolean }) => {
       setIsCreateViewOpen(false);
       setSelectedShipmentId(shipment.id);
       setSelectedShipment(shipment);
+      setRecentlyCreatedOwnedShipmentId(shipment.id);
+      setPaymentDialogOpen(options.payPlatformFeeNow);
       setDetailError(null);
       setDetailLoading(false);
       const filtersWillChange = statusFilter !== 'ALL' || page !== 0;
@@ -307,6 +315,9 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         error={detailError}
         onBack={closeShipmentDetail}
         onRetry={() => loadShipmentDetail(selectedShipmentId)}
+        paymentDialogOpen={paymentDialogOpen}
+        onPaymentDialogOpenChange={setPaymentDialogOpen}
+        ownershipConfirmed={recentlyCreatedOwnedShipmentId === selectedShipmentId}
       />
     );
   }
@@ -429,7 +440,15 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">Reference</TableHead>
+                      <TableHead
+                        className={cn(
+                          'text-muted-foreground',
+                          currentRole === 'COLLECTOR' &&
+                            'sticky left-0 z-20 min-w-48 border-r border-border bg-card shadow-[4px_0_10px_-8px_currentColor]',
+                        )}
+                      >
+                        Reference
+                      </TableHead>
                       <TableHead className="text-muted-foreground">
                         {getSenderColumnLabel(currentRole)}
                       </TableHead>
@@ -440,13 +459,26 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                       <TableHead className="text-muted-foreground">Destination</TableHead>
                       <TableHead className="text-muted-foreground">Statut</TableHead>
                       <TableHead className="text-muted-foreground">Maj</TableHead>
-                      <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                      <TableHead
+                        className={cn(
+                          'text-right text-muted-foreground',
+                          currentRole === 'COLLECTOR' &&
+                            'sticky right-0 z-20 w-16 border-l border-border bg-card shadow-[-4px_0_10px_-8px_currentColor]',
+                        )}
+                      >
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredShipments.map((shipment) => (
-                      <TableRow key={shipment.id} className="border-border">
-                        <TableCell>
+                      <TableRow key={shipment.id} className="group border-border">
+                        <TableCell
+                          className={cn(
+                            currentRole === 'COLLECTOR' &&
+                              'sticky left-0 z-10 min-w-48 border-r border-border bg-card shadow-[4px_0_10px_-8px_currentColor] group-hover:bg-muted/50',
+                          )}
+                        >
                           <div className="flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
                               <Package className="h-4 w-4 text-primary" />
@@ -476,7 +508,13 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                         <TableCell className="text-muted-foreground">
                           {formatShipmentDate(shipment.updatedAt)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell
+                          className={cn(
+                            'text-right',
+                            currentRole === 'COLLECTOR' &&
+                              'sticky right-0 z-10 w-16 border-l border-border bg-card shadow-[-4px_0_10px_-8px_currentColor] group-hover:bg-muted/50',
+                          )}
+                        >
                           <Button
                             variant="ghost"
                             size="icon"
@@ -647,6 +685,9 @@ function ShipmentDetailView({
   error,
   onBack,
   onRetry,
+  paymentDialogOpen,
+  onPaymentDialogOpenChange,
+  ownershipConfirmed,
 }: {
   currentRole: UserRole;
   shipmentId: number;
@@ -655,7 +696,11 @@ function ShipmentDetailView({
   error: string | null;
   onBack: () => void;
   onRetry: () => void;
+  paymentDialogOpen: boolean;
+  onPaymentDialogOpenChange: (open: boolean) => void;
+  ownershipConfirmed: boolean;
 }) {
+  const userId = useAuthStore((state) => state.userId);
   const statusHistory = shipment?.statusHistory ?? [];
   const { t } = useTranslation('dashboard');
   const { formatMoney } = useCurrency();
@@ -665,6 +710,32 @@ function ShipmentDetailView({
   const shipmentDisplayName = shipment
     ? getShipmentReferenceDisplay(shipment, currentRole, t)
     : `Shipment #${shipmentId}`;
+  const platformFeeIsSettled = shipment
+    ? shipment.paymentStatus === 'PAID' ||
+      shipment.transactionStatus === 'PLATFORM_FEE_PAID' ||
+      shipment.transactionStatus === 'COMPLETED'
+    : false;
+  const shipmentPaymentIsClosed = shipment
+    ? shipment.transactionStatus === 'CANCELLED' ||
+      shipment.status === 'CANCELLED' ||
+      shipment.status === 'DELIVERED' ||
+      shipment.status === 'RETURNED'
+    : true;
+  const platformFeeIsDue = Boolean(
+    shipment && !platformFeeIsSettled && !shipmentPaymentIsClosed,
+  );
+  const collectorOwnsShipment = shipment
+    ? shipment.createdByUserId === userId || ownershipConfirmed
+    : false;
+  const canCollectorPay =
+    currentRole === 'COLLECTOR' && platformFeeIsDue && collectorOwnsShipment;
+  const shouldMountPaymentDialog =
+    canCollectorPay ||
+    (currentRole === 'COLLECTOR' &&
+      ownershipConfirmed &&
+      paymentDialogOpen &&
+      !platformFeeIsSettled &&
+      !shipmentPaymentIsClosed);
 
   return (
     <div className="space-y-6">
@@ -711,6 +782,32 @@ function ShipmentDetailView({
         </Card>
       ) : shipment ? (
         <div className="space-y-6">
+          {currentRole === 'COLLECTOR' && platformFeeIsDue && (
+            <Card className={cn('overflow-hidden', canCollectorPay ? 'border-primary/35 bg-primary/5' : 'border-border bg-muted/20')}>
+              <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', canCollectorPay ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      {t(canCollectorPay ? 'shipmentPayment.ownerDueTitle' : 'shipmentPayment.notOwnerTitle')}
+                    </p>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                      {t(canCollectorPay ? 'shipmentPayment.ownerDueDescription' : 'shipmentPayment.notOwnerDescription')}
+                    </p>
+                  </div>
+                </div>
+                {canCollectorPay && (
+                  <Button className="shrink-0 gap-2" onClick={() => onPaymentDialogOpenChange(true)}>
+                    <CreditCard className="h-4 w-4" />
+                    {t('shipmentPayment.payPlatformFee')}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="overflow-hidden border-border bg-card">
             <CardContent className="space-y-5 p-5 sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -959,6 +1056,17 @@ function ShipmentDetailView({
               )}
             </CardContent>
           </Card>
+
+          {shouldMountPaymentDialog && (
+            <ShipmentPaymentDialog
+              open={paymentDialogOpen}
+              shipment={shipment}
+              onOpenChange={onPaymentDialogOpenChange}
+              onPaymentSucceeded={async () => {
+                await onRetry();
+              }}
+            />
+          )}
         </div>
       ) : null}
     </div>

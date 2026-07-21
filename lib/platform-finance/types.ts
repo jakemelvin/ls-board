@@ -125,6 +125,7 @@ export interface PaymentAttemptResponse {
   providerStatus?: string;
   payerMsisdnMasked?: string;
   approvalUrl?: string;
+  clientSecret?: string;
   failureCode?: string;
   failureReason?: string;
   expiresAt?: string;

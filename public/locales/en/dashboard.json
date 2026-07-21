@@ -886,6 +886,59 @@
       "collectorPlaceholder": "Search by sender or receiver..."
     }
   },
+  "shipmentPayment": {
+    "title": "Pay the platform fee",
+    "description": "Start the secure payment for shipment #{{id}}.",
+    "shipment": "Shipment",
+    "platformFee": "Estimated platform fee",
+    "loading": "Loading payment methods",
+    "chooseProvider": "Payment method",
+    "phoneLabel": "Mobile Money number",
+    "phonePlaceholder": "E.g. 237690000000",
+    "phoneHint": "Use the number that will receive the confirmation request.",
+    "pay": "Start payment",
+    "retry": "Retry payment",
+    "check": "Check now",
+    "confirmCard": "Confirm card payment",
+    "continueProvider": "Continue with provider",
+    "payLater": "Pay later",
+    "close": "Close",
+    "payPlatformFee": "Pay platform fee",
+    "ownerDueTitle": "Platform fee pending",
+    "ownerDueDescription": "You created this shipment. Pay its platform fee to make it eligible for collection.",
+    "notOwnerTitle": "Payment restricted to creator",
+    "notOwnerDescription": "Only the collector who created this shipment can pay its platform fee later.",
+    "unavailableTitle": "Payment unavailable",
+    "unavailableDescription": "No online payment provider is currently configured.",
+    "errorTitle": "Payment was not completed",
+    "successTitle": "Payment confirmed",
+    "pendingDescription": "Approve the provider request. The status is checked automatically.",
+    "successDescription": "The platform fee has been paid. The shipment can proceed to collection.",
+    "failedDescription": "This attempt did not complete. You can start a new one.",
+    "providers": {
+      "MTN": "MTN Mobile Money",
+      "ORANGE": "Orange Money",
+      "PAYPAL": "PayPal",
+      "STRIPE": "Bank card"
+    },
+    "statuses": {
+      "CREATED": "Attempt created",
+      "PENDING": "Awaiting confirmation",
+      "REQUIRES_ACTION": "Action required",
+      "PROCESSING": "Payment processing",
+      "SUCCEEDED": "Payment confirmed",
+      "FAILED": "Payment failed",
+      "CANCELLED": "Payment cancelled",
+      "EXPIRED": "Attempt expired"
+    },
+    "errors": {
+      "config": "Unable to load payment methods.",
+      "phoneRequired": "Enter a valid Mobile Money number.",
+      "initiation": "Unable to start payment.",
+      "confirmation": "Unable to confirm the payment status.",
+      "card": "The card payment could not be confirmed."
+    }
+  },
   "superAdminShipments": {
     "collectionModes": {
       "COLLECTION_POINT": "Collection point",

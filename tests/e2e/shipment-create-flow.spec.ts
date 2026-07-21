@@ -4,6 +4,10 @@ const API_ORIGIN = 'https://dstest.easywaka.com';
 
 test('shipment creation follows API dependencies and links a platform recipient', async ({ page }) => {
   test.setTimeout(60_000);
+  const pngPixel = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
   const requestedUrls: string[] = [];
   let createBody = '';
 
@@ -30,6 +34,11 @@ test('shipment creation follows API dependencies and links a platform recipient'
 
     if (url.pathname === '/api/delivery/notifications/unread-count') {
       await json({ unreadCount: 0 });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/payments/config') {
+      await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
       return;
     }
 
@@ -134,10 +143,13 @@ test('shipment creation follows API dependencies and links a platform recipient'
       await json({
         id: 900,
         reference: 'SHP-900',
+        createdByUserId: 4,
         companyId: 9,
         companyName: 'Sendam Express',
         priority: 'EXPRESS',
         status: 'CREATED',
+        feeAmount: 500,
+        price: 12000,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -184,12 +196,30 @@ test('shipment creation follows API dependencies and links a platform recipient'
   await page.getByLabel(/Point de dépôt|Drop-off point/).selectOption('101');
   await page.getByLabel(/Point de retrait|Pickup point/).selectOption('202');
 
-  const photoInput = page.locator('input[type="file"][multiple]');
-  await photoInput.setInputFiles(
-    Array.from({ length: 5 }, (_, index) => ({
-      name: `parcel-${index + 1}.png`,
+  const addPhotosButton = page.getByRole('button', { name: /Ajouter des photos|Add photos/ });
+  const firstFileChooserPromise = page.waitForEvent('filechooser');
+  await addPhotosButton.click();
+  const firstFileChooser = await firstFileChooserPromise;
+  await firstFileChooser.setFiles({
+    name: 'parcel-1.png',
+    mimeType: 'image/png',
+    buffer: pngPixel,
+  });
+  await expect(page.getByText(/1\/4 photo/)).toBeVisible();
+  await expect(addPhotosButton).toBeFocused();
+  const firstPreview = page.getByRole('img', { name: /parcel-1\.png/ });
+  await expect(firstPreview).toBeVisible();
+  const previewBox = await firstPreview.boundingBox();
+  expect(previewBox?.height).toBeLessThan(300);
+
+  const secondFileChooserPromise = page.waitForEvent('filechooser');
+  await addPhotosButton.click();
+  const secondFileChooser = await secondFileChooserPromise;
+  await secondFileChooser.setFiles(
+    Array.from({ length: 4 }, (_, index) => ({
+      name: `parcel-${index + 2}.png`,
       mimeType: 'image/png',
-      buffer: Buffer.from(`photo-${index + 1}`),
+      buffer: pngPixel,
     })),
   );
   await expect(page.getByText(/4\/4 photo/)).toBeVisible();
@@ -198,10 +228,16 @@ test('shipment creation follows API dependencies and links a platform recipient'
 
   await page.getByLabel(/Nom complet|Full name/).first().fill('Marc Collecteur');
   await page.getByLabel(/Téléphone.*WhatsApp|Phone.*WhatsApp/).first().fill('237690000111');
+  const identityInputs = page.getByLabel(/Numéro de pièce d’identité|Identity document number/);
+  await expect(identityInputs).toHaveCount(2);
+  await expect(identityInputs.first()).toHaveAttribute('required', '');
+  await expect(identityInputs.first()).toHaveAttribute('placeholder', /CNI 123456789|ID 123456789/);
+  await identityInputs.first().fill('CNI-SENDER-001');
   await page.getByRole('button', { name: /Utilisateur SENDAMhub|SENDAMhub user/ }).click();
   await page.getByLabel(/Nom d’utilisateur ou téléphone|Username or phone/).fill('marie');
   await page.getByRole('option', { name: /Marie Destinataire/ }).click();
   await expect(page.getByText(/@marie237/)).toBeVisible();
+  await identityInputs.nth(1).fill('CNI-RECEIVER-002');
   await page.getByRole('button', { name: /Continuer|Continue/ }).click();
 
   expect(
@@ -213,8 +249,14 @@ test('shipment creation follows API dependencies and links a platform recipient'
   await expect(page.getByText(/12.?000/).first()).toBeVisible();
   await expect(page.getByText(/A regler au point|Pay at collection point/)).toBeVisible();
   await expect(page.getByText(/collecteur encaissera|collector then collects/)).toBeVisible();
-  await page.getByRole('button', { name: /Confirmer et créer|Confirm and create/ }).click();
+  await expect(page.getByRole('button', { name: /Créer sans payer|Create without paying/ })).toBeVisible();
+  await page.getByRole('button', { name: /Créer et payer les frais|Create and pay the fee/ }).click();
 
+  const paymentDialog = page.getByRole('dialog');
+  await expect(paymentDialog.getByText(/Régler les frais plateforme|Pay the platform fee/)).toBeVisible();
+  await expect(paymentDialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
+  await expect(paymentDialog.getByRole('radio', { name: /Orange Money/ })).toBeVisible();
+  await paymentDialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();
   await expect(page.getByRole('heading', { name: /Shipment #900/ })).toBeVisible();
   expect(createBody).toContain('"receiverUserId":77');
   expect((createBody.match(/name="parcelPhotos"/g) ?? []).length).toBe(4);

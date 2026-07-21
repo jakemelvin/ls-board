@@ -29,6 +29,8 @@
     "simulate": "Calculate price",
     "simulating": "Calculating price…",
     "create": "Confirm and create",
+    "createWithoutPayment": "Create without paying",
+    "createAndPay": "Create and pay the fee",
     "creating": "Creating…",
     "change": "Edit",
     "remove": "Remove"
@@ -82,6 +84,9 @@
     "photosDescription": "Add up to 4 photos. Image formats only.",
     "addPhotos": "Add photos",
     "photoCount": "{{count}}/4 photo(s)",
+    "photoPreviewAlt": "Preview of {{name}}",
+    "photoSizeKb": "{{size}} KB",
+    "photoSizeMb": "{{size}} MB",
     "noParcelType": "This company has no priced parcel type.",
     "noPoints": "No point is compatible with this selection."
   },
@@ -101,7 +106,8 @@
     "changeUser": "Change user",
     "fullName": "Full name",
     "phone": "Phone / WhatsApp",
-    "idCard": "ID number",
+    "idCard": "Identity document number",
+    "idCardPlaceholder": "E.g. ID 123456789",
     "address": "Address",
     "senderNamePlaceholder": "John Sender",
     "receiverNamePlaceholder": "Mary Recipient",
@@ -137,7 +143,9 @@
     "platformPlan": "The client pays the full company price and platform fee online from the client application.",
     "promoApplied": "Promo code applied",
     "promoNotApplied": "Promo code not applied",
-    "simulationStale": "Some information changed. Recalculate the price before confirming."
+    "simulationStale": "Some information changed. Recalculate the price before confirming.",
+    "paymentChoiceTitle": "Choose when to pay the platform fee",
+    "paymentChoiceDescription": "You can create the shipment without paying, or open payment immediately after creation. The parcel cannot be accepted until the platform fee is paid."
   },
   "errors": {
     "metadata": "Unable to load the data required to create a shipment.",

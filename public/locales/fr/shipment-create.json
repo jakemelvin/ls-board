@@ -29,6 +29,8 @@
     "simulate": "Calculer le tarif",
     "simulating": "Calcul du tarif…",
     "create": "Confirmer et créer",
+    "createWithoutPayment": "Créer sans payer",
+    "createAndPay": "Créer et payer les frais",
     "creating": "Création en cours…",
     "change": "Modifier",
     "remove": "Retirer"
@@ -82,6 +84,9 @@
     "photosDescription": "Ajoutez jusqu’à 4 photos. Formats image uniquement.",
     "addPhotos": "Ajouter des photos",
     "photoCount": "{{count}}/4 photo(s)",
+    "photoPreviewAlt": "Aperçu de {{name}}",
+    "photoSizeKb": "{{size}} Ko",
+    "photoSizeMb": "{{size}} Mo",
     "noParcelType": "Aucun type de colis tarifé par cette entreprise.",
     "noPoints": "Aucun point compatible avec cette sélection."
   },
@@ -101,7 +106,8 @@
     "changeUser": "Changer d’utilisateur",
     "fullName": "Nom complet",
     "phone": "Téléphone / WhatsApp",
-    "idCard": "Numéro de pièce",
+    "idCard": "Numéro de pièce d’identité",
+    "idCardPlaceholder": "Ex. CNI 123456789",
     "address": "Adresse",
     "senderNamePlaceholder": "Jean Expéditeur",
     "receiverNamePlaceholder": "Marie Destinataire",
@@ -137,7 +143,9 @@
     "platformPlan": "Le client regle en ligne la totalite du prix entreprise et des frais plateforme depuis l'application client.",
     "promoApplied": "Code promo appliqué",
     "promoNotApplied": "Code promo non appliqué",
-    "simulationStale": "Une information a changé. Recalculez le tarif avant de confirmer."
+    "simulationStale": "Une information a changé. Recalculez le tarif avant de confirmer.",
+    "paymentChoiceTitle": "Choisissez quand régler les frais plateforme",
+    "paymentChoiceDescription": "Vous pouvez créer le shipment sans payer, ou ouvrir le paiement juste après sa création. Sans règlement des frais plateforme, le colis ne pourra pas être pris en charge."
   },
   "errors": {
     "metadata": "Impossible de charger les données nécessaires à la création.",

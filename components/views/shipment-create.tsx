@@ -1,11 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import {
   type ChangeEvent,
   type ElementType,
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -15,6 +17,7 @@ import {
   Check,
   CheckCircle2,
   CircleUserRound,
+  CreditCard,
   FileImage,
   MapPin,
   Package,
@@ -102,7 +105,7 @@ type ReceiverMode = 'MANUAL' | 'PLATFORM';
 
 interface ShipmentCreateViewProps {
   onBack: () => void;
-  onCreated: (shipment: Shipment) => void;
+  onCreated: (shipment: Shipment, options: { payPlatformFeeNow: boolean }) => void;
 }
 
 const DEFAULT_FORM: ShipmentCreateFormState = {
@@ -662,9 +665,11 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     if (step === 3) {
       if (!form.senderFullName.trim()) nextErrors.senderFullName = required;
       if (!form.senderWhatsappNumber.trim()) nextErrors.senderWhatsappNumber = required;
+      if (!form.senderIdCardNumber.trim()) nextErrors.senderIdCardNumber = required;
       if (receiverMode === 'PLATFORM' && !selectedReceiver) nextErrors.receiverUser = t('errors.userRequired');
       if (!form.receiverFullName.trim()) nextErrors.receiverFullName = required;
       if (!form.receiverWhatsappNumber.trim()) nextErrors.receiverWhatsappNumber = required;
+      if (!form.receiverIdCardNumber.trim()) nextErrors.receiverIdCardNumber = required;
     }
 
     setErrors((current) => ({ ...current, ...nextErrors }));
@@ -702,13 +707,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
         fullName: form.senderFullName.trim(),
         whatsappNumber: form.senderWhatsappNumber.trim(),
         address: optionalString(form.senderAddress),
-        idCardNumber: optionalString(form.senderIdCardNumber),
+        idCardNumber: form.senderIdCardNumber.trim(),
       },
       receiver: {
         fullName: form.receiverFullName.trim(),
         whatsappNumber: form.receiverWhatsappNumber.trim(),
         address: optionalString(form.receiverAddress),
-        idCardNumber: optionalString(form.receiverIdCardNumber),
+        idCardNumber: form.receiverIdCardNumber.trim(),
       },
     };
   }
@@ -740,7 +745,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
     }
   }
 
-  async function handleCreate() {
+  async function handleCreate(payPlatformFeeNow: boolean) {
     if (!token || !pendingShipmentInput) {
       setSubmitError(t('review.simulationStale'));
       return;
@@ -753,7 +758,7 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
         title: t('toast.createdTitle'),
         description: t('toast.createdDescription', { values: { reference: shipment.reference } }),
       });
-      onCreated(shipment);
+      onCreated(shipment, { payPlatformFeeNow });
     } catch (error) {
       setSubmitError(apiMessage(error, t('errors.creation')));
     } finally {
@@ -911,22 +916,35 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
             )}
 
             {activeStep === 4 && (
-              <ReviewStep
-                form={form}
-                countries={countries}
-                originCities={originCities}
-                destinationCities={destinationCities}
-                transportMode={selectedTransportMode}
-                company={selectedCompany}
-                parcelType={selectedParcelType}
-                originPoints={originPoints}
-                destinationPoints={destinationPoints}
-                selectedReceiver={selectedReceiver}
-                photoCount={parcelPhotos.length}
-                idCardCount={Number(Boolean(senderFrontIdCard)) + Number(Boolean(senderBackIdCard))}
-                simulation={priceSimulation}
-                t={t}
-              />
+              <div className="space-y-5">
+                <ReviewStep
+                  form={form}
+                  countries={countries}
+                  originCities={originCities}
+                  destinationCities={destinationCities}
+                  transportMode={selectedTransportMode}
+                  company={selectedCompany}
+                  parcelType={selectedParcelType}
+                  originPoints={originPoints}
+                  destinationPoints={destinationPoints}
+                  selectedReceiver={selectedReceiver}
+                  photoCount={parcelPhotos.length}
+                  idCardCount={Number(Boolean(senderFrontIdCard)) + Number(Boolean(senderBackIdCard))}
+                  simulation={priceSimulation}
+                  t={t}
+                />
+                {priceSimulation && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:p-5">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      <CreditCard className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-foreground">{t('review.paymentChoiceTitle')}</p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{t('review.paymentChoiceDescription')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {submitError && (
@@ -956,9 +974,13 @@ export function ShipmentCreateView({ onBack, onCreated }: ShipmentCreateViewProp
                   <Button variant="outline" onClick={() => void handleSimulate()} disabled={simulating || submitting}>
                     {simulating ? t('actions.simulating') : t('actions.simulate')}
                   </Button>
-                  <Button onClick={() => void handleCreate()} disabled={submitting || simulating} className="gap-2">
+                  <Button variant="outline" onClick={() => void handleCreate(false)} disabled={submitting || simulating} className="gap-2">
                     {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-                    {submitting ? t('actions.creating') : t('actions.create')}
+                    {submitting ? t('actions.creating') : t('actions.createWithoutPayment')}
+                  </Button>
+                  <Button onClick={() => void handleCreate(true)} disabled={submitting || simulating} className="gap-2">
+                    {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    {submitting ? t('actions.creating') : t('actions.createAndPay')}
                   </Button>
                 </div>
               ) : (
@@ -1111,6 +1133,14 @@ function ParcelStep({ form, errors, parcelTypes, originPoints, destinationPoints
   t: Translate;
 }) {
   const dimensionHint = pricingError ?? (pricingLoading ? t('common.loading') : t('parcel.optionalByPricing'));
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoButtonRef = useRef<HTMLButtonElement>(null);
+
+  function handlePhotoInputChange(event: ChangeEvent<HTMLInputElement>) {
+    onPhotosChange(event);
+    window.requestAnimationFrame(() => photoButtonRef.current?.focus());
+  }
+
   return (
     <div className="space-y-7">
       <ChoiceSection title={t('parcel.type')} error={errors.parcelTypeId} empty={parcelTypes.length === 0 ? t('parcel.noParcelType') : null}>
@@ -1150,25 +1180,93 @@ function ParcelStep({ form, errors, parcelTypes, originPoints, destinationPoints
           </div>
           <Badge variant="outline">{t('parcel.photoCount', { values: { count: photos.length } })}</Badge>
         </div>
-        <label className={cn('mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground hover:bg-muted', photos.length >= MAX_PARCEL_PHOTOS && 'pointer-events-none opacity-50')}>
+        <button
+          ref={photoButtonRef}
+          type="button"
+          disabled={photos.length >= MAX_PARCEL_PHOTOS}
+          onClick={() => photoInputRef.current?.click()}
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+        >
           <FileImage className="h-4 w-4" />
           {t('parcel.addPhotos')}
-          <input className="sr-only" type="file" accept="image/*" multiple disabled={photos.length >= MAX_PARCEL_PHOTOS} onChange={onPhotosChange} />
-        </label>
+        </button>
+        <input
+          ref={photoInputRef}
+          className="hidden"
+          type="file"
+          accept="image/*"
+          multiple
+          tabIndex={-1}
+          aria-hidden="true"
+          disabled={photos.length >= MAX_PARCEL_PHOTOS}
+          onChange={handlePhotoInputChange}
+        />
         {errors.parcelPhotos && <p className="mt-2 text-sm text-destructive">{errors.parcelPhotos}</p>}
         {photos.length > 0 && (
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {photos.map((photo, index) => (
-              <li key={`${photo.name}-${photo.lastModified}-${index}`} className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-                <FileImage className="h-4 w-4 shrink-0 text-primary" />
-                <span className="min-w-0 flex-1 truncate text-sm">{photo.name}</span>
-                <button type="button" onClick={() => onRemovePhoto(index)} className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`${t('actions.remove')} ${photo.name}`}><Trash2 className="h-4 w-4" /></button>
-              </li>
+              <PhotoPreview
+                key={`${photo.name}-${photo.lastModified}-${index}`}
+                photo={photo}
+                onRemove={() => onRemovePhoto(index)}
+                t={t}
+              />
             ))}
           </ul>
         )}
       </div>
     </div>
+  );
+}
+
+function PhotoPreview({
+  photo,
+  onRemove,
+  t,
+}: {
+  photo: File;
+  onRemove: () => void;
+  t: Translate;
+}) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(photo);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [photo]);
+
+  return (
+    <li className="min-w-0 overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        {previewUrl ? (
+          <Image
+            src={previewUrl}
+            alt={t('parcel.photoPreviewAlt', { values: { name: photo.name } })}
+            fill
+            unoptimized
+            sizes="(max-width: 1024px) 50vw, 25vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            <FileImage className="h-6 w-6" />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute right-2 top-2 z-10 rounded-full border border-border/70 bg-background/90 p-2 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${t('actions.remove')} ${photo.name}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="min-w-0 px-3 py-2.5">
+        <p className="truncate text-sm font-medium text-foreground" title={photo.name}>{photo.name}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{formatFileSize(photo.size, t)}</p>
+      </div>
+    </li>
   );
 }
 
@@ -1197,7 +1295,7 @@ function PeopleStep({ form, errors, receiverMode, receiverQuery, receiverResults
       <ContactPanel title={t('people.sender')} icon={UserRound}>
         <InputField label={t('people.fullName')} value={form.senderFullName} error={errors.senderFullName} onChange={(event) => onUpdate('senderFullName', event.target.value)} placeholder={t('people.senderNamePlaceholder')} />
         <InputField label={t('people.phone')} value={form.senderWhatsappNumber} error={errors.senderWhatsappNumber} onChange={(event) => onUpdate('senderWhatsappNumber', event.target.value)} placeholder={t('people.phonePlaceholder')} />
-        <InputField label={t('people.idCard')} value={form.senderIdCardNumber} onChange={(event) => onUpdate('senderIdCardNumber', event.target.value)} placeholder={t('common.optional')} />
+        <InputField label={`${t('people.idCard')} *`} value={form.senderIdCardNumber} error={errors.senderIdCardNumber} required onChange={(event) => onUpdate('senderIdCardNumber', event.target.value)} placeholder={t('people.idCardPlaceholder')} />
         <TextAreaField label={t('people.address')} value={form.senderAddress} onChange={(event) => onUpdate('senderAddress', event.target.value)} placeholder={t('people.addressPlaceholder')} />
         <div className="grid gap-3 sm:grid-cols-2">
           <FileInput label={t('people.idFront')} file={senderFrontIdCard} onChange={onSenderFrontChange} />
@@ -1250,7 +1348,7 @@ function PeopleStep({ form, errors, receiverMode, receiverQuery, receiverResults
 
         <InputField label={t('people.fullName')} value={form.receiverFullName} error={errors.receiverFullName} onChange={(event) => onUpdate('receiverFullName', event.target.value)} placeholder={t('people.receiverNamePlaceholder')} />
         <InputField label={t('people.phone')} value={form.receiverWhatsappNumber} error={errors.receiverWhatsappNumber} onChange={(event) => onUpdate('receiverWhatsappNumber', event.target.value)} placeholder={t('people.phonePlaceholder')} />
-        <InputField label={t('people.idCard')} value={form.receiverIdCardNumber} onChange={(event) => onUpdate('receiverIdCardNumber', event.target.value)} placeholder={t('common.optional')} />
+        <InputField label={`${t('people.idCard')} *`} value={form.receiverIdCardNumber} error={errors.receiverIdCardNumber} required onChange={(event) => onUpdate('receiverIdCardNumber', event.target.value)} placeholder={t('people.idCardPlaceholder')} />
         <TextAreaField label={t('people.address')} value={form.receiverAddress} onChange={(event) => onUpdate('receiverAddress', event.target.value)} placeholder={t('people.addressPlaceholder')} />
       </ContactPanel>
     </div>
@@ -1415,6 +1513,13 @@ function optionalNumber(value: string) {
 function isPositiveNumber(value: string) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0;
+}
+
+function formatFileSize(size: number, t: Translate) {
+  if (size >= 1024 * 1024) {
+    return t('parcel.photoSizeMb', { values: { size: (size / (1024 * 1024)).toFixed(1) } });
+  }
+  return t('parcel.photoSizeKb', { values: { size: Math.max(1, Math.round(size / 1024)) } });
 }
 
 function apiMessage(error: unknown, fallback: string) {

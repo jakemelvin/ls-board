@@ -886,6 +886,59 @@
       "collectorPlaceholder": "Rechercher par expediteur ou destinataire..."
     }
   },
+  "shipmentPayment": {
+    "title": "Régler les frais plateforme",
+    "description": "Initiez le paiement sécurisé du shipment #{{id}}.",
+    "shipment": "Shipment",
+    "platformFee": "Frais plateforme estimés",
+    "loading": "Chargement des moyens de paiement",
+    "chooseProvider": "Moyen de paiement",
+    "phoneLabel": "Numéro Mobile Money",
+    "phonePlaceholder": "Ex. 237690000000",
+    "phoneHint": "Utilisez le numéro qui recevra la demande de confirmation.",
+    "pay": "Initier le paiement",
+    "retry": "Réessayer le paiement",
+    "check": "Vérifier maintenant",
+    "confirmCard": "Confirmer le paiement par carte",
+    "continueProvider": "Continuer chez le fournisseur",
+    "payLater": "Payer plus tard",
+    "close": "Fermer",
+    "payPlatformFee": "Payer les frais plateforme",
+    "ownerDueTitle": "Frais plateforme en attente",
+    "ownerDueDescription": "Vous avez créé ce shipment. Vous pouvez régler ses frais plateforme afin de le rendre éligible à la prise en charge.",
+    "notOwnerTitle": "Paiement réservé au créateur",
+    "notOwnerDescription": "Seul le collecteur qui a créé ce shipment peut régler ultérieurement ses frais plateforme.",
+    "unavailableTitle": "Paiement indisponible",
+    "unavailableDescription": "Aucun fournisseur de paiement en ligne n’est actuellement configuré.",
+    "errorTitle": "Le paiement n’a pas abouti",
+    "successTitle": "Paiement confirmé",
+    "pendingDescription": "Validez la demande chez le fournisseur. Le statut est vérifié automatiquement.",
+    "successDescription": "Les frais plateforme ont été réglés. Le shipment peut poursuivre sa prise en charge.",
+    "failedDescription": "Cette tentative n’a pas abouti. Vous pouvez en lancer une nouvelle.",
+    "providers": {
+      "MTN": "MTN Mobile Money",
+      "ORANGE": "Orange Money",
+      "PAYPAL": "PayPal",
+      "STRIPE": "Carte bancaire"
+    },
+    "statuses": {
+      "CREATED": "Tentative créée",
+      "PENDING": "Confirmation en attente",
+      "REQUIRES_ACTION": "Action requise",
+      "PROCESSING": "Paiement en traitement",
+      "SUCCEEDED": "Paiement confirmé",
+      "FAILED": "Paiement échoué",
+      "CANCELLED": "Paiement annulé",
+      "EXPIRED": "Tentative expirée"
+    },
+    "errors": {
+      "config": "Impossible de charger les moyens de paiement.",
+      "phoneRequired": "Saisissez un numéro Mobile Money valide.",
+      "initiation": "Impossible d’initier le paiement.",
+      "confirmation": "Impossible de confirmer le statut du paiement.",
+      "card": "Le paiement par carte n’a pas pu être confirmé."
+    }
+  },
   "superAdminShipments": {
     "collectionModes": {
       "COLLECTION_POINT": "Point de collecte",
