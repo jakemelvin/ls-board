@@ -10,10 +10,13 @@
     "loadError": "Loading error",
     "noResults": "No results",
     "new": "New",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
     "refresh": "Refresh",
     "retry": "Retry",
     "save": "Save",
     "saving": "Saving...",
+    "sortOrder": "Display order",
     "tryAnotherSearch": "Try another search term."
   },
   "roles": {
@@ -863,9 +866,11 @@
       "companyPriceDueDescription": "The platform fee is already settled. After confirmation, the backend will automatically record the COLLECTION_POINT payment and complete the transaction.",
       "confirmCash": "I confirm that I collected {{amount}} on behalf of the company.",
       "confirmCashAria": "Confirm physical collection of the company price",
-      "platformFeePending": "Platform fee not confirmed: reception blocked.",
+      "payPlatformFee": "Pay platform fee",
+      "platformFeePending": "Platform fee must be paid before reception.",
       "platformFeeRequiredDescription": "The platform fee must be confirmed before receiving the parcel.",
-      "platformFeeRequiredTitle": "Platform fee required"
+      "platformFeeRequiredTitle": "Platform fee required",
+      "receive": "Receive"
     }
   },
   "parcelManagement": {
@@ -905,9 +910,9 @@
     "close": "Close",
     "payPlatformFee": "Pay platform fee",
     "ownerDueTitle": "Platform fee pending",
-    "ownerDueDescription": "You created this shipment. Pay its platform fee to make it eligible for collection.",
-    "notOwnerTitle": "Payment restricted to creator",
-    "notOwnerDescription": "Only the collector who created this shipment can pay its platform fee later.",
+    "ownerDueDescription": "This shipment belongs to your collection scope. You can pay its platform fee to make it eligible for collection.",
+    "notOwnerTitle": "Payment available at the collection point",
+    "notOwnerDescription": "Any collector assigned to the shipment's collection point can pay its platform fee.",
     "unavailableTitle": "Payment unavailable",
     "unavailableDescription": "No online payment provider is currently configured.",
     "errorTitle": "Payment was not completed",

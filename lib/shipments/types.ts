@@ -131,6 +131,7 @@ export interface GetCollectorIncomingShipmentsParams {
 export interface PageableParams {
   page?: number;
   size?: number;
+  sort?: string;
 }
 
 export interface GetTransporterReadyShipmentsParams extends PageableParams {

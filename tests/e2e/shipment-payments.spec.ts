@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const API_ORIGIN = 'https://dstest.easywaka.com';
 
-test('collector can pay a shipment they created but not another collector shipment', async ({ page }) => {
+test('collector can pay any shipment visible in their collection scope', async ({ page }) => {
   test.setTimeout(60_000);
   let paymentBody = '';
   let ownShipmentPaid = false;
@@ -160,6 +160,6 @@ test('collector can pay a shipment they created but not another collector shipme
   } else {
     await page.getByRole('button', { name: /#702 detail|detail.*#702/i }).click();
   }
-  await expect(page.getByText(/Paiement réservé au créateur|Payment restricted to creator/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ })).toHaveCount(0);
+  await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ })).toBeVisible();
 });

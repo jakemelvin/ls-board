@@ -4,6 +4,8 @@ const API_ORIGIN = 'https://dstest.easywaka.com';
 
 test('collector receives an unpaid collection-point shipment only after physical payment', async ({ page }) => {
   let validatedBody = '';
+  let platformPaymentBody = '';
+  let feePendingShipmentPaid = false;
 
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const request = route.request();
@@ -57,7 +59,7 @@ test('collector receives an unpaid collection-point shipment only after physical
             receiverFullName: 'Receiver',
             status: 'CREATED',
             paymentStatus: 'UNPAID',
-            transactionStatus: 'INITIATED',
+            transactionStatus: feePendingShipmentPaid ? 'PLATFORM_FEE_PAID' : 'INITIATED',
             companyPrice: 8000,
             feeAmount: 500,
             price: 8500,
@@ -71,6 +73,28 @@ test('collector receives an unpaid collection-point shipment only after physical
         first: true,
         last: true,
         empty: false,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/payments/config') {
+      await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/payments/MTN/shipments/702') {
+      platformPaymentBody = request.postData() ?? '';
+      feePendingShipmentPaid = true;
+      await json({
+        id: 2,
+        reference: 'PAY-702-MTN',
+        provider: 'MTN',
+        purpose: 'SHIPMENT',
+        status: 'SUCCEEDED',
+        shipmentId: 702,
+        transactionStatus: 'PLATFORM_FEE_PAID',
+        amount: 500,
+        currency: 'XAF',
       });
       return;
     }
@@ -104,11 +128,31 @@ test('collector receives an unpaid collection-point shipment only after physical
     await page.locator('aside').getByRole('button', { name: /ception/i }).click();
   }
 
-  await expect(page.getByText(/A encaisser sur place|Collect on site/)).toBeVisible();
-  const blockedRow = page.getByRole('row').filter({ hasText: 'Fee Pending' });
-  await expect(blockedRow.getByRole('button', { name: /Frais en attente|Fee pending/ })).toBeDisabled();
+  const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
+  const collectionSurface = isMobile ? page.getByRole('article') : page.getByRole('row');
+  const cashShipmentSurface = collectionSurface.filter({ hasText: 'Alice Client' });
+  const feePendingSurface = collectionSurface.filter({ hasText: 'Fee Pending' });
 
-  await page.getByRole('button', { name: /Encaisser et receptionner|Collect and receive/ }).click();
+  await expect(cashShipmentSurface.getByText(/A encaisser sur place|Collect on site/)).toBeVisible();
+  await expect(feePendingSurface.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ })).toBeVisible();
+
+  if (isMobile) {
+    await expect(page.locator('table:visible')).toHaveCount(0);
+    const mainOverflowsHorizontally = await page.locator('main').evaluate(
+      (element) => element.scrollWidth > element.clientWidth + 1,
+    );
+    expect(mainOverflowsHorizontally).toBe(false);
+  }
+
+  await feePendingSurface.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
+  const paymentDialog = page.getByRole('dialog');
+  await paymentDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
+  await expect.poll(() => platformPaymentBody).toContain('237690123456');
+  await paymentDialog.getByRole('button', { name: /Fermer|Close/, exact: true }).first().click();
+  await expect(feePendingSurface.getByText(/A encaisser sur place|Collect on site/)).toBeVisible();
+
+  await cashShipmentSurface.getByRole('button', { name: /Encaisser et receptionner|Collect and receive/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText(/10.?000/).first()).toBeVisible();
   await dialog.getByPlaceholder(/Reference presente|Reference present/).fill('SHP-701-SECURE');

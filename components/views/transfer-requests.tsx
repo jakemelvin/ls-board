@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import {
+  ArrowDownUp,
   Check,
   Clock,
   Eye,
@@ -44,6 +45,7 @@ import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-butt
 import { toast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
 import {
   addTransmissionTransitNote,
   approveTransmissionRequest,
@@ -74,13 +76,16 @@ interface TransferRequestsProps {
 }
 
 type ActionMode = 'approve' | 'reject' | 'embark' | 'note' | null;
+type SortDirection = 'desc' | 'asc';
 
 export function TransferRequests({ currentRole }: TransferRequestsProps) {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const [requests, setRequests] = useState<ShipmentTransmissionRequestSummary[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +115,16 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     try {
       const response =
         currentRole === 'COLLECTOR'
-          ? await getCollectorTransmissionRequests(token, { page, size: PAGE_SIZE })
-          : await getTransporterTransmissionRequests(token, { page, size: PAGE_SIZE });
+          ? await getCollectorTransmissionRequests(token, {
+              page,
+              size: PAGE_SIZE,
+              sort: `createdAt,${sortDirection}`,
+            })
+          : await getTransporterTransmissionRequests(token, {
+              page,
+              size: PAGE_SIZE,
+              sort: `createdAt,${sortDirection}`,
+            });
 
       if (isLatestRequest(requestId)) {
         setRequests(response.content ?? []);
@@ -132,7 +145,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     } finally {
       if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [beginRequest, canUseScreen, currentRole, isLatestRequest, page, token]);
+  }, [beginRequest, canUseScreen, currentRole, isLatestRequest, page, sortDirection, token]);
 
   useEffect(() => {
     void loadRequests();
@@ -313,11 +326,11 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
   const renderActions = (request: ShipmentTransmissionRequestSummary) => {
     if (currentRole === 'COLLECTOR' && request.status === 'PENDING_COLLECTOR_APPROVAL') {
       return (
-        <div className="flex justify-end gap-2">
+        <div className="flex w-full flex-col gap-2 min-[420px]:flex-row md:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            className="w-full gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground md:w-auto"
             onClick={() => void openDetail(request, 'reject')}
           >
             <X className="h-4 w-4" />
@@ -325,7 +338,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
           </Button>
           <Button
             size="sm"
-            className="gap-1 bg-success text-success-foreground hover:bg-success/90"
+            className="w-full gap-1 bg-success text-success-foreground hover:bg-success/90 md:w-auto"
             onClick={() => void openDetail(request, 'approve')}
           >
             <Check className="h-4 w-4" />
@@ -343,7 +356,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       return (
         <Button
           size="sm"
-          className="gap-2"
+          className="w-full gap-2 md:w-auto"
           onClick={() => void openDetail(request, 'embark')}
         >
           <Truck className="h-4 w-4" />
@@ -354,13 +367,14 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
 
     return (
       <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+        variant="outline"
+        size="sm"
+        className="h-9 w-full gap-2 md:h-8 md:w-8 md:p-0"
         onClick={() => void openDetail(request)}
         aria-label={`Voir la demande ${request.requestId}`}
       >
         <Eye className="h-4 w-4" />
+        <span className="md:sr-only">Voir</span>
       </Button>
     );
   };
@@ -389,18 +403,36 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
               : 'Suivez vos demandes et confirmez les colis reellement embarques.'}
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="w-fit gap-2"
-          onClick={() => void loadRequests()}
-          disabled={loading}
-        >
-          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
-        </Button>
+        <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-auto">
+          <label className="relative">
+            <span className="sr-only">{t('common.sortOrder')}</span>
+            <ArrowDownUp className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={sortDirection}
+              onChange={(event) => {
+                setSortDirection(event.target.value as SortDirection);
+                setPage(0);
+              }}
+              className="h-10 w-full appearance-none rounded-md border border-input bg-background pl-9 pr-8 text-sm sm:w-44"
+              aria-label={t('common.sortOrder')}
+            >
+              <option value="desc">{t('common.newestFirst')}</option>
+              <option value="asc">{t('common.oldestFirst')}</option>
+            </select>
+          </label>
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => void loadRequests()}
+            disabled={loading}
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <RequestMetric icon={Clock} label="En attente" value={counters.pending} className="bg-warning/15 text-warning" />
         <RequestMetric icon={Check} label="Approuvees" value={counters.approved} className="bg-primary/15 text-primary" />
         <RequestMetric icon={PackageCheck} label="Embarquees" value={counters.dispatched} className="bg-success/15 text-success" />
@@ -509,10 +541,11 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                 <p className="text-sm text-muted-foreground">
                   Page {totalPages === 0 ? 0 : page + 1} sur {totalPages} - {totalElements} demande(s)
                 </p>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={page <= 0}
                     onClick={() => setPage((current) => Math.max(0, current - 1))}
                   >
@@ -521,6 +554,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={totalPages === 0 || page >= totalPages - 1}
                     onClick={() => setPage((current) => current + 1)}
                   >
@@ -721,19 +755,19 @@ function MobileTransmissionRequestCard({
   actions: ReactNode;
 }) {
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-3">
+    <article className="space-y-3 overflow-hidden rounded-xl border border-border bg-background p-3.5 shadow-sm">
+      <div className="flex flex-col items-start gap-2 min-[400px]:flex-row min-[400px]:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-foreground">#{request.requestId}</p>
-          <p className="truncate text-sm text-muted-foreground">
+          <p className="break-words text-sm text-muted-foreground">
             {request.originCollectionPointName ?? 'Point non renseigne'}
           </p>
         </div>
-        <Badge className={cn('shrink-0 border-0', getShipmentTransmissionStatusClassName(request.status))}>
+        <Badge className={cn('max-w-full shrink-0 whitespace-normal border-0 text-left text-[11px]', getShipmentTransmissionStatusClassName(request.status))}>
           {SHIPMENT_TRANSMISSION_STATUS_LABELS[request.status]}
         </Badge>
       </div>
-      <div className="grid gap-2 text-sm">
+      <div className="grid gap-2 rounded-lg bg-muted/40 p-3 text-sm">
         <MobileInfo label="Transporteur" value={request.transporterUsername} />
         <MobileInfo label="Collecteur" value={request.collectorUsername} />
         <MobileInfo
@@ -742,8 +776,8 @@ function MobileTransmissionRequestCard({
         />
         <MobileInfo label="Date" value={formatShipmentDate(request.createdAt)} />
       </div>
-      <div className="flex justify-end">{actions}</div>
-    </div>
+      <div className="flex w-full">{actions}</div>
+    </article>
   );
 }
 
@@ -767,9 +801,9 @@ function MobileEmptyState({
 
 function MobileInfo({ label, value }: { label: string; value?: string | number }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3">
       <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right font-medium text-foreground">
+      <span className="break-words text-right font-medium text-foreground">
         {value || 'Non renseigne'}
       </span>
     </div>

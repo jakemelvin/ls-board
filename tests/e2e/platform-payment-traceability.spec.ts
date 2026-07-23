@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 const API_ORIGIN = 'https://dstest.easywaka.com';
 
 test('super admin separates succeeded cash from promo coverage', async ({ page }) => {
+  const transactionQueries: string[] = [];
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -33,6 +34,7 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
       return;
     }
     if (url.pathname === '/api/delivery/admin/transactions') {
+      transactionQueries.push(url.search);
       await json({
         content: [{
           transaction: {
@@ -53,8 +55,8 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
             { id: 4, reference: 'PAY-FAILED', provider: 'ORANGE', status: 'FAILED', amount: 500, currency: 'XAF', failureReason: 'Timeout fournisseur' },
           ],
         }],
-        totalPages: 1, totalElements: 1, number: 0, size: 20,
-        first: true, last: true, empty: false,
+        totalPages: 2, totalElements: 21, number: Number(url.searchParams.get('page') ?? 0), size: 20,
+        first: url.searchParams.get('page') !== '1', last: url.searchParams.get('page') === '1', empty: false,
       });
       return;
     }
@@ -82,6 +84,14 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
   await expect(page.getByText(/9.?500/).first()).toBeVisible();
   await expect(page.getByText(/1.?000/).first()).toBeVisible();
   await expect(page.getByText(/Tentatives echouees|Failed attempts/).locator('..').getByText('1')).toBeVisible();
+  await expect(page.getByLabel(/Ordre d'affichage|Display order/)).toHaveValue('desc');
+  expect(transactionQueries.some((query) => query.includes('sort=createdAt%2Cdesc'))).toBe(true);
+
+  await page.getByLabel(/Ordre d'affichage|Display order/).selectOption('asc');
+  await expect.poll(() => transactionQueries.some((query) => query.includes('sort=createdAt%2Casc'))).toBe(true);
+
+  await page.getByRole('button', { name: /^(Suivant|Next)$/ }).click();
+  await expect.poll(() => transactionQueries.some((query) => query.includes('page=1'))).toBe(true);
 });
 
 for (const account of [
@@ -91,6 +101,7 @@ for (const account of [
 test(`${account.label} sees only company-scoped transactions and their payments`, async ({ page }) => {
   let companyTransactionsCalled = false;
   let adminFinanceCalled = false;
+  const transactionQueries: string[] = [];
 
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const url = new URL(route.request().url());
@@ -119,6 +130,7 @@ test(`${account.label} sees only company-scoped transactions and their payments`
     }
     if (url.pathname === '/api/delivery/transactions') {
       companyTransactionsCalled = true;
+      transactionQueries.push(url.search);
       await json({
         content: [{
           id: 51,
@@ -179,5 +191,9 @@ test(`${account.label} sees only company-scoped transactions and their payments`
   }
   expect(companyTransactionsCalled).toBe(true);
   expect(adminFinanceCalled).toBe(false);
+  await expect(page.getByLabel(/Ordre d'affichage|Display order/)).toHaveValue('desc');
+  expect(transactionQueries.some((query) => query.includes('sort=createdAt%2Cdesc'))).toBe(true);
+  await page.getByLabel(/Ordre d'affichage|Display order/).selectOption('asc');
+  await expect.poll(() => transactionQueries.some((query) => query.includes('sort=createdAt%2Casc'))).toBe(true);
 });
 }

@@ -7,6 +7,9 @@ import {
   AUTH_EXPIRED_EVENT,
   AUTH_STORAGE_KEY,
   clearAuthCookie,
+  isTokenExpired,
+  redirectToLoginAfterAuthFailure,
+  scheduleTokenExpiration,
   setAuthCookie,
 } from './session';
 
@@ -27,6 +30,15 @@ const EMPTY: Omit<AuthSession, never> = {
   role: 'CLIENT' as ApiRole,
   user: undefined,
 };
+
+let cancelTokenExpiration = () => undefined;
+
+function watchTokenExpiration(token: string) {
+  cancelTokenExpiration();
+  cancelTokenExpiration = token
+    ? scheduleTokenExpiration(token, redirectToLoginAfterAuthFailure)
+    : () => undefined;
+}
 
 function normalizeUser(user: AuthUser | UserResponse): AuthUser {
   return {
@@ -58,11 +70,18 @@ export const useAuthStore = create<AuthStore>()(
       isHydrated: false,
 
       setAuth: (session) => {
+        if (isTokenExpired(session.token)) {
+          redirectToLoginAfterAuthFailure();
+          return;
+        }
+
         set({ ...session });
         setAuthCookie(session.token);
+        watchTokenExpiration(session.token);
       },
 
       clearAuth: () => {
+        watchTokenExpiration('');
         set({ ...EMPTY });
         clearAuthCookie();
       },
@@ -86,9 +105,12 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isHydrated = true;
-          // Re-sync cookie in case it was cleared but localStorage wasn't
-          if (state.token) {
+          if (state.token && isTokenExpired(state.token)) {
+            redirectToLoginAfterAuthFailure();
+          } else if (state.token) {
+            // Re-sync cookie in case it was cleared but localStorage wasn't.
             setAuthCookie(state.token);
+            watchTokenExpiration(state.token);
           }
         }
       },
@@ -99,6 +121,7 @@ export const useAuthStore = create<AuthStore>()(
 if (typeof window !== 'undefined') {
   const browserWindow = window as typeof window & {
     __sendamAuthExpiredListenerRegistered?: boolean;
+    __sendamAuthExpiryChecksRegistered?: boolean;
   };
 
   if (!browserWindow.__sendamAuthExpiredListenerRegistered) {
@@ -106,5 +129,22 @@ if (typeof window !== 'undefined') {
       useAuthStore.getState().clearAuth();
     });
     browserWindow.__sendamAuthExpiredListenerRegistered = true;
+  }
+
+  if (!browserWindow.__sendamAuthExpiryChecksRegistered) {
+    const clearExpiredSession = () => {
+      const token = useAuthStore.getState().token;
+      if (token && isTokenExpired(token)) {
+        redirectToLoginAfterAuthFailure();
+      }
+    };
+
+    browserWindow.addEventListener('pageshow', clearExpiredSession);
+    browserWindow.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        clearExpiredSession();
+      }
+    });
+    browserWindow.__sendamAuthExpiryChecksRegistered = true;
   }
 }

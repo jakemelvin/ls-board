@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowDownUp,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
+type SortDirection = 'desc' | 'asc';
 const PAYMENT_STATUSES: PaymentAttemptStatus[] = [
   'CREATED',
   'PENDING',
@@ -109,6 +111,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +126,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
           status: transactionStatus || undefined,
           page,
           size: PAGE_SIZE,
+          sort: `createdAt,${sortDirection}`,
         };
         if (scope === 'platform') {
           const response = await getAdminTransactions(token, params);
@@ -144,6 +148,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
           status: status || undefined,
           page,
           size: PAGE_SIZE,
+          sort: `createdAt,${sortDirection}`,
         });
         setAttempts(response.content ?? []);
         setTotalPages(response.totalPages ?? 0);
@@ -158,7 +163,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
     } finally {
       setLoading(false);
     }
-  }, [page, provider, scope, status, t, token, transactionStatus, view]);
+  }, [page, provider, scope, sortDirection, status, t, token, transactionStatus, view]);
 
   useEffect(() => {
     void load();
@@ -223,7 +228,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
       )}
 
       {view === 'transactions' && (
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2">
           <select
             value={transactionStatus}
             onChange={(event) => {
@@ -238,6 +243,23 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
               <option key={item} value={item}>{t(`platformFinance.trace.transactionStatuses.${item}`)}</option>
             ))}
           </select>
+          <label className="relative">
+            <span className="sr-only">{t('common.sortOrder')}</span>
+            <ArrowDownUp className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={sortDirection}
+              onChange={(event) => {
+                setSortDirection(event.target.value as SortDirection);
+                setPage(0);
+                setExpandedId(null);
+              }}
+              className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm"
+              aria-label={t('common.sortOrder')}
+            >
+              <option value="desc">{t('common.newestFirst')}</option>
+              <option value="asc">{t('common.oldestFirst')}</option>
+            </select>
+          </label>
         </div>
       )}
 
@@ -304,7 +326,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
               {t('platformFinance.trace.empty')}
             </p>
           )}
-          {!loading && totalPages > 1 && (
+          {!loading && totalElements > 0 && (
             <Pagination
               page={page}
               totalPages={totalPages}

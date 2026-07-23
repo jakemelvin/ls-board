@@ -6,6 +6,7 @@ import {
   Check,
   CircleAlert,
   Clock3,
+  CreditCard,
   Package,
   PackageCheck,
   QrCode,
@@ -15,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ShipmentPaymentDialog } from '@/components/payments/shipment-payment-dialog';
 import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -83,6 +85,8 @@ export function CollectorReception() {
   const [isCompanyPaymentChecked, setIsCompanyPaymentChecked] = useState(false);
   const [referenceInput, setReferenceInput] = useState('');
   const [rejectReason, setRejectReason] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState<CollectorIncomingShipment | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [validatedCount, setValidatedCount] = useState(0);
   const [rejectedCount, setRejectedCount] = useState(0);
   const { beginRequest, isLatestRequest } = useLatestRequest();
@@ -188,6 +192,16 @@ export function CollectorReception() {
     setSelectedShipment(shipment);
     setRejectReason('');
     setIsRejectDialogOpen(true);
+  };
+
+  const openPaymentDialog = (shipment: CollectorIncomingShipment) => {
+    setPaymentTarget(shipment);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePaymentDialogChange = (open: boolean) => {
+    setIsPaymentDialogOpen(open);
+    if (!open) setPaymentTarget(null);
   };
 
   const resetValidateDialog = () => {
@@ -311,7 +325,7 @@ export function CollectorReception() {
         </div>
         <Button
           variant="outline"
-          className="w-fit gap-2"
+          className="w-full gap-2 sm:w-fit"
           onClick={() => void loadIncomingShipments()}
           disabled={loading}
         >
@@ -320,12 +334,13 @@ export function CollectorReception() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <ReceptionStatCard
           icon={Clock3}
           label="A receptionner"
           value={totalElements}
           className="bg-warning/15 text-warning"
+          cardClassName="col-span-2 md:col-span-1"
         />
         <ReceptionStatCard
           icon={Check}
@@ -371,7 +386,20 @@ export function CollectorReception() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="space-y-3 md:hidden">
+                {filteredShipments.map((shipment) => (
+                  <MobileReceptionShipmentCard
+                    key={shipment.shipmentId}
+                    shipment={shipment}
+                    onReject={openRejectDialog}
+                    onReceive={openValidateDialog}
+                    onPay={openPaymentDialog}
+                  />
+                ))}
+                {filteredShipments.length === 0 && <ReceptionEmptyState />}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
@@ -385,12 +413,6 @@ export function CollectorReception() {
                   </TableHeader>
                   <TableBody>
                     {filteredShipments.map((shipment) => {
-                      const requiresCollection =
-                        shipment.paymentStatus === 'UNPAID' &&
-                        shipment.transactionStatus === 'PLATFORM_FEE_PAID';
-                      const paymentBlocked =
-                        shipment.paymentStatus === 'UNPAID' && !requiresCollection;
-
                       return (
                       <TableRow key={shipment.shipmentId} className="border-border">
                         <TableCell>
@@ -427,47 +449,7 @@ export function CollectorReception() {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <p className="font-medium text-foreground">
-                              {formatMoney(shipment.price, { fallback: 'Non renseigne' })}
-                            </p>
-                            {shipment.paymentStatus ? (
-                              <Badge
-                                className={cn(
-                                  'border-0',
-                                  getShipmentPaymentStatusClassName(shipment.paymentStatus),
-                                )}
-                              >
-                                {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">Paiement non renseigne</Badge>
-                            )}
-                            {shipment.transactionStatus && (
-                              <Badge
-                                className={cn(
-                                  'border-0',
-                                  getShipmentTransactionStatusClassName(shipment.transactionStatus),
-                                )}
-                              >
-                                {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
-                              </Badge>
-                            )}
-                            {requiresCollection && (
-                              <p className="text-xs font-medium text-warning">
-                                {t('collectorReception.payments.collectCompanyPrice', {
-                                  values: { amount: formatMoney(shipment.companyPrice) },
-                                })}
-                              </p>
-                            )}
-                            {paymentBlocked && (
-                              <p className="text-xs text-destructive">
-                                {t('collectorReception.payments.platformFeePending')}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
+                        <TableCell><ReceptionPaymentSummary shipment={shipment} /></TableCell>
                         <TableCell>
                           {shipment.status ? (
                             <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
@@ -478,35 +460,12 @@ export function CollectorReception() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                              onClick={() => openRejectDialog(shipment)}
-                            >
-                              <AlertTriangle className="h-4 w-4" />
-                              Rejeter
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="gap-1 bg-success text-success-foreground hover:bg-success/90"
-                              disabled={paymentBlocked}
-                              title={
-                                paymentBlocked
-                                  ? t('collectorReception.payments.platformFeeRequiredTitle')
-                                  : undefined
-                              }
-                              onClick={() => openValidateDialog(shipment)}
-                            >
-                              <PackageCheck className="h-4 w-4" />
-                              {requiresCollection
-                                ? t('collectorReception.payments.collectAndReceive')
-                                : paymentBlocked
-                                  ? t('collectorReception.payments.blockedButton')
-                                  : 'Receptionner'}
-                            </Button>
-                          </div>
+                          <ReceptionActions
+                            shipment={shipment}
+                            onReject={openRejectDialog}
+                            onReceive={openValidateDialog}
+                            onPay={openPaymentDialog}
+                          />
                         </TableCell>
                       </TableRow>
                       );
@@ -515,13 +474,7 @@ export function CollectorReception() {
                     {filteredShipments.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="h-28 text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <Package className="h-8 w-8 text-muted-foreground" />
-                            <p className="font-medium text-foreground">Aucun colis a receptionner</p>
-                            <p className="text-sm text-muted-foreground">
-                              Les colis entrants valides par le backend apparaitront ici.
-                            </p>
-                          </div>
+                          <ReceptionEmptyState />
                         </TableCell>
                       </TableRow>
                     )}
@@ -533,10 +486,11 @@ export function CollectorReception() {
                 <p className="text-sm text-muted-foreground">
                   Page {totalPages === 0 ? 0 : page + 1} sur {totalPages} - {totalElements} colis
                 </p>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={page <= 0}
                     onClick={() => setPage((current) => Math.max(0, current - 1))}
                   >
@@ -545,6 +499,7 @@ export function CollectorReception() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={totalPages === 0 || page >= totalPages - 1}
                     onClick={() => setPage((current) => current + 1)}
                   >
@@ -762,6 +717,224 @@ export function CollectorReception() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {paymentTarget && (
+        <ShipmentPaymentDialog
+          open={isPaymentDialogOpen}
+          shipment={{
+            id: paymentTarget.shipmentId,
+            reference: `#${paymentTarget.shipmentId}`,
+            feeAmount: paymentTarget.feeAmount,
+            discountAmount: paymentTarget.discountAmount,
+          }}
+          onOpenChange={handlePaymentDialogChange}
+          onPaymentSucceeded={async () => {
+            await loadIncomingShipments();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function getReceptionPaymentState(shipment: CollectorIncomingShipment) {
+  const requiresCollection =
+    shipment.paymentStatus === 'UNPAID' &&
+    shipment.transactionStatus === 'PLATFORM_FEE_PAID';
+  return {
+    requiresCollection,
+    paymentBlocked: shipment.paymentStatus === 'UNPAID' && !requiresCollection,
+  };
+}
+
+function ReceptionPaymentSummary({ shipment }: { shipment: CollectorIncomingShipment }) {
+  const { t } = useTranslation('dashboard');
+  const { formatMoney } = useCurrency();
+  const { requiresCollection, paymentBlocked } = getReceptionPaymentState(shipment);
+
+  return (
+    <div className="min-w-0 space-y-1.5 text-sm">
+      <p className="font-semibold text-foreground">
+        {formatMoney(shipment.price, { fallback: 'Non renseigne' })}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {shipment.paymentStatus ? (
+          <Badge
+            className={cn(
+              'max-w-full whitespace-normal border-0 text-left text-[11px]',
+              getShipmentPaymentStatusClassName(shipment.paymentStatus),
+            )}
+          >
+            {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
+          </Badge>
+        ) : (
+          <Badge variant="outline">Paiement non renseigne</Badge>
+        )}
+        {shipment.transactionStatus && (
+          <Badge
+            className={cn(
+              'max-w-full whitespace-normal border-0 text-left text-[11px]',
+              getShipmentTransactionStatusClassName(shipment.transactionStatus),
+            )}
+          >
+            {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
+          </Badge>
+        )}
+      </div>
+      {requiresCollection && (
+        <p className="text-xs font-medium text-warning">
+          {t('collectorReception.payments.collectCompanyPrice', {
+            values: { amount: formatMoney(shipment.companyPrice) },
+          })}
+        </p>
+      )}
+      {paymentBlocked && (
+        <p className="text-xs text-destructive">
+          {t('collectorReception.payments.platformFeePending')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReceptionActions({
+  shipment,
+  onReject,
+  onReceive,
+  onPay,
+  mobile = false,
+}: {
+  shipment: CollectorIncomingShipment;
+  onReject: (shipment: CollectorIncomingShipment) => void;
+  onReceive: (shipment: CollectorIncomingShipment) => void;
+  onPay: (shipment: CollectorIncomingShipment) => void;
+  mobile?: boolean;
+}) {
+  const { t } = useTranslation('dashboard');
+  const { requiresCollection, paymentBlocked } = getReceptionPaymentState(shipment);
+
+  return (
+    <div className={cn('flex gap-2', mobile ? 'w-full flex-col min-[420px]:flex-row' : 'justify-end')}>
+      <Button
+        variant="outline"
+        size="sm"
+        className={cn(
+          'gap-1 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground',
+          mobile && 'w-full',
+        )}
+        onClick={() => onReject(shipment)}
+      >
+        <AlertTriangle className="h-4 w-4" />
+        Rejeter
+      </Button>
+      {paymentBlocked ? (
+        <Button
+          size="sm"
+          className={cn('gap-1', mobile && 'w-full')}
+          onClick={() => onPay(shipment)}
+        >
+          <CreditCard className="h-4 w-4" />
+          {t('collectorReception.payments.payPlatformFee')}
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          className={cn(
+            'gap-1 bg-success text-success-foreground hover:bg-success/90',
+            mobile && 'w-full',
+          )}
+          onClick={() => onReceive(shipment)}
+        >
+          <PackageCheck className="h-4 w-4" />
+          {requiresCollection
+            ? t('collectorReception.payments.collectAndReceive')
+            : t('collectorReception.payments.receive')}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function MobileReceptionShipmentCard({
+  shipment,
+  onReject,
+  onReceive,
+  onPay,
+}: {
+  shipment: CollectorIncomingShipment;
+  onReject: (shipment: CollectorIncomingShipment) => void;
+  onReceive: (shipment: CollectorIncomingShipment) => void;
+  onPay: (shipment: CollectorIncomingShipment) => void;
+}) {
+  return (
+    <article className="space-y-3 overflow-hidden rounded-xl border border-border bg-background p-3.5 shadow-sm">
+      <div className="flex flex-col items-start gap-2 min-[400px]:flex-row min-[400px]:justify-between">
+        <div className="min-w-0">
+          <p className="font-mono text-sm font-semibold text-foreground">#{shipment.shipmentId}</p>
+          <p className="break-words text-sm text-muted-foreground">
+            {shipment.parcelTypeName ?? 'Type non renseigne'}
+            {shipment.transportModeName ? ` · ${shipment.transportModeName}` : ''}
+          </p>
+        </div>
+        {shipment.status && (
+          <Badge className={cn('max-w-full shrink-0 whitespace-normal border-0 text-left text-[11px]', getShipmentStatusClassName(shipment.status))}>
+            {getShipmentStatusLabel(shipment.status)}
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid gap-3 rounded-lg bg-muted/40 p-3 text-sm">
+        <MobileReceptionInfo
+          label="Expediteur"
+          value={shipment.senderFullName ?? 'Non renseigne'}
+        />
+        <MobileReceptionInfo
+          label="Destinataire"
+          value={shipment.receiverFullName ?? 'Non renseigne'}
+        />
+        <div className="border-t border-border/70 pt-2">
+          <p className="text-xs text-muted-foreground">Trajet</p>
+          <p className="mt-1 break-words font-medium text-foreground">
+            {shipment.originCollectionPointName ?? 'Origine non renseignee'}
+          </p>
+          <p className="break-words text-muted-foreground">
+            → {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/70 p-3">
+        <ReceptionPaymentSummary shipment={shipment} />
+      </div>
+
+      <ReceptionActions
+        shipment={shipment}
+        onReject={onReject}
+        onReceive={onReceive}
+        onPay={onPay}
+        mobile
+      />
+    </article>
+  );
+}
+
+function MobileReceptionInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="break-words text-right font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function ReceptionEmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-2 py-8 text-center">
+      <Package className="h-8 w-8 text-muted-foreground" />
+      <p className="font-medium text-foreground">Aucun colis a receptionner</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Les colis entrants valides par le backend apparaitront ici.
+      </p>
     </div>
   );
 }
@@ -771,14 +944,16 @@ function ReceptionStatCard({
   label,
   value,
   className,
+  cardClassName,
 }: {
   icon: ElementType;
   label: string;
   value: number;
   className: string;
+  cardClassName?: string;
 }) {
   return (
-    <Card className="border-border bg-card">
+    <Card className={cn('border-border bg-card', cardClassName)}>
       <CardContent className="flex items-center gap-3 p-4">
         <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', className)}>
           <Icon className="h-5 w-5" />

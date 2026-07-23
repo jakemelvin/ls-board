@@ -10,10 +10,13 @@
     "loadError": "Erreur de chargement",
     "noResults": "Aucun résultat",
     "new": "Nouveau",
+    "newestFirst": "Plus récentes d'abord",
+    "oldestFirst": "Plus anciennes d'abord",
     "refresh": "Actualiser",
     "retry": "Réessayer",
     "save": "Enregistrer",
     "saving": "Enregistrement...",
+    "sortOrder": "Ordre d'affichage",
     "tryAnotherSearch": "Essayez un autre terme de recherche."
   },
   "roles": {
@@ -863,9 +866,11 @@
       "companyPriceDueDescription": "Les frais plateforme sont deja regles. Apres votre confirmation, le backend enregistrera automatiquement le paiement COLLECTION_POINT et finalisera la transaction.",
       "confirmCash": "Je confirme avoir encaisse {{amount}} pour le compte de la compagnie.",
       "confirmCashAria": "Confirmer l'encaissement physique du prix compagnie",
-      "platformFeePending": "Frais plateforme non confirmes : reception bloquee.",
+      "payPlatformFee": "Payer les frais plateforme",
+      "platformFeePending": "Frais plateforme à régler avant la réception.",
       "platformFeeRequiredDescription": "Les frais plateforme doivent etre confirmes avant la reception du colis.",
-      "platformFeeRequiredTitle": "Frais plateforme requis"
+      "platformFeeRequiredTitle": "Frais plateforme requis",
+      "receive": "Réceptionner"
     }
   },
   "parcelManagement": {
@@ -905,9 +910,9 @@
     "close": "Fermer",
     "payPlatformFee": "Payer les frais plateforme",
     "ownerDueTitle": "Frais plateforme en attente",
-    "ownerDueDescription": "Vous avez créé ce shipment. Vous pouvez régler ses frais plateforme afin de le rendre éligible à la prise en charge.",
-    "notOwnerTitle": "Paiement réservé au créateur",
-    "notOwnerDescription": "Seul le collecteur qui a créé ce shipment peut régler ultérieurement ses frais plateforme.",
+    "ownerDueDescription": "Ce shipment est rattaché à votre périmètre de collecte. Vous pouvez régler ses frais plateforme afin de le rendre éligible à la prise en charge.",
+    "notOwnerTitle": "Paiement disponible au point de collecte",
+    "notOwnerDescription": "Tout collecteur affecté au point de collecte du shipment peut régler ses frais plateforme.",
     "unavailableTitle": "Paiement indisponible",
     "unavailableDescription": "Aucun fournisseur de paiement en ligne n’est actuellement configuré.",
     "errorTitle": "Le paiement n’a pas abouti",

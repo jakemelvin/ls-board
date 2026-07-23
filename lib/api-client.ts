@@ -102,7 +102,7 @@ async function executeRequest<T>(
     } catch {
       if (text) message = text;
     }
-    if (token && isAuthFailure(response.status, message)) {
+    if (token && isAuthFailure(response.status)) {
       redirectToLoginAfterAuthFailure();
     }
 
@@ -118,12 +118,8 @@ async function executeRequest<T>(
   return JSON.parse(text) as T;
 }
 
-function isAuthFailure(status: number, message: string) {
-  if (status === 401) return true;
-
-  if (status !== 403) return false;
-
-  return /auth|token|jwt|expir|invalid|unauthori[sz]ed/i.test(message);
+function isAuthFailure(status: number) {
+  return status === 401 || status === 403;
 }
 
 export const apiClient = {

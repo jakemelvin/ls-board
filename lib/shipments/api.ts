@@ -57,6 +57,7 @@ function buildPageableQuery(params: PageableParams = {}) {
   const search = new URLSearchParams();
   search.set('page', String(params.page ?? 0));
   search.set('size', String(params.size ?? 20));
+  if (params.sort) search.set('sort', params.sort);
   return search.toString();
 }
 

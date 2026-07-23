@@ -189,6 +189,7 @@ export interface GetAdminTransactionsParams {
   status?: ShipmentTransactionStatus;
   page?: number;
   size?: number;
+  sort?: string;
 }
 
 export type GetTransactionsParams = GetAdminTransactionsParams;
@@ -200,4 +201,5 @@ export interface GetAdminPaymentsParams {
   shipmentId?: number;
   page?: number;
   size?: number;
+  sort?: string;
 }

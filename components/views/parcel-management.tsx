@@ -123,7 +123,6 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [recentlyCreatedOwnedShipmentId, setRecentlyCreatedOwnedShipmentId] = useState<number | null>(null);
   const { beginRequest: beginListRequest, isLatestRequest: isLatestListRequest } =
     useLatestRequest();
   const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
@@ -138,7 +137,6 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     setSelectedShipment(null);
     setDetailError(null);
     setPaymentDialogOpen(false);
-    setRecentlyCreatedOwnedShipmentId(null);
   }, [currentRole]);
 
   const loadShipments = useCallback(async () => {
@@ -221,7 +219,6 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       setIsCreateViewOpen(false);
       setSelectedShipmentId(shipment.id);
       setSelectedShipment(shipment);
-      setRecentlyCreatedOwnedShipmentId(shipment.id);
       setPaymentDialogOpen(options.payPlatformFeeNow);
       setDetailError(null);
       setDetailLoading(false);
@@ -317,7 +314,6 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         onRetry={() => loadShipmentDetail(selectedShipmentId)}
         paymentDialogOpen={paymentDialogOpen}
         onPaymentDialogOpenChange={setPaymentDialogOpen}
-        ownershipConfirmed={recentlyCreatedOwnedShipmentId === selectedShipmentId}
       />
     );
   }
@@ -687,7 +683,6 @@ function ShipmentDetailView({
   onRetry,
   paymentDialogOpen,
   onPaymentDialogOpenChange,
-  ownershipConfirmed,
 }: {
   currentRole: UserRole;
   shipmentId: number;
@@ -698,9 +693,7 @@ function ShipmentDetailView({
   onRetry: () => void;
   paymentDialogOpen: boolean;
   onPaymentDialogOpenChange: (open: boolean) => void;
-  ownershipConfirmed: boolean;
 }) {
-  const userId = useAuthStore((state) => state.userId);
   const statusHistory = shipment?.statusHistory ?? [];
   const { t } = useTranslation('dashboard');
   const { formatMoney } = useCurrency();
@@ -724,18 +717,9 @@ function ShipmentDetailView({
   const platformFeeIsDue = Boolean(
     shipment && !platformFeeIsSettled && !shipmentPaymentIsClosed,
   );
-  const collectorOwnsShipment = shipment
-    ? shipment.createdByUserId === userId || ownershipConfirmed
-    : false;
   const canCollectorPay =
-    currentRole === 'COLLECTOR' && platformFeeIsDue && collectorOwnsShipment;
-  const shouldMountPaymentDialog =
-    canCollectorPay ||
-    (currentRole === 'COLLECTOR' &&
-      ownershipConfirmed &&
-      paymentDialogOpen &&
-      !platformFeeIsSettled &&
-      !shipmentPaymentIsClosed);
+    currentRole === 'COLLECTOR' && platformFeeIsDue;
+  const shouldMountPaymentDialog = canCollectorPay && paymentDialogOpen;
 
   return (
     <div className="space-y-6">
@@ -783,27 +767,25 @@ function ShipmentDetailView({
       ) : shipment ? (
         <div className="space-y-6">
           {currentRole === 'COLLECTOR' && platformFeeIsDue && (
-            <Card className={cn('overflow-hidden', canCollectorPay ? 'border-primary/35 bg-primary/5' : 'border-border bg-muted/20')}>
+            <Card className="overflow-hidden border-primary/35 bg-primary/5">
               <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <div className="flex items-start gap-3">
-                  <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl', canCollectorPay ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">
-                      {t(canCollectorPay ? 'shipmentPayment.ownerDueTitle' : 'shipmentPayment.notOwnerTitle')}
+                      {t('shipmentPayment.ownerDueTitle')}
                     </p>
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                      {t(canCollectorPay ? 'shipmentPayment.ownerDueDescription' : 'shipmentPayment.notOwnerDescription')}
+                      {t('shipmentPayment.ownerDueDescription')}
                     </p>
                   </div>
                 </div>
-                {canCollectorPay && (
-                  <Button className="shrink-0 gap-2" onClick={() => onPaymentDialogOpenChange(true)}>
-                    <CreditCard className="h-4 w-4" />
-                    {t('shipmentPayment.payPlatformFee')}
-                  </Button>
-                )}
+                <Button className="shrink-0 gap-2" onClick={() => onPaymentDialogOpenChange(true)}>
+                  <CreditCard className="h-4 w-4" />
+                  {t('shipmentPayment.payPlatformFee')}
+                </Button>
               </CardContent>
             </Card>
           )}

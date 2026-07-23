@@ -42,7 +42,6 @@ import type {
   PaymentAttemptResponse,
   PaymentPublicConfigResponse,
 } from '@/lib/payments/types';
-import type { Shipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
 const ONLINE_PROVIDERS: OnlinePaymentProvider[] = ['MTN', 'ORANGE', 'PAYPAL', 'STRIPE'];
@@ -57,9 +56,16 @@ const PROVIDER_ICONS = {
 
 interface ShipmentPaymentDialogProps {
   open: boolean;
-  shipment: Shipment;
+  shipment: PayableShipment;
   onOpenChange: (open: boolean) => void;
   onPaymentSucceeded: (payment: PaymentAttemptResponse) => void | Promise<void>;
+}
+
+export interface PayableShipment {
+  id: number;
+  reference?: string;
+  feeAmount?: number;
+  discountAmount?: number;
 }
 
 export function ShipmentPaymentDialog({
@@ -177,7 +183,7 @@ export function ShipmentPaymentDialog({
         payerMsisdn:
           provider === 'MTN' || provider === 'ORANGE' ? payerMsisdn.trim() : undefined,
         idempotencyKey: createIdempotencyKey(shipment.id),
-        description: `Platform fee for shipment ${shipment.reference}`,
+        description: `Platform fee for shipment ${shipment.reference ?? `#${shipment.id}`}`,
       });
       setAttempt(payment);
       await reportSuccess(payment);
