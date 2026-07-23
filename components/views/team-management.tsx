@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -44,6 +45,7 @@ import {
   useToastSimple,
 } from '@/components/company/company-shared';
 import { CreateMemberDialog } from '@/components/company/create-member-dialog';
+import { useClientPagination } from '@/hooks/use-client-pagination';
 
 // ─── Display config ────────────────────────────────────────────────────────
 
@@ -395,6 +397,11 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
       );
     });
   }, [members, search, roleFilter]);
+  const memberPagination = useClientPagination(
+    filtered,
+    20,
+    `${search}:${roleFilter}`,
+  );
 
   const counts = useMemo(() => ({
     total: members.length,
@@ -522,7 +529,7 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
         <>
           {/* Mobile: cards */}
           <div className="grid gap-3 md:hidden">
-            {filtered.map((m) => (
+            {memberPagination.paginatedItems.map((m) => (
               <Card key={m.id} className="border-border bg-card">
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start gap-3">
@@ -574,7 +581,7 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((m) => (
+                {memberPagination.paginatedItems.map((m) => (
                   <tr key={m.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -622,6 +629,14 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
               </tbody>
             </table>
           </div>
+          <DataPagination
+            page={memberPagination.page}
+            pageSize={memberPagination.pageSize}
+            totalPages={memberPagination.totalPages}
+            totalElements={memberPagination.totalElements}
+            onPageChange={memberPagination.setPage}
+            onPageSizeChange={memberPagination.setPageSize}
+          />
         </>
       )}
     </div>

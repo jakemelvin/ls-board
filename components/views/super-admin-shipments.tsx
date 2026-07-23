@@ -6,8 +6,6 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Circle,
   Clock3,
   CreditCard,
@@ -26,6 +24,7 @@ import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-butt
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -60,8 +59,6 @@ import {
   type SuperAdminShipmentStatusFilter,
 } from '@/lib/super-admin-shipments/api';
 import { cn } from '@/lib/utils';
-
-const PAGE_SIZE = 8;
 
 const STATUS_FILTERS: SuperAdminShipmentStatusFilter[] = [
   'ALL',
@@ -99,6 +96,7 @@ export function SuperAdminShipmentsView() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [companies, setCompanies] = useState<SuperAdminShipmentCompanyOption[]>([]);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [query, setQuery] = useState('');
@@ -122,7 +120,7 @@ export function SuperAdminShipmentsView() {
     try {
       const response = await getSuperAdminShipments(token, {
         page,
-        size: PAGE_SIZE,
+        size: pageSize,
         query,
         status,
         companyId,
@@ -139,7 +137,7 @@ export function SuperAdminShipmentsView() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, createdFrom, createdTo, page, query, status, t, token]);
+  }, [companyId, createdFrom, createdTo, page, pageSize, query, status, t, token]);
 
   useEffect(() => {
     void loadShipments();
@@ -514,12 +512,14 @@ export function SuperAdminShipmentsView() {
         </CardContent>
       </Card>
 
-      <PaginationBar
+      <DataPagination
         page={page}
+        pageSize={pageSize}
         totalPages={totalPages}
         totalElements={totalElements}
         loading={loading}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );
@@ -824,53 +824,6 @@ function ShipmentMobileCard({
         </div>
       </div>
     </button>
-  );
-}
-
-function PaginationBar({
-  page,
-  totalPages,
-  totalElements,
-  loading,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  totalElements: number;
-  loading: boolean;
-  onPageChange: (page: number) => void;
-}) {
-  const { t } = useTranslation('dashboard');
-
-  return (
-    <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-      <span>{t('superAdminShipments.pagination.total', { values: { count: totalElements } })}</span>
-      <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 sm:flex">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => onPageChange(Math.max(page - 1, 0))}
-          disabled={loading || page === 0}
-          aria-label={t('superAdminShipments.pagination.previous')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="px-2 text-center font-medium text-foreground">
-          {t('superAdminShipments.pagination.current', {
-            values: { page: page + 1, total: Math.max(totalPages, 1) },
-          })}
-        </span>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => onPageChange(page + 1)}
-          disabled={loading || page + 1 >= totalPages}
-          aria-label={t('superAdminShipments.pagination.next')}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
   );
 }
 

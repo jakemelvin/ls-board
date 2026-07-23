@@ -24,8 +24,6 @@ import {
   Package,
   Percent,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   AlertTriangle,
   Info,
   ExternalLink,
@@ -36,6 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { OperationalReadinessDialog } from '@/components/company/operational-readiness';
 import { SuperAdminDashboard } from '@/components/views/super-admin-dashboard';
 import { useAuthStore } from '@/lib/auth/store';
@@ -357,45 +356,6 @@ function ToastBar({ toast }: { toast: { msg: string; type: 'success' | 'error' }
 }
 
 // ─── Pagination bar ────────────────────────────────────────────────────────
-
-function PaginationBar({
-  page,
-  totalPages,
-  totalElements,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  totalElements: number;
-  onPageChange: (p: number) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3 px-1 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-      <span>{totalElements} résultat{totalElements !== 1 ? 's' : ''}</span>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page === 0}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="px-2 text-foreground font-medium">
-          {page + 1} / {totalPages || 1}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages - 1}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 // ─── Create company dialog ─────────────────────────────────────────────────
 
@@ -1414,6 +1374,7 @@ function CompaniesTab({ token }: { token: string }) {
   const { success, error: showError, toast } = useToastSimple();
   const [data, setData] = useState<Page<CompanyResponse> | null>(null);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [readiness, setReadiness] = useState<CompanyOperationalReadiness | null>(null);
@@ -1426,14 +1387,14 @@ function CompaniesTab({ token }: { token: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getCompanies(token, { page, size: 15 });
+      const result = await getCompanies(token, { page, size: pageSize });
       setData(result);
     } catch {
       showError('Impossible de charger les entreprises');
     } finally {
       setLoading(false);
     }
-  }, [token, page]);
+  }, [token, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1818,11 +1779,14 @@ function CompaniesTab({ token }: { token: string }) {
       </div>
 
       {data && (
-        <PaginationBar
+        <DataPagination
           page={page}
+          pageSize={pageSize}
           totalPages={data.totalPages}
           totalElements={data.totalElements}
           onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          loading={loading}
         />
       )}
     </>
@@ -2176,6 +2140,7 @@ function UsersTab({ token }: { token: string }) {
   const { success, error: showError, toast } = useToastSimple();
   const [data, setData] = useState<Page<UserResponse> | null>(null);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
@@ -2186,14 +2151,14 @@ function UsersTab({ token }: { token: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getUsers(token, { page, size: 20 });
+      const result = await getUsers(token, { page, size: pageSize });
       setData(result);
     } catch {
       showError('Impossible de charger les utilisateurs');
     } finally {
       setLoading(false);
     }
-  }, [token, page]);
+  }, [token, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -2648,11 +2613,14 @@ function UsersTab({ token }: { token: string }) {
       </div>
 
       {data && (
-        <PaginationBar
+        <DataPagination
           page={page}
+          pageSize={pageSize}
           totalPages={data.totalPages}
           totalElements={data.totalElements}
           onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          loading={loading}
         />
       )}
     </>

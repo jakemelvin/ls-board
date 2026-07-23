@@ -6,6 +6,7 @@ import { CheckCircle2, Coins, Search, UserCheck, WalletCards } from 'lucide-reac
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ import {
 import type { CommissionBeneficiaryRole, CommissionEntry, CommissionStatus } from '@/lib/mock-data';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useClientPagination } from '@/hooks/use-client-pagination';
 
 type StatusFilter = CommissionStatus | 'ALL';
 type RoleFilter = CommissionBeneficiaryRole | 'ALL';
@@ -89,6 +91,11 @@ export function CommissionManagement() {
   }, [commissions, periodRange, roleFilter, searchTerm, statusFilter]);
 
   const summary = getCommissionSummary(filteredCommissions);
+  const commissionPagination = useClientPagination(
+    filteredCommissions,
+    20,
+    `${periodPreset}:${periodRange.from.toISOString()}:${periodRange.to.toISOString()}:${statusFilter}:${roleFilter}:${searchTerm}`,
+  );
 
   const handlePeriodChange = (preset: DashboardPeriodPreset, range: DateRange) => {
     setPeriodPreset(preset);
@@ -207,7 +214,7 @@ export function CommissionManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCommissions.map((commission) => (
+              {commissionPagination.paginatedItems.map((commission) => (
                 <TableRow key={commission.id} className="border-border">
                   <TableCell>
                     <p className="font-medium text-foreground">{commission.beneficiaryName}</p>
@@ -269,6 +276,17 @@ export function CommissionManagement() {
               )}
             </TableBody>
           </Table>
+          {filteredCommissions.length > 0 && (
+            <DataPagination
+              page={commissionPagination.page}
+              pageSize={commissionPagination.pageSize}
+              totalPages={commissionPagination.totalPages}
+              totalElements={commissionPagination.totalElements}
+              onPageChange={commissionPagination.setPage}
+              onPageSizeChange={commissionPagination.setPageSize}
+              className="mx-4 mb-4"
+            />
+          )}
         </CardContent>
       </Card>
 

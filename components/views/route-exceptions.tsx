@@ -16,6 +16,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -60,6 +61,7 @@ import type {
 } from '@/lib/company/types';
 import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useClientPagination } from '@/hooks/use-client-pagination';
 
 type RouteExceptionFormState = {
   originCollectionPointId: string;
@@ -208,6 +210,11 @@ function RouteExceptionsInner({
         .some((value) => value!.toLowerCase().includes(query)),
     );
   }, [routeExceptions, search]);
+  const routePagination = useClientPagination(
+    filteredRouteExceptions,
+    20,
+    search,
+  );
 
   const editingException = useMemo(
     () => routeExceptions.find((item) => item.id === editingId) ?? null,
@@ -531,7 +538,7 @@ function RouteExceptionsInner({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRouteExceptions.map((item) => (
+                      {routePagination.paginatedItems.map((item) => (
                         <TableRow
                           key={item.id}
                           data-state={editingId === item.id ? 'selected' : undefined}
@@ -572,7 +579,7 @@ function RouteExceptionsInner({
                 </div>
 
                 <div className="space-y-3 md:hidden">
-                  {filteredRouteExceptions.map((item) => (
+                  {routePagination.paginatedItems.map((item) => (
                     <div
                       key={item.id}
                       className={cn(
@@ -604,6 +611,15 @@ function RouteExceptionsInner({
                     </div>
                   ))}
                 </div>
+                <DataPagination
+                  page={routePagination.page}
+                  pageSize={routePagination.pageSize}
+                  totalPages={routePagination.totalPages}
+                  totalElements={routePagination.totalElements}
+                  onPageChange={routePagination.setPage}
+                  onPageSizeChange={routePagination.setPageSize}
+                  className="mt-4"
+                />
               </>
             )}
           </CardContent>

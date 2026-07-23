@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
+import { useCallback, useMemo, useState, type ElementType } from 'react';
 import {
   CheckCircle2,
   Layers3,
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import { toast } from '@/hooks/use-toast';
+import { usePaginatedQuery } from '@/hooks/use-paginated-query';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
 import {
@@ -62,18 +64,11 @@ import type {
 } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 50;
-
 type GroupAction = 'note' | 'dissolve' | null;
 
 export function TransporterTour() {
   const token = useAuthStore((state) => state.token);
-  const [shipments, setShipments] = useState<TransporterReadyShipment[]>([]);
-  const [groups, setGroups] = useState<ShipmentTransportGroupSummary[]>([]);
-  const [depositRequests, setDepositRequests] = useState<ShipmentDestinationDepositRequestSummary[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
@@ -83,39 +78,56 @@ export function TransporterTour() {
   const [selectedGroup, setSelectedGroup] = useState<ShipmentTransportGroupSummary | null>(null);
   const [groupAction, setGroupAction] = useState<GroupAction>(null);
 
-  const loadTour = useCallback(async () => {
-    if (!token) {
-      setError('Session expiree');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [shipmentResponse, groupResponse, depositResponse] = await Promise.all([
-        getTransporterInTransitShipments(token, { page: 0, size: PAGE_SIZE }),
-        getTransportGroups(token, { page: 0, size: PAGE_SIZE }),
-        getTransporterDestinationDepositRequests(token, { page: 0, size: PAGE_SIZE }),
+  const shipmentQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getTransporterInTransitShipments(token, { page, size: pageSize }),
+    [token],
+  );
+  const groupQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getTransportGroups(token, { page, size: pageSize }),
+    [token],
+  );
+  const depositQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getTransporterDestinationDepositRequests(token, { page, size: pageSize }),
+    [token],
+  );
+  const shipmentPagination = usePaginatedQuery({
+    query: shipmentQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les colis en transit.',
+  });
+  const groupPagination = usePaginatedQuery({
+    query: groupQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les groupes de transport.',
+  });
+  const depositPagination = usePaginatedQuery({
+    query: depositQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les depots destination.',
+  });
+  const shipments = shipmentPagination.items;
+  const groups = groupPagination.items;
+  const depositRequests = depositPagination.items;
+  const loading =
+    shipmentPagination.loading || groupPagination.loading || depositPagination.loading;
+  const error =
+    shipmentPagination.error || groupPagination.error || depositPagination.error;
+  const loadTour = useCallback(
+    async () => {
+      await Promise.all([
+        shipmentPagination.reload(),
+        groupPagination.reload(),
+        depositPagination.reload(),
       ]);
-
-      setShipments(shipmentResponse.content ?? []);
-      setGroups(groupResponse.content ?? []);
-      setDepositRequests(depositResponse.content ?? []);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impossible de charger la tournee.');
-      setShipments([]);
-      setGroups([]);
-      setDepositRequests([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void loadTour();
-  }, [loadTour]);
+    },
+    [depositPagination, groupPagination, shipmentPagination],
+  );
 
   const activeGroups = groups.filter((group) => group.active !== false);
   const selectedShipments = shipments.filter((shipment) =>
@@ -428,6 +440,24 @@ export function TransporterTour() {
                 ))
               )}
             </CardContent>
+            {shipmentPagination.totalElements > 0 && (
+              <DataPagination
+                page={shipmentPagination.page}
+                pageSize={shipmentPagination.pageSize}
+                totalPages={shipmentPagination.totalPages}
+                totalElements={shipmentPagination.totalElements}
+                onPageChange={(nextPage) => {
+                  setSelectedShipmentIds([]);
+                  shipmentPagination.setPage(nextPage);
+                }}
+                onPageSizeChange={(nextPageSize) => {
+                  setSelectedShipmentIds([]);
+                  shipmentPagination.setPageSize(nextPageSize);
+                }}
+                loading={shipmentPagination.loading}
+                className="mx-4 mb-4"
+              />
+            )}
           </Card>
 
           <Card className="border-border bg-card">
@@ -513,6 +543,24 @@ export function TransporterTour() {
                 </div>
               )}
             </CardContent>
+            {groupPagination.totalElements > 0 && (
+              <DataPagination
+                page={groupPagination.page}
+                pageSize={groupPagination.pageSize}
+                totalPages={groupPagination.totalPages}
+                totalElements={groupPagination.totalElements}
+                onPageChange={(nextPage) => {
+                  setSelectedGroupIds([]);
+                  groupPagination.setPage(nextPage);
+                }}
+                onPageSizeChange={(nextPageSize) => {
+                  setSelectedGroupIds([]);
+                  groupPagination.setPageSize(nextPageSize);
+                }}
+                loading={groupPagination.loading}
+                className="mx-4 mb-4"
+              />
+            )}
           </Card>
 
           <Card className="border-border bg-card">
@@ -579,6 +627,18 @@ export function TransporterTour() {
                 </>
               )}
             </CardContent>
+            {depositPagination.totalElements > 0 && (
+              <DataPagination
+                page={depositPagination.page}
+                pageSize={depositPagination.pageSize}
+                totalPages={depositPagination.totalPages}
+                totalElements={depositPagination.totalElements}
+                onPageChange={depositPagination.setPage}
+                onPageSizeChange={depositPagination.setPageSize}
+                loading={depositPagination.loading}
+                className="mx-4 mb-4"
+              />
+            )}
           </Card>
         </>
       )}

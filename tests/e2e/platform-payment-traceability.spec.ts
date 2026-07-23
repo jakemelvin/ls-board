@@ -90,8 +90,18 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
   await page.getByLabel(/Ordre d'affichage|Display order/).selectOption('asc');
   await expect.poll(() => transactionQueries.some((query) => query.includes('sort=createdAt%2Casc'))).toBe(true);
 
-  await page.getByRole('button', { name: /^(Suivant|Next)$/ }).click();
+  await page.getByTestId('pagination-next').click();
   await expect.poll(() => transactionQueries.some((query) => query.includes('page=1'))).toBe(true);
+
+  await page.getByTestId('pagination-page-size').click();
+  await page.getByRole('option', { name: '50', exact: true }).click();
+  await expect.poll(() => transactionQueries.some((query) => query.includes('size=50'))).toBe(true);
+
+  await page.getByTestId('pagination-page-input').fill('2');
+  await page.getByTestId('pagination-page-input').press('Enter');
+  await expect.poll(() =>
+    transactionQueries.some((query) => query.includes('page=1') && query.includes('size=50')),
+  ).toBe(true);
 });
 
 for (const account of [

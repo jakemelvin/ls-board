@@ -6,8 +6,6 @@ import {
   Bell,
   Check,
   CheckCheck,
-  ChevronLeft,
-  ChevronRight,
   ChevronsUpDown,
   Loader2,
   RefreshCw,
@@ -21,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -449,6 +448,7 @@ function InboxTab({ token }: { token: string }) {
   const { locale, t } = useTranslation('dashboard');
   const [status, setStatus] = useState<NotificationStatus>('ALL');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
   const [data, setData] = useState<{
     content: NotificationResponse[];
     totalElements: number;
@@ -467,7 +467,7 @@ function InboxTab({ token }: { token: string }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await getMyNotifications(token, { status, page, size: 12 });
+      const response = await getMyNotifications(token, { status, page, size: pageSize });
       if (isLatestRequest(requestId)) setData(response);
     } catch (err) {
       if (isLatestRequest(requestId)) {
@@ -476,7 +476,7 @@ function InboxTab({ token }: { token: string }) {
     } finally {
       if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [beginRequest, isLatestRequest, page, status, t, token]);
+  }, [beginRequest, isLatestRequest, page, pageSize, status, t, token]);
 
   useEffect(() => {
     void load();
@@ -629,37 +629,17 @@ function InboxTab({ token }: { token: string }) {
         </div>
       )}
 
-      {data && data.totalPages > 1 && (
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>{t('notifications.pagination.total', { values: { count: data.totalElements } })}</span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => setPage((value) => Math.max(0, value - 1))}
-              disabled={data.first}
-              title={t('notifications.pagination.previous')}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="px-2 font-medium text-foreground">
-              {t('notifications.pagination.current', {
-                values: { page: page + 1, total: data.totalPages },
-              })}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => setPage((value) => value + 1)}
-              disabled={data.last}
-              title={t('notifications.pagination.next')}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {data && data.totalElements > 0 && (
+        <DataPagination
+          page={page}
+          pageSize={pageSize}
+          totalPages={data.totalPages}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          loading={loading}
+          className="rounded-xl border border-border bg-card p-3"
+        />
       )}
     </div>
   );

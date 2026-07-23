@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
+import { useCallback, useMemo, useState, type ElementType } from 'react';
 import {
   Check,
   ClipboardCheck,
@@ -16,6 +16,7 @@ import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CopyTrackingNumberButton } from '@/components/copy-tracking-number-button';
 import { toast } from '@/hooks/use-toast';
+import { usePaginatedQuery } from '@/hooks/use-paginated-query';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
 import {
@@ -64,17 +66,9 @@ import type {
 } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 50;
-
 export function LocalStock() {
   const token = useAuthStore((state) => state.token);
-  const [depositRequests, setDepositRequests] = useState<ShipmentDestinationDepositRequestSummary[]>([]);
-  const [incomingShipments, setIncomingShipments] = useState<ShipmentDestinationIncomingShipment[]>([]);
-  const [incomingGroups, setIncomingGroups] = useState<ShipmentTransportGroupSummary[]>([]);
-  const [pickupShipments, setPickupShipments] = useState<CollectorPickupShipment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [selectedDeposit, setSelectedDeposit] =
     useState<ShipmentDestinationDepositRequest | null>(null);
@@ -91,42 +85,80 @@ export function LocalStock() {
   const { beginRequest: beginDetailRequest, isLatestRequest: isLatestDetailRequest } =
     useLatestRequest();
 
-  const loadStock = useCallback(async () => {
-    if (!token) {
-      setError('Session expiree');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [deposits, incoming, groups, pickups] = await Promise.all([
-        getCollectorDestinationDepositRequests(token, { page: 0, size: PAGE_SIZE }),
-        getDestinationIncomingShipments(token, { page: 0, size: PAGE_SIZE }),
-        getDestinationIncomingGroups(token, { page: 0, size: PAGE_SIZE }),
-        getReadyForPickupShipments(token, { page: 0, size: PAGE_SIZE }),
+  const depositQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getCollectorDestinationDepositRequests(token, { page, size: pageSize }),
+    [token],
+  );
+  const incomingShipmentQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getDestinationIncomingShipments(token, { page, size: pageSize }),
+    [token],
+  );
+  const incomingGroupQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getDestinationIncomingGroups(token, { page, size: pageSize }),
+    [token],
+  );
+  const pickupQuery = useCallback(
+    (page: number, pageSize: number) =>
+      getReadyForPickupShipments(token, { page, size: pageSize }),
+    [token],
+  );
+  const depositPagination = usePaginatedQuery({
+    query: depositQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les depots destination.',
+  });
+  const incomingShipmentPagination = usePaginatedQuery({
+    query: incomingShipmentQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les colis entrants.',
+  });
+  const incomingGroupPagination = usePaginatedQuery({
+    query: incomingGroupQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les groupes entrants.',
+  });
+  const pickupPagination = usePaginatedQuery({
+    query: pickupQuery,
+    enabled: Boolean(token),
+    initialPageSize: 50,
+    errorMessage: 'Impossible de charger les colis prets au retrait.',
+  });
+  const depositRequests = depositPagination.items;
+  const incomingShipments = incomingShipmentPagination.items;
+  const incomingGroups = incomingGroupPagination.items;
+  const pickupShipments = pickupPagination.items;
+  const loading =
+    depositPagination.loading ||
+    incomingShipmentPagination.loading ||
+    incomingGroupPagination.loading ||
+    pickupPagination.loading;
+  const error =
+    depositPagination.error ||
+    incomingShipmentPagination.error ||
+    incomingGroupPagination.error ||
+    pickupPagination.error;
+  const loadStock = useCallback(
+    async () => {
+      await Promise.all([
+        depositPagination.reload(),
+        incomingShipmentPagination.reload(),
+        incomingGroupPagination.reload(),
+        pickupPagination.reload(),
       ]);
-
-      setDepositRequests(deposits.content ?? []);
-      setIncomingShipments(incoming.content ?? []);
-      setIncomingGroups(groups.content ?? []);
-      setPickupShipments(pickups.content ?? []);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Impossible de charger le stock local.');
-      setDepositRequests([]);
-      setIncomingShipments([]);
-      setIncomingGroups([]);
-      setPickupShipments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void loadStock();
-  }, [loadStock]);
+    },
+    [
+      depositPagination,
+      incomingGroupPagination,
+      incomingShipmentPagination,
+      pickupPagination,
+    ],
+  );
 
   const pendingDepositCount = depositRequests.filter(
     (request) => request.status === 'PENDING_COLLECTOR_REVIEW',
@@ -387,6 +419,18 @@ export function LocalStock() {
                 </>
               )}
             </CardContent>
+            {depositPagination.totalElements > 0 && (
+              <DataPagination
+                page={depositPagination.page}
+                pageSize={depositPagination.pageSize}
+                totalPages={depositPagination.totalPages}
+                totalElements={depositPagination.totalElements}
+                onPageChange={depositPagination.setPage}
+                onPageSizeChange={depositPagination.setPageSize}
+                loading={depositPagination.loading}
+                className="mx-4 mb-4"
+              />
+            )}
           </Card>
 
           <div className="grid gap-6 2xl:grid-cols-2">
@@ -425,6 +469,30 @@ export function LocalStock() {
                   </>
                 )}
               </CardContent>
+              <div className="space-y-3 px-4 pb-4">
+                {incomingShipmentPagination.totalElements > 0 && (
+                  <DataPagination
+                    page={incomingShipmentPagination.page}
+                    pageSize={incomingShipmentPagination.pageSize}
+                    totalPages={incomingShipmentPagination.totalPages}
+                    totalElements={incomingShipmentPagination.totalElements}
+                    onPageChange={incomingShipmentPagination.setPage}
+                    onPageSizeChange={incomingShipmentPagination.setPageSize}
+                    loading={incomingShipmentPagination.loading}
+                  />
+                )}
+                {incomingGroupPagination.totalElements > 0 && (
+                  <DataPagination
+                    page={incomingGroupPagination.page}
+                    pageSize={incomingGroupPagination.pageSize}
+                    totalPages={incomingGroupPagination.totalPages}
+                    totalElements={incomingGroupPagination.totalElements}
+                    onPageChange={incomingGroupPagination.setPage}
+                    onPageSizeChange={incomingGroupPagination.setPageSize}
+                    loading={incomingGroupPagination.loading}
+                  />
+                )}
+              </div>
             </Card>
 
             <Card className="border-border bg-card">
@@ -505,6 +573,18 @@ export function LocalStock() {
                   </>
                 )}
               </CardContent>
+              {pickupPagination.totalElements > 0 && (
+                <DataPagination
+                  page={pickupPagination.page}
+                  pageSize={pickupPagination.pageSize}
+                  totalPages={pickupPagination.totalPages}
+                  totalElements={pickupPagination.totalElements}
+                  onPageChange={pickupPagination.setPage}
+                  onPageSizeChange={pickupPagination.setPageSize}
+                  loading={pickupPagination.loading}
+                  className="mx-4 mb-4"
+                />
+              )}
             </Card>
           </div>
         </>

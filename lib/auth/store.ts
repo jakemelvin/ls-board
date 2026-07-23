@@ -31,7 +31,7 @@ const EMPTY: Omit<AuthSession, never> = {
   user: undefined,
 };
 
-let cancelTokenExpiration = () => undefined;
+let cancelTokenExpiration: () => void = () => undefined;
 
 function watchTokenExpiration(token: string) {
   cancelTokenExpiration();

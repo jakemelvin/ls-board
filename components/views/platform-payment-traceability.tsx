@@ -5,8 +5,6 @@ import {
   AlertTriangle,
   ArrowDownUp,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   RefreshCw,
   ReceiptText,
@@ -14,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Table,
   TableBody,
@@ -39,7 +38,6 @@ import {
 } from '@/lib/shipments/presentation';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 20;
 type SortDirection = 'desc' | 'asc';
 const PAYMENT_STATUSES: PaymentAttemptStatus[] = [
   'CREATED',
@@ -109,6 +107,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
   const [status, setStatus] = useState<PaymentAttemptStatus | ''>('');
   const [transactionStatus, setTransactionStatus] = useState<ShipmentTransactionStatus | ''>('');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -125,7 +124,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
         const params = {
           status: transactionStatus || undefined,
           page,
-          size: PAGE_SIZE,
+          size: pageSize,
           sort: `createdAt,${sortDirection}`,
         };
         if (scope === 'platform') {
@@ -147,7 +146,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
           provider: provider || undefined,
           status: status || undefined,
           page,
-          size: PAGE_SIZE,
+          size: pageSize,
           sort: `createdAt,${sortDirection}`,
         });
         setAttempts(response.content ?? []);
@@ -163,7 +162,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
     } finally {
       setLoading(false);
     }
-  }, [page, provider, scope, sortDirection, status, t, token, transactionStatus, view]);
+  }, [page, pageSize, provider, scope, sortDirection, status, t, token, transactionStatus, view]);
 
   useEffect(() => {
     void load();
@@ -327,10 +326,15 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
             </p>
           )}
           {!loading && totalElements > 0 && (
-            <Pagination
+            <DataPagination
               page={page}
+              pageSize={pageSize}
               totalPages={totalPages}
+              totalElements={totalElements}
               onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              loading={loading}
+              className="mt-4"
             />
           )}
         </CardContent>
@@ -596,46 +600,5 @@ function PaymentRow({ payment }: { payment: AdminPaymentAttemptResponse }) {
         {payment.failureReason ? <span className="inline-flex items-start gap-1"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{payment.failureCode ? `${payment.failureCode}: ` : ''}{payment.failureReason}</span> : '--'}
       </TableCell>
     </TableRow>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  const { t } = useTranslation('dashboard');
-  return (
-    <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-border pt-4 sm:flex-row">
-      <p className="text-sm text-muted-foreground">
-        {t('platformFinance.trace.page', { values: { current: page + 1, total: totalPages } })}
-      </p>
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page === 0}
-          onClick={() => onPageChange(page - 1)}
-        >
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          {t('platformFinance.trace.previous')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page + 1 >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          {t('platformFinance.trace.next')}
-          <ChevronRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
-    </div>
   );
 }

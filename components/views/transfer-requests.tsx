@@ -24,6 +24,7 @@ import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -69,8 +70,6 @@ import type {
 import type { UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 20;
-
 interface TransferRequestsProps {
   currentRole: UserRole;
 }
@@ -83,6 +82,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
   const token = useAuthStore((state) => state.token);
   const [requests, setRequests] = useState<ShipmentTransmissionRequestSummary[]>([]);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -117,12 +117,12 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         currentRole === 'COLLECTOR'
           ? await getCollectorTransmissionRequests(token, {
               page,
-              size: PAGE_SIZE,
+              size: pageSize,
               sort: `createdAt,${sortDirection}`,
             })
           : await getTransporterTransmissionRequests(token, {
               page,
-              size: PAGE_SIZE,
+              size: pageSize,
               sort: `createdAt,${sortDirection}`,
             });
 
@@ -145,7 +145,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     } finally {
       if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [beginRequest, canUseScreen, currentRole, isLatestRequest, page, sortDirection, token]);
+  }, [beginRequest, canUseScreen, currentRole, isLatestRequest, page, pageSize, sortDirection, token]);
 
   useEffect(() => {
     void loadRequests();
@@ -537,31 +537,16 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                 </Table>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Page {totalPages === 0 ? 0 : page + 1} sur {totalPages} - {totalElements} demande(s)
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:flex">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={page <= 0}
-                    onClick={() => setPage((current) => Math.max(0, current - 1))}
-                  >
-                    Precedent
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={totalPages === 0 || page >= totalPages - 1}
-                    onClick={() => setPage((current) => current + 1)}
-                  >
-                    Suivant
-                  </Button>
-                </div>
-              </div>
+              <DataPagination
+                page={page}
+                pageSize={pageSize}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                loading={loading}
+                className="m-4"
+              />
             </>
           )}
         </CardContent>

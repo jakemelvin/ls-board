@@ -5,7 +5,9 @@ const API_ORIGIN = 'https://dstest.easywaka.com';
 test('collector can pay any shipment visible in their collection scope', async ({ page }) => {
   test.setTimeout(60_000);
   let paymentBody = '';
+  let promoBody = '';
   let ownShipmentPaid = false;
+  let otherShipmentPaid = false;
 
   const ownShipment = () => ({
     id: 701,
@@ -26,7 +28,7 @@ test('collector can pay any shipment visible in their collection scope', async (
     updatedAt: new Date().toISOString(),
   });
 
-  const otherShipment = {
+  const otherShipment = () => ({
     id: 702,
     reference: 'SHP-702',
     createdByUserId: 99,
@@ -34,16 +36,17 @@ test('collector can pay any shipment visible in their collection scope', async (
     companyId: 9,
     companyName: 'Sendam Express',
     priority: 'STANDARD',
-    status: 'CREATED',
-    paymentStatus: 'UNPAID',
-    transactionStatus: 'INITIATED',
+    status: otherShipmentPaid ? 'AWAITING_DROP_OFF' : 'CREATED',
+    paymentStatus: otherShipmentPaid ? 'PAID' : 'UNPAID',
+    transactionStatus: otherShipmentPaid ? 'PLATFORM_FEE_PAID' : 'INITIATED',
     feeAmount: 500,
+    discountAmount: otherShipmentPaid ? 500 : 0,
     price: 8500,
     sender: { fullName: 'Other Sender' },
     receiver: { fullName: 'Other Receiver' },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  };
+  });
 
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const request = route.request();
@@ -71,7 +74,7 @@ test('collector can pay any shipment visible in their collection scope', async (
 
     if (url.pathname === '/api/delivery/shipments' && request.method() === 'GET') {
       await json({
-        content: [ownShipment(), otherShipment],
+        content: [ownShipment(), otherShipment()],
         totalPages: 1,
         totalElements: 2,
         number: 0,
@@ -89,7 +92,17 @@ test('collector can pay any shipment visible in their collection scope', async (
     }
 
     if (url.pathname === '/api/delivery/shipments/702') {
-      await json(otherShipment);
+      await json(otherShipment());
+      return;
+    }
+
+    if (
+      url.pathname === '/api/delivery/shipments/702/payments/promo-code' &&
+      request.method() === 'POST'
+    ) {
+      promoBody = request.postData() ?? '';
+      otherShipmentPaid = true;
+      await json(otherShipment());
       return;
     }
 
@@ -161,5 +174,14 @@ test('collector can pay any shipment visible in their collection scope', async (
     await page.getByRole('button', { name: /#702 detail|detail.*#702/i }).click();
   }
   await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ })).toBeVisible();
+  await page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
+
+  const promoDialog = page.getByRole('dialog');
+  await promoDialog.getByLabel(/Code promo|Promo code/).fill('BIENVENUE');
+  await promoDialog.getByRole('button', { name: /Appliquer|Apply/ }).click();
+
+  await expect.poll(() => promoBody).toContain('BIENVENUE');
+  await expect(page.getByText(/Frais couverts par le code promo|Fee covered by promo code/)).toBeVisible();
+  await expect(promoDialog).toHaveCount(0);
+  await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toHaveCount(0);
 });

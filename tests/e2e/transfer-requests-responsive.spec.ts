@@ -91,6 +91,6 @@ test('collector pickup requests are sorted, paginated, and mobile-friendly', asy
     await expect(page.getByRole('table').getByText('#42')).toBeVisible();
   }
 
-  await page.getByRole('button', { name: /^(Suivant|Next)$/ }).click();
+  await page.getByTestId('pagination-next').click();
   await expect.poll(() => requestQueries.some((query) => query.includes('page=1'))).toBe(true);
 });

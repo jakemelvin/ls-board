@@ -5,6 +5,7 @@ import { Check, MapPin, Package, RefreshCw, Send, Truck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -39,11 +40,13 @@ import {
 import type { TransporterReadyShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 50;
-
 export function PickupRequest() {
   const token = useAuthStore((state) => state.token);
   const [shipments, setShipments] = useState<TransporterReadyShipment[]>([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +67,13 @@ export function PickupRequest() {
 
     try {
       const response = await getTransporterReadyShipments(token, {
-        page: 0,
-        size: PAGE_SIZE,
+        page,
+        size: pageSize,
       });
 
       setShipments(response.content ?? []);
+      setTotalPages(response.totalPages ?? 0);
+      setTotalElements(response.totalElements ?? 0);
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -76,10 +81,12 @@ export function PickupRequest() {
           : 'Impossible de charger les colis disponibles.',
       );
       setShipments([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [page, pageSize, token]);
 
   useEffect(() => {
     void loadShipments();
@@ -349,6 +356,24 @@ export function PickupRequest() {
             );
           })}
         </div>
+      )}
+
+      {!loading && !error && totalElements > 0 && (
+        <DataPagination
+          page={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          onPageChange={(nextPage) => {
+            resetSelection();
+            setPage(nextPage);
+          }}
+          onPageSizeChange={(nextPageSize) => {
+            resetSelection();
+            setPageSize(nextPageSize);
+          }}
+          loading={loading}
+        />
       )}
 
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>

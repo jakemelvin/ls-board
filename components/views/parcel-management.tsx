@@ -27,6 +27,7 @@ import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
 import { ShipmentCreateView } from '@/components/views/shipment-create';
 import { ShipmentPaymentDialog } from '@/components/payments/shipment-payment-dialog';
@@ -72,7 +73,6 @@ import type {
 import type { User, UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 20;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 const COLLECTOR_REFERENCE_VISIBLE_STATUSES = new Set<ShipmentStatus>([
   'RECEIVED_AT_COLLECTION_POINT',
@@ -109,6 +109,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const { t } = useTranslation('dashboard');
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -154,7 +155,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     try {
       const response = await getShipments(token, {
         page,
-        size: PAGE_SIZE,
+        size: pageSize,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
       });
 
@@ -170,7 +171,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     } finally {
       if (isLatestListRequest(requestId)) setLoading(false);
     }
-  }, [beginListRequest, isLatestListRequest, page, statusFilter, token]);
+  }, [beginListRequest, isLatestListRequest, page, pageSize, statusFilter, token]);
 
   useEffect(() => {
     loadShipments();
@@ -397,9 +398,6 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
           <CardTitle className="text-lg">
             {totalElements} shipment{totalElements > 1 ? 's' : ''}
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Page {page + 1} / {Math.max(totalPages, 1)}
-          </p>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -539,27 +537,18 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Les filtres de recherche s&apos;appliquent a la page actuellement chargee.
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage((current) => Math.max(current - 1, 0))}
-            disabled={loading || page === 0}
-          >
-            Precedent
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setPage((current) => current + 1)}
-            disabled={loading || page + 1 >= totalPages}
-          >
-            Suivant
-          </Button>
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Les filtres de recherche s&apos;appliquent a la page actuellement chargee.
+      </p>
+      <DataPagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        totalElements={totalElements}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        loading={loading}
+      />
     </div>
   );
 }

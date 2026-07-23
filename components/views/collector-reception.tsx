@@ -21,6 +21,7 @@ import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataPagination } from '@/components/ui/data-pagination';
 import {
   Dialog,
   DialogContent,
@@ -62,14 +63,13 @@ import {
 import type { CollectorIncomingShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 20;
-
 export function CollectorReception() {
   const { t } = useTranslation('dashboard');
   const { formatMoney } = useCurrency();
   const token = useAuthStore((state) => state.token);
   const [shipments, setShipments] = useState<CollectorIncomingShipment[]>([]);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -106,7 +106,7 @@ export function CollectorReception() {
     try {
       const response = await getCollectorIncomingShipments(token, {
         page,
-        size: PAGE_SIZE,
+        size: pageSize,
       });
 
       if (isLatestRequest(requestId)) {
@@ -128,7 +128,7 @@ export function CollectorReception() {
     } finally {
       if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [beginRequest, isLatestRequest, page, token]);
+  }, [beginRequest, isLatestRequest, page, pageSize, token]);
 
   useEffect(() => {
     void loadIncomingShipments();
@@ -482,31 +482,15 @@ export function CollectorReception() {
                 </Table>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Page {totalPages === 0 ? 0 : page + 1} sur {totalPages} - {totalElements} colis
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:flex">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={page <= 0}
-                    onClick={() => setPage((current) => Math.max(0, current - 1))}
-                  >
-                    Precedent
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={totalPages === 0 || page >= totalPages - 1}
-                    onClick={() => setPage((current) => current + 1)}
-                  >
-                    Suivant
-                  </Button>
-                </div>
-              </div>
+              <DataPagination
+                page={page}
+                pageSize={pageSize}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                loading={loading}
+              />
             </>
           )}
         </CardContent>

@@ -1,5 +1,17 @@
 {
   "title": "Dashboard",
+  "pagination": {
+    "first": "First page",
+    "goToPage": "Go to page",
+    "label": "Results pagination",
+    "last": "Last page",
+    "next": "Next page",
+    "of": "of {{total}}",
+    "page": "Page",
+    "previous": "Previous page",
+    "rowsPerPage": "Rows per page",
+    "total": "{{count}} result(s)"
+  },
   "common": {
     "add": "Add",
     "cancel": "Cancel",
@@ -898,6 +910,15 @@
     "platformFee": "Estimated platform fee",
     "loading": "Loading payment methods",
     "chooseProvider": "Payment method",
+    "promoTitle": "Pay with a promo code",
+    "promoDescription": "Apply a promo code to cover all or part of the platform fee.",
+    "promoLabel": "Promo code",
+    "promoPlaceholder": "E.g. WELCOME",
+    "applyPromo": "Apply",
+    "promoAppliedTitle": "Promo code applied",
+    "promoAppliedDescription": "The promo code was applied. Remaining amount: {{amount}}.",
+    "promoSuccessTitle": "Fee covered by promo code",
+    "promoSuccessDescription": "The promo code fully covers the platform fee. The shipment can proceed to collection.",
     "phoneLabel": "Mobile Money number",
     "phonePlaceholder": "E.g. 237690000000",
     "phoneHint": "Use the number that will receive the confirmation request.",
@@ -939,6 +960,8 @@
     "errors": {
       "config": "Unable to load payment methods.",
       "phoneRequired": "Enter a valid Mobile Money number.",
+      "promoRequired": "Enter a promo code.",
+      "promo": "This promo code could not be applied.",
       "initiation": "Unable to start payment.",
       "confirmation": "Unable to confirm the payment status.",
       "card": "The card payment could not be confirmed."

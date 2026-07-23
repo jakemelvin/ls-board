@@ -41,7 +41,7 @@ export function scheduleTokenExpiration(
   const expirationTime = getTokenExpirationTime(token);
   if (expirationTime === null) return () => undefined;
 
-  let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+  let timeoutId: number | undefined;
 
   const armTimer = () => {
     const remainingTime = expirationTime - Date.now();

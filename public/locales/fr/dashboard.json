@@ -1,5 +1,17 @@
 {
   "title": "Tableau de bord",
+  "pagination": {
+    "first": "Première page",
+    "goToPage": "Aller à la page",
+    "label": "Pagination des résultats",
+    "last": "Dernière page",
+    "next": "Suivant",
+    "of": "sur {{total}}",
+    "page": "Page",
+    "previous": "Précédent",
+    "rowsPerPage": "Lignes par page",
+    "total": "{{count}} résultat(s)"
+  },
   "common": {
     "add": "Ajouter",
     "cancel": "Annuler",
@@ -898,6 +910,15 @@
     "platformFee": "Frais plateforme estimés",
     "loading": "Chargement des moyens de paiement",
     "chooseProvider": "Moyen de paiement",
+    "promoTitle": "Payer avec un code promo",
+    "promoDescription": "Appliquez un code promo pour couvrir tout ou partie des frais plateforme.",
+    "promoLabel": "Code promo",
+    "promoPlaceholder": "Ex. BIENVENUE",
+    "applyPromo": "Appliquer",
+    "promoAppliedTitle": "Code promo appliqué",
+    "promoAppliedDescription": "Le code promo a été appliqué. Reste à payer : {{amount}}.",
+    "promoSuccessTitle": "Frais couverts par le code promo",
+    "promoSuccessDescription": "Le code promo couvre entièrement les frais plateforme. Le shipment peut poursuivre sa prise en charge.",
     "phoneLabel": "Numéro Mobile Money",
     "phonePlaceholder": "Ex. 237690000000",
     "phoneHint": "Utilisez le numéro qui recevra la demande de confirmation.",
@@ -939,6 +960,8 @@
     "errors": {
       "config": "Impossible de charger les moyens de paiement.",
       "phoneRequired": "Saisissez un numéro Mobile Money valide.",
+      "promoRequired": "Saisissez un code promo.",
+      "promo": "Ce code promo n’a pas pu être appliqué.",
       "initiation": "Impossible d’initier le paiement.",
       "confirmation": "Impossible de confirmer le statut du paiement.",
       "card": "Le paiement par carte n’a pas pu être confirmé."
