@@ -55,7 +55,10 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
             { id: 4, reference: 'PAY-FAILED', provider: 'ORANGE', status: 'FAILED', amount: 500, currency: 'XAF', failureReason: 'Timeout fournisseur' },
           ],
         }],
-        totalPages: 2, totalElements: 21, number: Number(url.searchParams.get('page') ?? 0), size: 20,
+        totalPages: 2,
+        totalElements: 21,
+        number: Number(url.searchParams.get('page') ?? 0),
+        size: Number(url.searchParams.get('size') ?? 20),
         first: url.searchParams.get('page') !== '1', last: url.searchParams.get('page') === '1', empty: false,
       });
       return;
@@ -164,8 +167,13 @@ test(`${account.label} sees only company-scoped transactions and their payments`
             payerMsisdnMasked: '******123',
           }],
         }],
-        totalPages: 1, totalElements: 1, number: 0, size: 20,
-        first: true, last: true, empty: false,
+        totalPages: 2,
+        totalElements: 21,
+        number: Number(url.searchParams.get('page') ?? 0),
+        size: Number(url.searchParams.get('size') ?? 20),
+        first: url.searchParams.get('page') !== '1',
+        last: url.searchParams.get('page') === '1',
+        empty: false,
       });
       return;
     }
@@ -203,6 +211,17 @@ test(`${account.label} sees only company-scoped transactions and their payments`
   expect(adminFinanceCalled).toBe(false);
   await expect(page.getByLabel(/Ordre d'affichage|Display order/)).toHaveValue('desc');
   expect(transactionQueries.some((query) => query.includes('sort=createdAt%2Cdesc'))).toBe(true);
+  await expect(page.getByTestId('data-pagination')).toBeVisible();
+  await page.getByTestId('pagination-next').click();
+  await expect.poll(() => transactionQueries.some((query) => query.includes('page=1'))).toBe(true);
+
+  await page.getByTestId('pagination-page-size').click();
+  await page.getByRole('option', { name: '50', exact: true }).click();
+  await expect(page.getByTestId('pagination-page-input')).toHaveValue('1');
+  await expect.poll(() =>
+    transactionQueries.some((query) => query.includes('page=0') && query.includes('size=50')),
+  ).toBe(true);
+
   await page.getByLabel(/Ordre d'affichage|Display order/).selectOption('asc');
   await expect.poll(() => transactionQueries.some((query) => query.includes('sort=createdAt%2Casc'))).toBe(true);
 });

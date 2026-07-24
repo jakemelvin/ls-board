@@ -3,6 +3,7 @@
 import { type ElementType, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowDownUp,
   Check,
   CircleAlert,
   Clock3,
@@ -63,6 +64,8 @@ import {
 import type { CollectorIncomingShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
+type SortDirection = 'desc' | 'asc';
+
 export function CollectorReception() {
   const { t } = useTranslation('dashboard');
   const { formatMoney } = useCurrency();
@@ -72,6 +75,7 @@ export function CollectorReception() {
   const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +111,7 @@ export function CollectorReception() {
       const response = await getCollectorIncomingShipments(token, {
         page,
         size: pageSize,
+        sort: `createdAt,${sortDirection}`,
       });
 
       if (isLatestRequest(requestId)) {
@@ -128,7 +133,7 @@ export function CollectorReception() {
     } finally {
       if (isLatestRequest(requestId)) setLoading(false);
     }
-  }, [beginRequest, isLatestRequest, page, pageSize, token]);
+  }, [beginRequest, isLatestRequest, page, pageSize, sortDirection, token]);
 
   useEffect(() => {
     void loadIncomingShipments();
@@ -323,15 +328,33 @@ export function CollectorReception() {
             Receptionnez ou rejetez les colis remis par les clients au point de collecte.
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="w-full gap-2 sm:w-fit"
-          onClick={() => void loadIncomingShipments()}
-          disabled={loading}
-        >
-          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
-        </Button>
+        <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-auto">
+          <label className="relative">
+            <span className="sr-only">{t('common.sortOrder')}</span>
+            <ArrowDownUp className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <select
+              value={sortDirection}
+              onChange={(event) => {
+                setSortDirection(event.target.value as SortDirection);
+                setPage(0);
+              }}
+              className="h-10 w-full appearance-none rounded-md border border-input bg-background pl-9 pr-8 text-sm sm:w-44"
+              aria-label={t('common.sortOrder')}
+            >
+              <option value="desc">{t('common.newestFirst')}</option>
+              <option value="asc">{t('common.oldestFirst')}</option>
+            </select>
+          </label>
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => void loadIncomingShipments()}
+            disabled={loading}
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">

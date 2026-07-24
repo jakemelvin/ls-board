@@ -123,16 +123,13 @@ export interface GetShipmentsParams {
   status?: ShipmentStatus;
 }
 
-export interface GetCollectorIncomingShipmentsParams {
-  page?: number;
-  size?: number;
-}
-
 export interface PageableParams {
   page?: number;
   size?: number;
   sort?: string;
 }
+
+export type GetCollectorIncomingShipmentsParams = PageableParams;
 
 export interface GetTransporterReadyShipmentsParams extends PageableParams {
   originCollectionPointId?: number;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDownUp,
@@ -114,11 +114,34 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
   const load = useCallback(async () => {
     if (!token) return;
+    const currentRequestId = ++requestId.current;
     setLoading(true);
     setError(null);
+
+    const applyPagination = (response: {
+      number?: number;
+      size?: number;
+      totalPages?: number;
+      totalElements?: number;
+    }) => {
+      const nextTotalPages = Math.max(response.totalPages ?? 0, 0);
+      const lastPage = Math.max(nextTotalPages - 1, 0);
+      const nextPage = Math.min(Math.max(response.number ?? page, 0), lastPage);
+      const nextPageSize =
+        typeof response.size === 'number' && response.size > 0
+          ? response.size
+          : pageSize;
+
+      setTotalPages(nextTotalPages);
+      setTotalElements(Math.max(response.totalElements ?? 0, 0));
+      if (nextPage !== page) setPage(nextPage);
+      if (nextPageSize !== pageSize) setPageSize(nextPageSize);
+    };
+
     try {
       if (view === 'transactions') {
         const params = {
@@ -129,17 +152,17 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
         };
         if (scope === 'platform') {
           const response = await getAdminTransactions(token, params);
+          if (currentRequestId !== requestId.current) return;
           setTransactions(response.content ?? []);
-          setTotalPages(response.totalPages ?? 0);
-          setTotalElements(response.totalElements ?? 0);
+          applyPagination(response);
         } else {
           const response = await getTransactions(token, params);
+          if (currentRequestId !== requestId.current) return;
           setTransactions((response.content ?? []).map((transaction) => ({
             transaction,
             payments: transaction.payments ?? [],
           })));
-          setTotalPages(response.totalPages ?? 0);
-          setTotalElements(response.totalElements ?? 0);
+          applyPagination(response);
         }
       } else {
         const response = await getAdminPayments(token, {
@@ -149,18 +172,21 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
           size: pageSize,
           sort: `createdAt,${sortDirection}`,
         });
+        if (currentRequestId !== requestId.current) return;
         setAttempts(response.content ?? []);
-        setTotalPages(response.totalPages ?? 0);
-        setTotalElements(response.totalElements ?? 0);
+        applyPagination(response);
       }
     } catch (cause) {
+      if (currentRequestId !== requestId.current) return;
       setError(
         cause instanceof ApiError
           ? cause.message
           : t('platformFinance.trace.errors.load'),
       );
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestId.current) {
+        setLoading(false);
+      }
     }
   }, [page, pageSize, provider, scope, sortDirection, status, t, token, transactionStatus, view]);
 

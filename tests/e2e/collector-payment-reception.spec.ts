@@ -6,6 +6,7 @@ test('collector receives an unpaid collection-point shipment only after physical
   let validatedBody = '';
   let platformPaymentBody = '';
   let feePendingShipmentPaid = false;
+  const receptionSorts: string[] = [];
 
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const request = route.request();
@@ -32,6 +33,7 @@ test('collector receives an unpaid collection-point shipment only after physical
     }
 
     if (url.pathname === '/api/delivery/shipments/reception' && request.method() === 'GET') {
+      receptionSorts.push(url.searchParams.get('sort') ?? '');
       await json({
         content: [
           {
@@ -127,6 +129,10 @@ test('collector receives an unpaid collection-point shipment only after physical
   } else {
     await page.locator('aside').getByRole('button', { name: /ception/i }).click();
   }
+
+  await expect.poll(() => receptionSorts).toContain('createdAt,desc');
+  await page.getByLabel(/Ordre d'affichage|Display order/).selectOption('asc');
+  await expect.poll(() => receptionSorts).toContain('createdAt,asc');
 
   const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
   const collectionSurface = isMobile ? page.getByRole('article') : page.getByRole('row');
