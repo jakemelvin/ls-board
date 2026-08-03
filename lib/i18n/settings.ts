@@ -4,7 +4,7 @@ export type Locale = (typeof locales)[number]
 
 export const defaultLocale: Locale = 'fr'
 
-export const namespaces = ['common', 'dashboard', 'login', 'pending', 'register', 'shipment-create'] as const
+export const namespaces = ['common', 'dashboard', 'login', 'pending', 'register', 'shipment-create', 'billing'] as const
 
 export type Namespace = (typeof namespaces)[number]
 

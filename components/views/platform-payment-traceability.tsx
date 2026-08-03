@@ -105,6 +105,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
   const [attempts, setAttempts] = useState<AdminPaymentAttemptResponse[]>([]);
   const [provider, setProvider] = useState<PaymentProvider | ''>('');
   const [status, setStatus] = useState<PaymentAttemptStatus | ''>('');
+  const [purpose, setPurpose] = useState<'SHIPMENT' | 'SUBSCRIPTION' | ''>('');
   const [transactionStatus, setTransactionStatus] = useState<ShipmentTransactionStatus | ''>('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -168,6 +169,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
         const response = await getAdminPayments(token, {
           provider: provider || undefined,
           status: status || undefined,
+          purpose: purpose || undefined,
           page,
           size: pageSize,
           sort: `createdAt,${sortDirection}`,
@@ -188,7 +190,7 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
         setLoading(false);
       }
     }
-  }, [page, pageSize, provider, scope, sortDirection, status, t, token, transactionStatus, view]);
+  }, [page, pageSize, provider, purpose, scope, sortDirection, status, t, token, transactionStatus, view]);
 
   useEffect(() => {
     void load();
@@ -289,7 +291,20 @@ function FinanceTraceability({ scope }: FinanceTraceabilityProps) {
       )}
 
       {view === 'attempts' && (
-        <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2">
+        <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-3">
+          <select
+            value={purpose}
+            onChange={(event) => {
+              setPurpose(event.target.value as 'SHIPMENT' | 'SUBSCRIPTION' | '');
+              setPage(0);
+            }}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            aria-label={t('platformFinance.trace.filterPurpose')}
+          >
+            <option value="">{t('platformFinance.trace.allPurposes')}</option>
+            <option value="SHIPMENT">{t('platformFinance.trace.purposes.SHIPMENT')}</option>
+            <option value="SUBSCRIPTION">{t('platformFinance.trace.purposes.SUBSCRIPTION')}</option>
+          </select>
           <select
             value={provider}
             onChange={(event) => {
@@ -528,6 +543,7 @@ function AttemptsTable({ items }: { items: AdminPaymentAttemptResponse[] }) {
           <TableHeader><TableRow>
             <TableHead>{t('platformFinance.trace.reference')}</TableHead>
             <TableHead>{t('platformFinance.trace.provider')}</TableHead>
+            <TableHead>{t('platformFinance.trace.purpose')}</TableHead>
             <TableHead>{t('platformFinance.trace.status')}</TableHead>
             <TableHead>{t('platformFinance.trace.amount')}</TableHead>
             <TableHead>{t('platformFinance.trace.payer')}</TableHead>
@@ -584,6 +600,9 @@ function PaymentMobileCard({
         </Badge>
         <p className="text-sm font-semibold text-foreground">{formatMoney(payment.amount, { sourceCurrency })}</p>
       </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {t(`platformFinance.trace.purposes.${payment.purpose ?? 'SHIPMENT'}`)}
+      </p>
 
       <dl className="mt-3 text-sm">
         <dt className="text-xs text-muted-foreground">{t('platformFinance.trace.payer')}</dt>
@@ -619,6 +638,7 @@ function PaymentRow({ payment }: { payment: AdminPaymentAttemptResponse }) {
     <TableRow>
       <TableCell><p className="font-mono text-xs">{payment.reference}</p><p className="text-xs text-muted-foreground">{formatDate(payment.createdAt)}</p></TableCell>
       <TableCell>{payment.provider}</TableCell>
+      <TableCell>{t(`platformFinance.trace.purposes.${payment.purpose ?? 'SHIPMENT'}`)}</TableCell>
       <TableCell><Badge className={cn('border-0', paymentStatusClassName(payment.status))}>{t(`platformFinance.trace.paymentStatuses.${payment.status}`)}</Badge></TableCell>
       <TableCell>{formatMoney(payment.amount, { sourceCurrency })}</TableCell>
       <TableCell className="max-w-48 break-words">{payer}</TableCell>

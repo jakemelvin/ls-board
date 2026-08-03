@@ -1,0 +1,108 @@
+{
+  "title": "Billing and subscription",
+  "subtitle": "Manage {{company}}’s plan, quotas, and invoices.",
+  "loading": "Loading billing…",
+  "actions": { "refresh": "Refresh", "retry": "Retry", "cancel": "Cancel", "keep": "Keep subscription" },
+  "alerts": { "attention": "Attention" },
+  "companyUnavailable": { "title": "Company unavailable", "description": "The company linked to this session could not be loaded." },
+  "errors": {
+    "title": "Something went wrong",
+    "load": "Unable to load the billing dashboard.",
+    "checkout": "Unable to create the subscription.",
+    "autoRenew": "Unable to update auto-renewal.",
+    "cancel": "Unable to cancel the subscription.",
+    "invoice": "Unable to resume this invoice payment."
+  },
+  "cycles": { "MONTHLY": "Monthly", "ANNUAL": "Annual" },
+  "features": { "SHIPMENT_SENDING": "Shipment creation and handling", "PARCEL_PICKUP": "Parcel pickup" },
+  "scopes": { "NATIONAL": "National", "INTERNATIONAL": "International", "BOTH": "National and international" },
+  "subscriptionStatuses": { "PENDING_PAYMENT": "Payment pending", "ACTIVE": "Active", "EXPIRED": "Expired", "CANCELLED": "Cancelled", "SUPERSEDED": "Replaced" },
+  "invoiceStatuses": { "PENDING": "Pending", "PAID": "Paid", "FAILED": "Failed", "CANCELLED": "Cancelled" },
+  "current": {
+    "noneTitle": "No active subscription",
+    "noneDescription": "Choose an eligible plan to make the company operational.",
+    "description": "Contract plan currently applied to the company.",
+    "cycle": "Cycle", "startsAt": "Start", "endsAt": "End",
+    "autoRenew": "Automatic renewal",
+    "autoRenewHint": "A new invoice will be prepared at expiry, without a silent charge.",
+    "cancel": "Cancel plan"
+  },
+  "usage": {
+    "title": "Calendar-month quota", "period": "From {{start}} to {{end}}",
+    "unavailable": "Quota data will be available after a subscription is activated.",
+    "unlimited": "Unlimited", "used": "{{count}} shipment(s) counted this month.",
+    "remaining": "{{count}} shipment(s) remaining.", "national": "National shipments", "international": "International shipments"
+  },
+  "plans": {
+    "title": "Available plans", "description": "EUR and USD prices are for display; invoices remain accounted for in XAF.",
+    "emptyTitle": "No available plans", "emptyDescription": "No active offer is eligible for this company’s country.",
+    "current": "Current plan", "active": "Active plan", "choose": "Choose this plan", "scope": "Scope", "quota": "Quota",
+    "shipmentsPerMonth": "{{count}} / month", "priceSuffix": { "MONTHLY": "per month", "ANNUAL": "per year" }
+  },
+  "checkout": {
+    "title": "Confirm subscription", "description": "An invoice will be created for {{plan}}.",
+    "autoRenew": "Renew automatically", "autoRenewHint": "Renewal prepares an invoice; it does not charge a payment method.",
+    "continue": "Create subscription"
+  },
+  "cancel": { "title": "Cancel subscription?", "description": "The subscription will no longer grant operating rights after cancellation.", "confirm": "Cancel subscription" },
+  "invoices": {
+    "title": "Recent invoices", "description": "Statuses and amounts supplied by the backend.",
+    "emptyTitle": "No invoices", "emptyDescription": "Invoices created by subscriptions will appear here.",
+    "reference": "Reference", "plan": "Plan", "date": "Date", "amount": "Amount", "status": "Status", "action": "Action", "pay": "Pay"
+  },
+  "payment": {
+    "title": "Invoice payment", "subtitle": "Invoice {{reference}} — {{plan}}", "amountDue": "Amount due in accounting currency",
+    "chooseProvider": "Choose a payment method", "phonePlaceholder": "+237 6XX XXX XXX", "promoPlaceholder": "Promo code",
+    "applyPromo": "Apply", "continueProvider": "Continue with provider", "payLater": "Pay later", "pay": "Start payment",
+    "retry": "New attempt", "check": "Check payment", "confirmCard": "Confirm card payment", "description": "{{plan}} subscription",
+    "errorTitle": "Payment was not completed", "success": "Payment is confirmed. The dashboard will refresh.",
+    "failed": "This attempt is final. You can create a new one.", "pending": "The provider is still processing this attempt. Do not start another payment.",
+    "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Credit card" },
+    "statuses": { "CREATED": "Attempt created", "PENDING": "Payment pending", "REQUIRES_ACTION": "Action required", "PROCESSING": "Payment processing", "SUCCEEDED": "Payment confirmed", "FAILED": "Payment failed", "CANCELLED": "Payment cancelled", "EXPIRED": "Payment expired" },
+    "errors": {
+      "load": "Unable to load payment methods and attempts.", "phoneRequired": "A payer number is required for MTN or Orange Money.",
+      "initiation": "Unable to start payment.", "confirmation": "Unable to confirm payment.", "promoRequired": "Enter a promo code.",
+      "promo": "This promo code cannot settle the invoice.", "card": "The card payment could not be confirmed."
+    }
+  },
+  "admin": {
+    "title": "Subscription plans", "subtitle": "Create and manage offers available to companies.", "new": "New plan", "edit": "Edit plan",
+    "save": "Save", "activate": "Activate", "deactivate": "Deactivate", "active": "Active", "inactive": "Inactive",
+    "empty": "No plan has been created yet.", "allCountries": "All countries", "selectedCountries": "Eligible countries", "unlimited": "Unlimited shipments",
+    "fields": { "title": "Title", "description": "Description", "monthly": "Monthly price (XAF)", "annual": "Annual price (XAF)", "scope": "Scope", "limit": "Monthly quota", "features": "Features", "countries": "Geographic availability" },
+    "errors": { "load": "Unable to load plans.", "validation": "Complete required fields and choose at least one feature.", "save": "Unable to save the plan.", "status": "Unable to update plan status." }
+  },
+  "statusBadge": {
+    "ACTIVE": { "label": "Active plan", "short": "Active" },
+    "PENDING": { "label": "Payment pending", "short": "Pending" },
+    "INACTIVE": { "label": "Inactive plan", "short": "No plan" }
+  },
+  "statusBanner": {
+    "ACTIVE": { "title": "Active plan" },
+    "PENDING": {
+      "title": "Subscription payment pending",
+      "adminDescription": "Complete payment to activate the company’s operational features.",
+      "employeeDescription": "Plan activation is awaiting payment. Contact your company administrator."
+    },
+    "INACTIVE": {
+      "title": "No active plan",
+      "adminDescription": "Choose a plan to activate the company’s operational features.",
+      "employeeDescription": "Your company’s subscription is inactive. Contact your company administrator."
+    },
+    "choosePlan": "Choose a plan",
+    "finishPayment": "Complete payment"
+  },
+  "readOnly": {
+    "noneDescription": "A company administrator must activate the subscription.",
+    "adminOnly": "Only a company administrator can choose this plan.",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "adminCompany": {
+    "title": "Company billing",
+    "description": "Select the company to administer.",
+    "select": "Company",
+    "empty": "No company is available.",
+    "errors": { "load": "Unable to load companies." }
+  }
+}

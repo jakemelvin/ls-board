@@ -12,6 +12,7 @@ import {
 import {
   BadgePercent,
   CreditCard,
+  Crown,
   Globe2,
   HandCoins,
   ListChecks,
@@ -23,6 +24,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BillingPlansManagement } from '@/components/billing/billing-plans-management';
+import { SuperAdminCompanyBilling } from '@/components/billing/super-admin-company-billing';
 import { PlatformPaymentTraceability } from '@/components/views/platform-payment-traceability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -64,7 +67,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useCurrency } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 
-type TabId = 'fees' | 'promos' | 'payments' | 'traceability';
+type TabId = 'plans' | 'subscriptions' | 'fees' | 'promos' | 'payments' | 'traceability';
 type DeleteTarget =
   | { kind: 'fee'; item: ShipmentFeeResponse }
   | { kind: 'promo'; item: PromoCodeResponse }
@@ -97,6 +100,8 @@ type PaymentModeForm = {
 };
 
 const TABS: { id: TabId; labelKey: string; icon: ElementType }[] = [
+  { id: 'plans', labelKey: 'platformFinance.tabs.plans', icon: Crown },
+  { id: 'subscriptions', labelKey: 'platformFinance.tabs.subscriptions', icon: ListChecks },
   { id: 'fees', labelKey: 'platformFinance.tabs.fees', icon: HandCoins },
   { id: 'promos', labelKey: 'platformFinance.tabs.promos', icon: BadgePercent },
   { id: 'payments', labelKey: 'platformFinance.tabs.payments', icon: CreditCard },
@@ -488,7 +493,7 @@ export function PlatformFinanceSettings() {
         <Metric icon={CreditCard} label={t('platformFinance.metrics.payments')} value={activePayments.length} />
       </div>
 
-      <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-grid sm:grid-cols-4">
+      <div className="grid gap-1 rounded-xl bg-muted p-1 sm:inline-grid sm:grid-cols-6">
         {TABS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
@@ -557,6 +562,8 @@ export function PlatformFinanceSettings() {
       )}
 
       {activeTab === 'traceability' && <PlatformPaymentTraceability />}
+      {activeTab === 'plans' && <BillingPlansManagement />}
+      {activeTab === 'subscriptions' && <SuperAdminCompanyBilling />}
     </div>
   );
 }

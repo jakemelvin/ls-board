@@ -4,6 +4,7 @@ const API_ORIGIN = 'https://dstest.easywaka.com';
 
 test('super admin separates succeeded cash from promo coverage', async ({ page }) => {
   const transactionQueries: string[] = [];
+  const paymentQueries: string[] = [];
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -63,6 +64,48 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
       });
       return;
     }
+    if (url.pathname === '/api/delivery/admin/payments') {
+      paymentQueries.push(url.search);
+      const payments = [
+        {
+          id: 11,
+          reference: 'PAY-SHIPMENT-11',
+          provider: 'MTN',
+          purpose: 'SHIPMENT',
+          status: 'SUCCEEDED',
+          amount: 10500,
+          currency: 'XAF',
+          initiatedByUsername: 'client.shipment',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 12,
+          reference: 'PAY-SUBSCRIPTION-12',
+          provider: 'ORANGE',
+          purpose: 'SUBSCRIPTION',
+          status: 'SUCCEEDED',
+          amount: 25000,
+          currency: 'XAF',
+          initiatedByUsername: 'alice.admin',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      const purpose = url.searchParams.get('purpose');
+      const filtered = purpose
+        ? payments.filter((payment) => payment.purpose === purpose)
+        : payments;
+      await json({
+        content: filtered,
+        totalPages: filtered.length > 0 ? 1 : 0,
+        totalElements: filtered.length,
+        number: 0,
+        size: Number(url.searchParams.get('size') ?? 20),
+        first: true,
+        last: true,
+        empty: filtered.length === 0,
+      });
+      return;
+    }
 
     await json({ content: [], totalPages: 0, totalElements: 0 });
   });
@@ -105,6 +148,23 @@ test('super admin separates succeeded cash from promo coverage', async ({ page }
   await expect.poll(() =>
     transactionQueries.some((query) => query.includes('page=1') && query.includes('size=50')),
   ).toBe(true);
+
+  await page.getByRole('button', { name: /Lignes de paiement|Payment lines/ }).click();
+  const purposeFilter = page.getByLabel(/Filtrer par finalité|Filter by purpose/);
+  await expect(purposeFilter).toBeVisible();
+  const subscriptionPayment = (page.viewportSize()?.width ?? 1280) < 768
+    ? page.getByRole('article').filter({ hasText: 'PAY-SUBSCRIPTION-12' })
+    : page.getByRole('row').filter({ hasText: 'PAY-SUBSCRIPTION-12' });
+  await expect(
+    subscriptionPayment.getByText(/Abonnement|Subscription/, { exact: true }),
+  ).toBeVisible();
+
+  await purposeFilter.selectOption('SUBSCRIPTION');
+  await expect.poll(() =>
+    paymentQueries.some((query) => query.includes('purpose=SUBSCRIPTION')),
+  ).toBe(true);
+  await expect(page.getByText('PAY-SUBSCRIPTION-12').filter({ visible: true })).toBeVisible();
+  await expect(page.getByText('PAY-SHIPMENT-11')).toHaveCount(0);
 });
 
 for (const account of [

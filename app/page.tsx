@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { SubscriptionStatusBanner } from '@/components/billing/subscription-status-indicator';
 import { useAuthStore } from '@/lib/auth/store';
+import { useCompanyBillingStatus } from '@/lib/billing/status';
 import { AdminDashboard } from '@/components/views/admin-dashboard';
 import { CollectorDashboard } from '@/components/views/collector-dashboard';
 import { FleetManagement } from '@/components/views/fleet-management';
@@ -89,6 +91,14 @@ export default function DashboardPage() {
     error: companyError,
     retry: retryCompany,
   } = companyContext;
+  const companyBillingStatus = useCompanyBillingStatus({
+    companyId: companyContext.companyId,
+    enabled:
+      isHydrated &&
+      Boolean(token) &&
+      shouldShowCompanyBrand &&
+      companyStatus === 'resolved',
+  });
   const didSyncRoleFromAuth = useRef(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
@@ -154,7 +164,11 @@ export default function DashboardPage() {
       case 'route-exceptions':
         return isAdminLikeRole(currentRole) ? <RouteExceptionsView /> : <AdminDashboard />;
       case 'billing':
-        return isAdminLikeRole(currentRole) ? <BillingSubscriptionView /> : <AdminDashboard />;
+        return isAdminLikeRole(currentRole) ? (
+          <BillingSubscriptionView readOnly={authRole === 'EMPLOYEE_COMPANY'} />
+        ) : (
+          <AdminDashboard />
+        );
       case 'financial-operations':
         return isAdminLikeRole(currentRole) ? <CompanyPaymentTraceability /> : <AdminDashboard />;
       case 'commissions':
@@ -250,10 +264,18 @@ export default function DashboardPage() {
         <DashboardHeader
           currentUser={currentUser}
           company={shouldShowCompanyBrand ? company : null}
+          billingDashboard={companyBillingStatus.dashboard}
         />
 
         {/* Content Area */}
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 md:pb-6">
+          {activeSection !== 'billing' && (
+            <SubscriptionStatusBanner
+              dashboard={companyBillingStatus.dashboard}
+              role={authRole}
+              onManageSubscription={() => setActiveSection('billing')}
+            />
+          )}
           {renderContent()}
         </main>
       </div>

@@ -3,17 +3,20 @@
 import { useRouter } from 'next/navigation';
 
 import { CompanyBrand } from '@/components/company-brand';
+import { SubscriptionStatusBadge } from '@/components/billing/subscription-status-indicator';
 import { DashboardProfileMenu } from '@/components/dashboard-profile-menu';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { SendamLogo } from '@/components/sendam-logo';
 import { logout } from '@/lib/auth/api';
 import { useAuthStore } from '@/lib/auth/store';
 import type { CompanyResponse } from '@/lib/auth/types';
+import type { CompanyBillingDashboardResponse } from '@/lib/billing/types';
 import type { User } from '@/lib/mock-data';
 
 interface DashboardHeaderProps {
   currentUser: User;
   company?: CompanyResponse | null;
+  billingDashboard?: CompanyBillingDashboardResponse | null;
 }
 
 const MOBILE_APP_LOGO_ROLES = new Set<User['role']>([
@@ -25,6 +28,7 @@ const MOBILE_APP_LOGO_ROLES = new Set<User['role']>([
 export function DashboardHeader({
   currentUser,
   company,
+  billingDashboard,
 }: DashboardHeaderProps) {
   const router = useRouter();
   const { token, clearAuth } = useAuthStore();
@@ -57,6 +61,8 @@ export function DashboardHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+        <SubscriptionStatusBadge dashboard={billingDashboard ?? null} />
+
         {token && <NotificationBell token={token} />}
 
         <DashboardProfileMenu currentUser={currentUser} onLogout={() => void handleLogout()} />

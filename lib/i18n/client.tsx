@@ -22,6 +22,8 @@ import englishLogin from '@/public/locales/en/login.json'
 import englishPending from '@/public/locales/en/pending.json'
 import englishRegister from '@/public/locales/en/register.json'
 import englishShipmentCreate from '@/public/locales/en/shipment-create.json'
+import defaultBilling from '@/public/locales/fr/billing.json'
+import englishBilling from '@/public/locales/en/billing.json'
 
 import { defaultLocale, defaultNamespace, fallbackNamespace, locales, namespaces } from './settings'
 import type { Locale, Namespace } from './settings'
@@ -60,6 +62,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     pending: defaultPending as TranslationFile,
     register: defaultRegister as TranslationFile,
     'shipment-create': defaultShipmentCreate as TranslationFile,
+    billing: defaultBilling as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -68,6 +71,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     pending: englishPending as TranslationFile,
     register: englishRegister as TranslationFile,
     'shipment-create': englishShipmentCreate as TranslationFile,
+    billing: englishBilling as TranslationFile,
   },
 }
 

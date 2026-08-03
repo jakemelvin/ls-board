@@ -1,0 +1,210 @@
+{
+  "title": "Facturation et abonnement",
+  "subtitle": "Gérez le plan, les quotas et les factures de {{company}}.",
+  "loading": "Chargement de la facturation…",
+  "actions": {
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "keep": "Conserver l’abonnement"
+  },
+  "alerts": { "attention": "Attention" },
+  "companyUnavailable": {
+    "title": "Entreprise indisponible",
+    "description": "L’entreprise liée à cette session ne peut pas être chargée."
+  },
+  "errors": {
+    "title": "Une erreur est survenue",
+    "load": "Impossible de charger le dashboard de facturation.",
+    "checkout": "Impossible de créer la souscription.",
+    "autoRenew": "Impossible de modifier le renouvellement automatique.",
+    "cancel": "Impossible d’annuler la souscription.",
+    "invoice": "Impossible de reprendre le paiement de cette facture."
+  },
+  "cycles": { "MONTHLY": "Mensuel", "ANNUAL": "Annuel" },
+  "features": {
+    "SHIPMENT_SENDING": "Création et traitement des envois",
+    "PARCEL_PICKUP": "Ramassage des colis"
+  },
+  "scopes": {
+    "NATIONAL": "National",
+    "INTERNATIONAL": "International",
+    "BOTH": "National et international"
+  },
+  "subscriptionStatuses": {
+    "PENDING_PAYMENT": "Paiement en attente",
+    "ACTIVE": "Actif",
+    "EXPIRED": "Expiré",
+    "CANCELLED": "Annulé",
+    "SUPERSEDED": "Remplacé"
+  },
+  "invoiceStatuses": {
+    "PENDING": "En attente",
+    "PAID": "Payée",
+    "FAILED": "Échouée",
+    "CANCELLED": "Annulée"
+  },
+  "current": {
+    "noneTitle": "Aucun abonnement actif",
+    "noneDescription": "Choisissez une offre éligible pour rendre l’entreprise opérationnelle.",
+    "description": "Plan contractuel actuellement appliqué à l’entreprise.",
+    "cycle": "Cycle",
+    "startsAt": "Début",
+    "endsAt": "Fin",
+    "autoRenew": "Renouvellement automatique",
+    "autoRenewHint": "Une nouvelle facture sera préparée à l’échéance, sans prélèvement silencieux.",
+    "cancel": "Annuler le plan"
+  },
+  "usage": {
+    "title": "Quota du mois civil",
+    "period": "Du {{start}} au {{end}}",
+    "unavailable": "Le quota sera disponible après activation d’un abonnement.",
+    "unlimited": "Illimité",
+    "used": "{{count}} envoi(s) comptabilisé(s) ce mois.",
+    "remaining": "{{count}} envoi(s) restant(s).",
+    "national": "Envois nationaux",
+    "international": "Envois internationaux"
+  },
+  "plans": {
+    "title": "Plans disponibles",
+    "description": "Les prix EUR et USD servent à l’affichage ; la facture reste comptabilisée en XAF.",
+    "emptyTitle": "Aucun plan disponible",
+    "emptyDescription": "Aucune offre active n’est éligible pour le pays de cette entreprise.",
+    "current": "Plan actuel",
+    "active": "Plan actif",
+    "choose": "Choisir ce plan",
+    "scope": "Périmètre",
+    "quota": "Quota",
+    "shipmentsPerMonth": "{{count}} / mois",
+    "priceSuffix": { "MONTHLY": "par mois", "ANNUAL": "par an" }
+  },
+  "checkout": {
+    "title": "Confirmer la souscription",
+    "description": "Une facture sera créée pour le plan {{plan}}.",
+    "autoRenew": "Renouveler automatiquement",
+    "autoRenewHint": "Le renouvellement prépare une facture ; il ne débite aucun moyen de paiement.",
+    "continue": "Créer la souscription"
+  },
+  "cancel": {
+    "title": "Annuler l’abonnement ?",
+    "description": "La souscription ne donnera plus de droits opérationnels après son annulation.",
+    "confirm": "Annuler l’abonnement"
+  },
+  "invoices": {
+    "title": "Factures récentes",
+    "description": "Statuts et montants fournis par le backend.",
+    "emptyTitle": "Aucune facture",
+    "emptyDescription": "Les factures créées par les souscriptions apparaîtront ici.",
+    "reference": "Référence",
+    "plan": "Plan",
+    "date": "Date",
+    "amount": "Montant",
+    "status": "Statut",
+    "action": "Action",
+    "pay": "Payer"
+  },
+  "payment": {
+    "title": "Paiement de la facture",
+    "subtitle": "Facture {{reference}} — {{plan}}",
+    "amountDue": "Montant dû en devise comptable",
+    "chooseProvider": "Choisissez un moyen de paiement",
+    "phonePlaceholder": "+237 6XX XXX XXX",
+    "promoPlaceholder": "Code promo",
+    "applyPromo": "Appliquer",
+    "continueProvider": "Continuer chez le fournisseur",
+    "payLater": "Payer plus tard",
+    "pay": "Initier le paiement",
+    "retry": "Nouvelle tentative",
+    "check": "Vérifier le paiement",
+    "confirmCard": "Confirmer le paiement par carte",
+    "description": "Abonnement {{plan}}",
+    "errorTitle": "Le paiement n’a pas abouti",
+    "success": "Le paiement est confirmé. Le dashboard va être actualisé.",
+    "failed": "Cette tentative est terminée. Vous pouvez en créer une nouvelle.",
+    "pending": "Le fournisseur traite encore la tentative. Ne relancez pas un second paiement.",
+    "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Carte bancaire" },
+    "statuses": {
+      "CREATED": "Tentative créée",
+      "PENDING": "Paiement en attente",
+      "REQUIRES_ACTION": "Action requise",
+      "PROCESSING": "Paiement en traitement",
+      "SUCCEEDED": "Paiement confirmé",
+      "FAILED": "Paiement échoué",
+      "CANCELLED": "Paiement annulé",
+      "EXPIRED": "Paiement expiré"
+    },
+    "errors": {
+      "load": "Impossible de charger les moyens et tentatives de paiement.",
+      "phoneRequired": "Le numéro du payeur est requis pour MTN ou Orange Money.",
+      "initiation": "Impossible d’initier le paiement.",
+      "confirmation": "Impossible de confirmer le paiement.",
+      "promoRequired": "Saisissez un code promo.",
+      "promo": "Ce code promo ne peut pas solder la facture.",
+      "card": "Le paiement par carte n’a pas pu être confirmé."
+    }
+  },
+  "admin": {
+    "title": "Plans d’abonnement",
+    "subtitle": "Créez et gérez les offres proposées aux entreprises.",
+    "new": "Nouveau plan",
+    "edit": "Modifier le plan",
+    "save": "Enregistrer",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "empty": "Aucun plan n’a encore été créé.",
+    "allCountries": "Tous les pays",
+    "selectedCountries": "Pays éligibles",
+    "unlimited": "Envois illimités",
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "monthly": "Prix mensuel (XAF)",
+      "annual": "Prix annuel (XAF)",
+      "scope": "Périmètre",
+      "limit": "Quota mensuel",
+      "features": "Fonctionnalités",
+      "countries": "Disponibilité géographique"
+    },
+    "errors": {
+      "load": "Impossible de charger les plans.",
+      "validation": "Complétez les champs obligatoires et choisissez au moins une fonctionnalité.",
+      "save": "Impossible d’enregistrer le plan.",
+      "status": "Impossible de modifier le statut du plan."
+    }
+  },
+  "statusBadge": {
+    "ACTIVE": { "label": "Plan actif", "short": "Actif" },
+    "PENDING": { "label": "Paiement en attente", "short": "En attente" },
+    "INACTIVE": { "label": "Plan inactif", "short": "Sans plan" }
+  },
+  "statusBanner": {
+    "ACTIVE": { "title": "Plan actif" },
+    "PENDING": {
+      "title": "Paiement de l’abonnement en attente",
+      "adminDescription": "Finalisez le paiement pour activer les fonctionnalités opérationnelles de l’entreprise.",
+      "employeeDescription": "L’activation du plan est en attente de paiement. Contactez votre administrateur d’entreprise."
+    },
+    "INACTIVE": {
+      "title": "Aucun plan actif",
+      "adminDescription": "Choisissez un plan afin d’activer les fonctionnalités opérationnelles de l’entreprise.",
+      "employeeDescription": "L’abonnement de votre entreprise est inactif. Contactez votre administrateur d’entreprise."
+    },
+    "choosePlan": "Choisir un plan",
+    "finishPayment": "Finaliser le paiement"
+  },
+  "readOnly": {
+    "noneDescription": "L’abonnement doit être activé par un administrateur de l’entreprise.",
+    "adminOnly": "Seul un administrateur d’entreprise peut choisir ce plan.",
+    "enabled": "Activé",
+    "disabled": "Désactivé"
+  },
+  "adminCompany": {
+    "title": "Facturation d’une entreprise",
+    "description": "Sélectionnez la compagnie à administrer.",
+    "select": "Entreprise",
+    "empty": "Aucune entreprise n’est disponible.",
+    "errors": { "load": "Impossible de charger les entreprises." }
+  }
+}

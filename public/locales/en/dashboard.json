@@ -1156,9 +1156,12 @@
       "payments": "Payment modes",
       "promos": "Promo codes",
       "traceability": "Transactions and payments"
+      ,"plans": "Subscription plans"
+      ,"subscriptions": "Company subscriptions"
     },
     "trace": {
       "allProviders": "All providers",
+      "allPurposes": "All purposes",
       "allStatuses": "All statuses",
       "allTransactionStatuses": "All transaction statuses",
       "amount": "Amount",
@@ -1179,6 +1182,7 @@
       "errors": { "load": "Unable to load financial traceability." },
       "failedAttempts": "Failed attempts",
       "filterProvider": "Filter by provider",
+      "filterPurpose": "Filter by purpose",
       "filterStatus": "Filter by status",
       "filterTransactionStatus": "Filter by transaction status",
       "hideDetails": "Hide details for {{reference}}",
@@ -1201,6 +1205,11 @@
       "previous": "Previous",
       "promoCoverage": "Promo code coverage",
       "provider": "Provider",
+      "purpose": "Purpose",
+      "purposes": {
+        "SHIPMENT": "Shipment",
+        "SUBSCRIPTION": "Subscription"
+      },
       "providerError": "Provider error",
       "reference": "Reference",
       "shipment": "Shipment",

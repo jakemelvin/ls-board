@@ -1156,9 +1156,12 @@
       "payments": "Modes paiement",
       "promos": "Codes promo",
       "traceability": "Transactions et paiements"
+      ,"plans": "Plans d'abonnement"
+      ,"subscriptions": "Abonnements entreprises"
     },
     "trace": {
       "allProviders": "Tous les fournisseurs",
+      "allPurposes": "Toutes les finalités",
       "allStatuses": "Tous les statuts",
       "allTransactionStatuses": "Tous les statuts de transaction",
       "amount": "Montant",
@@ -1179,6 +1182,7 @@
       "errors": { "load": "Impossible de charger la tracabilite financiere." },
       "failedAttempts": "Tentatives echouees",
       "filterProvider": "Filtrer par fournisseur",
+      "filterPurpose": "Filtrer par finalité",
       "filterStatus": "Filtrer par statut",
       "filterTransactionStatus": "Filtrer par statut de transaction",
       "hideDetails": "Masquer les détails de {{reference}}",
@@ -1201,6 +1205,11 @@
       "previous": "Précédent",
       "promoCoverage": "Couverture code promo",
       "provider": "Fournisseur",
+      "purpose": "Finalité",
+      "purposes": {
+        "SHIPMENT": "Colis",
+        "SUBSCRIPTION": "Abonnement"
+      },
       "providerError": "Erreur fournisseur",
       "reference": "Reference",
       "shipment": "Shipment",

@@ -35,6 +35,8 @@ export function confirmShipmentPayment(
   );
 }
 
+export const confirmPaymentAttempt = confirmShipmentPayment;
+
 export function getPaymentAttempt(
   token: string,
   paymentReference: string,
