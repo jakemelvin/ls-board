@@ -64,6 +64,7 @@ const plan = {
 test('company subscribes and billing only becomes active after backend confirmation', async ({ page }) => {
   test.setTimeout(60_000);
   let paid = false;
+  let subscriptionCreated = false;
   let checkoutBody = '';
   let paymentBody = '';
   let dashboardLoads = 0;
@@ -132,13 +133,22 @@ test('company subscribes and billing only becomes active after backend confirmat
             }
           : null,
         availablePlans: [plan],
-        recentInvoices: paid ? [invoice({ status: 'PAID', transactionStatus: 'COMPLETED' })] : [],
+        recentInvoices: paid
+          ? [invoice({ status: 'PAID', transactionStatus: 'COMPLETED' })]
+          : subscriptionCreated
+            ? [invoice()]
+            : [],
       });
       return;
     }
     if (url.pathname === '/api/delivery/billing/companies/42/subscriptions' && request.method() === 'POST') {
       checkoutBody = request.postData() ?? '';
+      subscriptionCreated = true;
       await json({ subscription: subscription(), invoice: invoice(), paymentRequired: true });
+      return;
+    }
+    if (url.pathname === '/api/delivery/billing/subscriptions/81') {
+      await json(subscription());
       return;
     }
     if (url.pathname === '/api/delivery/payments/config') {
@@ -217,6 +227,16 @@ test('company subscribes and billing only becomes active after backend confirmat
 
   await expect.poll(() => checkoutBody).toContain('"planId":7');
   const paymentDialog = page.getByRole('dialog');
+  await expect(paymentDialog.getByText('INV-2026-TEST-93')).toBeVisible();
+  await paymentDialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();
+  await expect(paymentDialog).toHaveCount(0);
+  await page.waitForTimeout(750);
+  await expect(paymentDialog).toHaveCount(0);
+
+  await page
+    .getByRole('button', { name: /^(Payer|Pay)$/ })
+    .filter({ visible: true })
+    .click();
   await expect(paymentDialog.getByText('INV-2026-TEST-93')).toBeVisible();
   await paymentDialog.getByPlaceholder(/237/).fill('+237690123456');
   await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();

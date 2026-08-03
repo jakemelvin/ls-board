@@ -36,7 +36,11 @@ import {
   getCompanyBillingDashboard,
   setSubscriptionAutoRenew,
 } from '@/lib/billing/api';
-import { getBillingCheckout, saveBillingCheckout } from '@/lib/billing/checkout-storage';
+import {
+  deferBillingCheckout,
+  getBillingCheckout,
+  saveBillingCheckout,
+} from '@/lib/billing/checkout-storage';
 import { notifyBillingStatusChanged } from '@/lib/billing/status';
 import type {
   BillingCycle,
@@ -113,7 +117,7 @@ export function BillingSubscriptionView({
   useEffect(() => {
     if (!dashboard || !token || activeCheckout || readOnly) return;
     const saved = getBillingCheckout(dashboard.companyId);
-    if (!saved) return;
+    if (!saved || saved.autoResume === false) return;
     const invoice = dashboard.recentInvoices.find(
       (item) => item.id === saved.invoiceId && item.status === 'PENDING',
     );
@@ -406,7 +410,12 @@ export function BillingSubscriptionView({
           open
           invoice={activeCheckout.invoice}
           subscription={activeCheckout.subscription}
-          onOpenChange={(open) => !open && setActiveCheckout(null)}
+          onOpenChange={(open) => {
+            if (open) return;
+            deferBillingCheckout(activeCheckout.invoice.id);
+            setActiveCheckout(null);
+            void load(true);
+          }}
           onPaymentSucceeded={async () => {
             setActiveCheckout(null);
             await load(true);

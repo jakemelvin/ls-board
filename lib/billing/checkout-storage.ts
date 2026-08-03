@@ -7,6 +7,7 @@ export interface BillingCheckoutSession {
   subscriptionId: number;
   invoiceId: number;
   idempotencyKeys: Partial<Record<OnlinePaymentProvider, string>>;
+  autoResume?: boolean;
 }
 
 function read(): BillingCheckoutSession | null {
@@ -36,6 +37,7 @@ export function saveBillingCheckout(
     subscriptionId,
     invoiceId,
     idempotencyKeys: sameInvoice ? current.idempotencyKeys : {},
+    autoResume: true,
   };
   write(session);
   return session;
@@ -52,6 +54,12 @@ export function clearBillingCheckout(invoiceId?: number) {
   if (invoiceId === undefined || session?.invoiceId === invoiceId) {
     window.localStorage.removeItem(STORAGE_KEY);
   }
+}
+
+export function deferBillingCheckout(invoiceId: number) {
+  const session = read();
+  if (!session || session.invoiceId !== invoiceId) return;
+  write({ ...session, autoResume: false });
 }
 
 export function getOrCreateBillingIdempotencyKey(
