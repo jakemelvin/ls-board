@@ -1,6 +1,32 @@
 import { expect, test } from '@playwright/test';
 
 const API_ORIGIN = 'https://dstest.easywaka.com';
+const QR_MATRIX = [
+  '00000000000000000000000000000', '00000000000000000000000000000',
+  '00000000000000000000000000000', '00000000000000000000000000000',
+  '00001111111000101011111110000', '00001000001010101010000010000',
+  '00001011101010110010111010000', '00001011101000001010111010000',
+  '00001011101011111010111010000', '00001000001011100010000010000',
+  '00001111111010101011111110000', '00000000000010000000000000000',
+  '00001101001100111011101100000', '00001101000010110001011000000',
+  '00001001111110010001011000000', '00001101100110101011100000000',
+  '00000100101111010110011100000', '00000000000010100000001000000',
+  '00001111111011011111011100000', '00001000001001000101000010000',
+  '00001011101001101001001010000', '00001011101011100010111110000',
+  '00001011101001010010000010000', '00001000001010111001001010000',
+  '00001111111011000000111000000', '00000000000000000000000000000',
+  '00000000000000000000000000000', '00000000000000000000000000000',
+  '00000000000000000000000000000',
+];
+
+function createQrSvg() {
+  const modules = QR_MATRIX.flatMap((row, y) =>
+    [...row].flatMap((cell, x) =>
+      cell === '1' ? [`<rect x="${x}" y="${y}" width="1" height="1"/>`] : [],
+    ),
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><rect width="29" height="29" fill="white"/><g fill="black">${modules}</g></svg>`;
+}
 
 test('collector receives an unpaid collection-point shipment only after physical payment', async ({ page }) => {
   let validatedBody = '';
@@ -79,6 +105,11 @@ test('collector receives an unpaid collection-point shipment only after physical
       return;
     }
 
+    if (url.pathname === '/api/delivery/shipments/701' && request.method() === 'GET') {
+      await json({ id: 701, reference: 'SHP-701-SECURE', code: 'SHP-701-SECURE' });
+      return;
+    }
+
     if (url.pathname === '/api/delivery/payments/config') {
       await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
       return;
@@ -152,6 +183,16 @@ test('collector receives an unpaid collection-point shipment only after physical
     await expect(
       scannerDialog.getByRole('button', { name: /Prendre ou choisir une photo|Take or choose a photo/ }),
     ).toBeVisible();
+    await scannerDialog.locator('input[type="file"]').setInputFiles({
+      name: 'shipment-701-qr.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(createQrSvg()),
+    });
+    const scannedReceptionDialog = page.getByRole('dialog');
+    await expect(scannedReceptionDialog.getByText(/Reception du colis client/)).toBeVisible();
+    await expect(
+      scannedReceptionDialog.getByPlaceholder(/Reference presente|Reference present/),
+    ).toHaveValue('SHP-701-SECURE');
     await page.keyboard.press('Escape');
 
     const mainOverflowsHorizontally = await page.locator('main').evaluate(
