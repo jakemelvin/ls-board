@@ -869,6 +869,25 @@
     "title": "Carte des points de collecte"
   },
   "collectorReception": {
+    "scanner": {
+      "cameraError": "Impossible d'accéder à la caméra. Autorisez son utilisation ou prenez une photo du QR code.",
+      "chooseImage": "Prendre ou choisir une photo",
+      "description": "Placez le QR code du colis dans le cadre. La détection est automatique.",
+      "hint": "Le scan identifie le colis, mais la réception devra toujours être confirmée manuellement.",
+      "imageError": "Aucun QR code lisible n'a été trouvé dans cette image.",
+      "lookupErrorDescription": "Impossible de rechercher le colis correspondant.",
+      "lookupErrorTitle": "Recherche impossible",
+      "notFoundDescription": "Ce QR code ne correspond à aucun colis à réceptionner. Ouvrez le colis concerné puis scannez sa référence dans la modale.",
+      "notFoundTitle": "Colis introuvable",
+      "previewAria": "Aperçu de la caméra pour scanner le QR code",
+      "referenceFilledDescription": "Vérifiez les contrôles obligatoires avant de valider la réception.",
+      "referenceFilledTitle": "Référence préremplie",
+      "scanParcel": "Scanner un colis",
+      "scanReference": "Scanner",
+      "searching": "Recherche du colis...",
+      "starting": "Ouverture de la caméra...",
+      "title": "Scanner le QR code"
+    },
     "payments": {
       "blockedButton": "Frais en attente",
       "blockedTitle": "Validation bloquee",

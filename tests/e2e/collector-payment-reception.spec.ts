@@ -144,6 +144,16 @@ test('collector receives an unpaid collection-point shipment only after physical
 
   if (isMobile) {
     await expect(page.locator('table:visible')).toHaveCount(0);
+    const scanParcelButton = page.getByRole('button', { name: /Scanner un colis|Scan a parcel/ });
+    await expect(scanParcelButton).toBeVisible();
+    await scanParcelButton.click();
+    const scannerDialog = page.getByRole('dialog');
+    await expect(scannerDialog.getByText(/Scanner le QR code|Scan QR code/)).toBeVisible();
+    await expect(
+      scannerDialog.getByRole('button', { name: /Prendre ou choisir une photo|Take or choose a photo/ }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+
     const mainOverflowsHorizontally = await page.locator('main').evaluate(
       (element) => element.scrollWidth > element.clientWidth + 1,
     );
@@ -161,6 +171,9 @@ test('collector receives an unpaid collection-point shipment only after physical
   await cashShipmentSurface.getByRole('button', { name: /Encaisser et receptionner|Collect and receive/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText(/10.?000/).first()).toBeVisible();
+  if (isMobile) {
+    await expect(dialog.getByRole('button', { name: /Scanner|Scan/, exact: true })).toBeVisible();
+  }
   await dialog.getByPlaceholder(/Reference presente|Reference present/).fill('SHP-701-SECURE');
   await dialog.getByRole('checkbox', { name: /deposant|depositor/i }).check();
   await dialog.getByRole('checkbox', { name: /physique du colis|physical.*parcel/i }).check();

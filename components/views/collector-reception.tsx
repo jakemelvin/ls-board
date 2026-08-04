@@ -12,12 +12,14 @@ import {
   PackageCheck,
   QrCode,
   RefreshCw,
+  ScanLine,
   Search,
   ShieldCheck,
   X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ShipmentPaymentDialog } from '@/components/payments/shipment-payment-dialog';
+import { QrCodeScannerDialog } from '@/components/shipments/qr-code-scanner-dialog';
 import { useLatestRequest } from '@/hooks/use-latest-request';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,6 +50,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useCurrency } from '@/lib/currency';
 import {
   getCollectorIncomingShipments,
+  getShipment,
   rejectIncomingShipment,
   validateIncomingShipment,
 } from '@/lib/shipments/api';
@@ -62,6 +65,11 @@ import {
   SHIPMENT_TRANSACTION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
 import type { CollectorIncomingShipment } from '@/lib/shipments/types';
+import {
+  inferShipmentIdFromReference,
+  normalizeShipmentReference,
+  parseScannedShipmentPayload,
+} from '@/lib/shipments/qr';
 import { cn } from '@/lib/utils';
 
 type SortDirection = 'desc' | 'asc';
@@ -91,6 +99,8 @@ export function CollectorReception() {
   const [rejectReason, setRejectReason] = useState('');
   const [paymentTarget, setPaymentTarget] = useState<CollectorIncomingShipment | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'find' | 'reference' | null>(null);
+  const [isResolvingScan, setIsResolvingScan] = useState(false);
   const [validatedCount, setValidatedCount] = useState(0);
   const [rejectedCount, setRejectedCount] = useState(0);
   const { beginRequest, isLatestRequest } = useLatestRequest();
@@ -172,7 +182,10 @@ export function CollectorReception() {
     !selectedShipmentPaymentIsBlocked &&
     (!selectedShipmentRequiresCollection || isCompanyPaymentChecked);
 
-  const openValidateDialog = (shipment: CollectorIncomingShipment) => {
+  const openValidateDialog = (
+    shipment: CollectorIncomingShipment,
+    scannedReference = '',
+  ) => {
     if (
       shipment.paymentStatus === 'UNPAID' &&
       shipment.transactionStatus !== 'PLATFORM_FEE_PAID'
@@ -189,8 +202,134 @@ export function CollectorReception() {
     setIsIdentityChecked(false);
     setIsParcelChecked(false);
     setIsCompanyPaymentChecked(false);
-    setReferenceInput('');
+    setReferenceInput(scannedReference);
     setIsValidateDialogOpen(true);
+  };
+
+  const findIncomingShipment = async (shipmentId: number) => {
+    const loadedShipment = shipments.find((shipment) => shipment.shipmentId === shipmentId);
+    if (loadedShipment) return loadedShipment;
+    if (!token) return null;
+
+    let targetPage = 0;
+    let pageCount = 1;
+
+    do {
+      const response = await getCollectorIncomingShipments(token, {
+        page: targetPage,
+        size: 100,
+        sort: `createdAt,${sortDirection}`,
+      });
+      const match = response.content?.find((shipment) => shipment.shipmentId === shipmentId);
+      if (match) return match;
+      pageCount = response.totalPages ?? 0;
+      targetPage += 1;
+    } while (targetPage < pageCount);
+
+    return null;
+  };
+
+  const resolveScannedShipment = async (scannedValue: string) => {
+    if (!token) return null;
+    const payload = parseScannedShipmentPayload(scannedValue);
+    if (!payload) return null;
+    const normalizedReference = normalizeShipmentReference(payload.reference);
+    let resolvedReference = payload.reference;
+
+    const referenceMatch = shipments.find((shipment) =>
+      [shipment.shipmentReference, shipment.reference]
+        .filter((value): value is string => Boolean(value))
+        .some((value) => normalizeShipmentReference(value) === normalizedReference),
+    );
+    if (referenceMatch) return { shipment: referenceMatch, reference: payload.reference };
+
+    let resolvedId = payload.shipmentId;
+    const inferredId = resolvedId ?? inferShipmentIdFromReference(payload.reference);
+
+    if (resolvedId && payload.reference === payload.raw) {
+      const referenceIsOnlyAnId = /^\d+$/.test(payload.reference);
+      const referenceIsAUrl = /^https?:\/\//i.test(payload.reference);
+      if (referenceIsOnlyAnId || referenceIsAUrl) {
+        try {
+          const detail = await getShipment(token, resolvedId);
+          resolvedReference = detail.reference;
+        } catch {
+          return null;
+        }
+      }
+    }
+
+    if (!resolvedId && inferredId) {
+      try {
+        const detail = await getShipment(token, inferredId);
+        if (
+          [detail.reference, detail.code]
+            .filter((value): value is string => Boolean(value))
+            .some((value) => normalizeShipmentReference(value) === normalizedReference)
+        ) {
+          resolvedId = detail.id;
+        }
+      } catch {
+        // The current-page lookup below remains available when the reference is opaque.
+      }
+    }
+
+    if (!resolvedId) {
+      const detailResults = await Promise.allSettled(
+        shipments.map((shipment) => getShipment(token, shipment.shipmentId)),
+      );
+      const detailMatch = detailResults.find(
+        (result) =>
+          result.status === 'fulfilled' &&
+          [result.value.reference, result.value.code]
+            .filter((value): value is string => Boolean(value))
+            .some((value) => normalizeShipmentReference(value) === normalizedReference),
+      );
+      if (detailMatch?.status === 'fulfilled') resolvedId = detailMatch.value.id;
+    }
+
+    if (!resolvedId) return null;
+    const incomingShipment = await findIncomingShipment(resolvedId);
+    return incomingShipment ? { shipment: incomingShipment, reference: resolvedReference } : null;
+  };
+
+  const handleScannedValue = async (scannedValue: string) => {
+    const payload = parseScannedShipmentPayload(scannedValue);
+    if (!payload) return;
+
+    if (scannerMode === 'reference') {
+      setReferenceInput(payload.reference);
+      toast({
+        title: t('collectorReception.scanner.referenceFilledTitle'),
+        description: t('collectorReception.scanner.referenceFilledDescription'),
+      });
+      return;
+    }
+
+    setIsResolvingScan(true);
+    try {
+      const result = await resolveScannedShipment(scannedValue);
+      if (!result) {
+        toast({
+          title: t('collectorReception.scanner.notFoundTitle'),
+          description: t('collectorReception.scanner.notFoundDescription'),
+          variant: 'destructive',
+        });
+        return;
+      }
+      openValidateDialog(result.shipment, result.reference);
+    } catch (err) {
+      toast({
+        title: t('collectorReception.scanner.lookupErrorTitle'),
+        description:
+          err instanceof ApiError
+            ? err.message
+            : t('collectorReception.scanner.lookupErrorDescription'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResolvingScan(false);
+    }
   };
 
   const openRejectDialog = (shipment: CollectorIncomingShipment) => {
@@ -356,6 +495,22 @@ export function CollectorReception() {
           </Button>
         </div>
       </div>
+
+      <Button
+        type="button"
+        className="h-12 w-full gap-2 md:hidden"
+        onClick={() => setScannerMode('find')}
+        disabled={loading || isResolvingScan}
+      >
+        {isResolvingScan ? (
+          <RefreshCw className="h-5 w-5 animate-spin" />
+        ) : (
+          <ScanLine className="h-5 w-5" />
+        )}
+        {isResolvingScan
+          ? t('collectorReception.scanner.searching')
+          : t('collectorReception.scanner.scanParcel')}
+      </Button>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <ReceptionStatCard
@@ -584,13 +739,25 @@ export function CollectorReception() {
                     </p>
                   </div>
                 </div>
-                <Input
-                  value={referenceInput}
-                  onChange={(event) => setReferenceInput(event.target.value)}
-                  placeholder="Reference presente sur le colis ou le bordereau"
-                  className="bg-secondary"
-                  disabled={actionLoading}
-                />
+                <div className="flex flex-col gap-2 min-[420px]:flex-row">
+                  <Input
+                    value={referenceInput}
+                    onChange={(event) => setReferenceInput(event.target.value)}
+                    placeholder="Reference presente sur le colis ou le bordereau"
+                    className="bg-secondary"
+                    disabled={actionLoading}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0 gap-2 md:hidden"
+                    onClick={() => setScannerMode('reference')}
+                    disabled={actionLoading}
+                  >
+                    <ScanLine className="h-4 w-4" />
+                    {t('collectorReception.scanner.scanReference')}
+                  </Button>
+                </div>
                 <div
                   className={cn(
                     'mt-3 flex items-start gap-3 rounded-lg border px-3 py-3',
@@ -740,6 +907,14 @@ export function CollectorReception() {
           }}
         />
       )}
+
+      <QrCodeScannerDialog
+        open={scannerMode !== null}
+        onOpenChange={(open) => {
+          if (!open) setScannerMode(null);
+        }}
+        onScan={(value) => void handleScannedValue(value)}
+      />
     </div>
   );
 }

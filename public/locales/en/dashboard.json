@@ -869,6 +869,25 @@
     "title": "Collection points map"
   },
   "collectorReception": {
+    "scanner": {
+      "cameraError": "Unable to access the camera. Allow camera access or take a picture of the QR code.",
+      "chooseImage": "Take or choose a photo",
+      "description": "Place the parcel QR code inside the frame. Detection is automatic.",
+      "hint": "Scanning identifies the parcel, but reception must still be confirmed manually.",
+      "imageError": "No readable QR code was found in this image.",
+      "lookupErrorDescription": "Unable to look up the matching parcel.",
+      "lookupErrorTitle": "Lookup failed",
+      "notFoundDescription": "This QR code does not match a parcel awaiting reception. Open the relevant parcel and scan its reference in the dialog.",
+      "notFoundTitle": "Parcel not found",
+      "previewAria": "Camera preview for scanning the QR code",
+      "referenceFilledDescription": "Complete the required checks before confirming reception.",
+      "referenceFilledTitle": "Reference filled in",
+      "scanParcel": "Scan a parcel",
+      "scanReference": "Scan",
+      "searching": "Looking up parcel...",
+      "starting": "Opening camera...",
+      "title": "Scan QR code"
+    },
     "payments": {
       "blockedButton": "Fee pending",
       "blockedTitle": "Validation blocked",

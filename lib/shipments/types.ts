@@ -210,6 +210,8 @@ export interface PromoCodePaymentRequest {
 
 export interface CollectorIncomingShipment {
   shipmentId: number;
+  shipmentReference?: string;
+  reference?: string;
   companyId?: number;
   companyName?: string;
   transportModeName?: string;
