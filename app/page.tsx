@@ -16,6 +16,8 @@ import { DeliveryEstimatesView } from '@/components/views/delivery-estimates';
 import { RouteExceptionsView } from '@/components/views/route-exceptions';
 import { BillingSubscriptionView } from '@/components/views/billing-subscription';
 import { CommissionManagement } from '@/components/views/commission-management';
+import { MyCommissions } from '@/components/views/my-commissions';
+import { ParcelPickupManagement } from '@/components/views/parcel-pickup-management';
 import { TeamManagement } from '@/components/views/team-management';
 import { ParcelTypesManagement } from '@/components/views/parcel-types-management';
 import { TransportModesManagement } from '@/components/views/transport-modes-management';
@@ -103,6 +105,11 @@ export default function DashboardPage() {
   const [currentRole, setCurrentRole] = useState<UserRole>('ADMIN');
   const [activeSection, setActiveSection] = useState<string>('dashboard');
   const [hasSyncedRoleFromAuth, setHasSyncedRoleFromAuth] = useState(false);
+  const pickupEnabled = Boolean(
+    companyBillingStatus.dashboard?.operationalSubscriptionReady &&
+      (companyBillingStatus.dashboard.currentUsage?.parcelPickupEnabled ||
+        companyBillingStatus.dashboard.activeSubscription?.features.includes('PARCEL_PICKUP')),
+  );
 
   useEffect(() => {
     if (isHydrated && !token) {
@@ -172,7 +179,17 @@ export default function DashboardPage() {
       case 'financial-operations':
         return isAdminLikeRole(currentRole) ? <CompanyPaymentTraceability /> : <AdminDashboard />;
       case 'commissions':
-        return isAdminLikeRole(currentRole) ? <CommissionManagement /> : <AdminDashboard />;
+        return isAdminLikeRole(currentRole) ? <CommissionManagement /> : <MyCommissions />;
+      case 'pickups':
+        return isAdminLikeRole(currentRole) ? (
+          <ParcelPickupManagement
+            pickupEnabled={pickupEnabled}
+            pickupEligibilityLoading={companyBillingStatus.loading}
+            onManageBilling={() => setActiveSection('billing')}
+          />
+        ) : (
+          <AdminDashboard />
+        );
       case 'team':
         return <TeamManagement />;
       case 'parcel-types':

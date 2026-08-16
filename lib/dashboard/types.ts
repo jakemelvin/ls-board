@@ -91,6 +91,8 @@ export interface OperationsOverview {
 export interface CommissionOverview {
   generatedAmount?: number;
   pendingAmount?: number;
+  awaitingConfirmationAmount?: number;
+  disputedAmount?: number;
   paidAmount?: number;
   generatedCommissionCount?: number;
   paidCommissionCount?: number;
@@ -150,6 +152,8 @@ export interface CommissionSummary {
   configuredPercentage?: number;
   generatedAmount?: number;
   pendingAmount?: number;
+  awaitingConfirmationAmount?: number;
+  disputedAmount?: number;
   paidAmount?: number;
   commissionedShipmentCount?: number;
   lastCommissionAmount?: number;

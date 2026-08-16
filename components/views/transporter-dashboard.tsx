@@ -382,12 +382,15 @@ function DashboardMetric({
 
 function CommissionGrid({ commissions }: { commissions: CommissionSummary }) {
   const { formatMoney } = useCurrency();
+  const { t } = useTranslation('commissions');
   return (
-    <div className="grid gap-4 md:grid-cols-4">
-      <InfoTile title="Taux configure" value={`${round(commissions.configuredPercentage)}%`} />
-      <InfoTile title="A payer" value={formatMoney(round(commissions.pendingAmount))} />
-      <InfoTile title="Deja paye" value={formatMoney(round(commissions.paidAmount))} />
-      <InfoTile title="Colis commissionnes" value={round(commissions.commissionedShipmentCount).toString()} />
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <InfoTile title={t('summary.generated')} value={formatMoney(round(commissions.generatedAmount))} />
+      <InfoTile title={t('summary.toPay')} value={formatMoney(round(commissions.pendingAmount))} />
+      <InfoTile title={t('summary.awaiting')} value={formatMoney(round(commissions.awaitingConfirmationAmount))} />
+      <InfoTile title={t('summary.disputed')} value={formatMoney(round(commissions.disputedAmount))} />
+      <InfoTile title={t('summary.paid')} value={formatMoney(round(commissions.paidAmount))} />
+      <InfoTile title={t('summary.shipments')} value={round(commissions.commissionedShipmentCount).toString()} />
     </div>
   );
 }

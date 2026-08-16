@@ -70,6 +70,8 @@
       "collectionPoints": "Territory management",
       "companyProfile": "Company profile",
       "commissions": "Commissions",
+      "pickups": "Pickups",
+      "pickupParcelTypes": "Pickup parcel types",
       "dashboard": "Dashboard",
       "dashboardShort": "Dashboard",
       "deliveryEstimates": "Delivery times",
@@ -871,6 +873,9 @@
   "collectorReception": {
     "scanner": {
       "cameraError": "Unable to access the camera. Allow camera access or take a picture of the QR code.",
+      "cameraHttpsRequired": "Camera scanning requires a secure HTTPS connection. Open the app from its https:// address, then try again.",
+      "cameraPermissionDenied": "Camera access is blocked in the browser settings. Allow Camera for this site, then try again.",
+      "cameraUnavailable": "No camera is available on this device. You can take or choose a photo of the QR code.",
       "chooseImage": "Take or choose a photo",
       "description": "Place the parcel QR code inside the frame. Detection is automatic.",
       "hint": "Scanning identifies the parcel, but reception must still be confirmed manually.",
@@ -939,8 +944,14 @@
     "promoSuccessTitle": "Fee covered by promo code",
     "promoSuccessDescription": "The promo code fully covers the platform fee. The shipment can proceed to collection.",
     "phoneLabel": "Mobile Money number",
+    "countryLabel": "Mobile Money wallet country",
+    "countryPlaceholder": "Choose a country",
     "phonePlaceholder": "E.g. 237690000000",
-    "phoneHint": "Use the number that will receive the confirmation request.",
+    "phoneHint": "Enter the local or international number that will receive the confirmation request.",
+    "loadingCountries": "Loading available countries…",
+    "countriesError": "Unable to load the countries available for this operator.",
+    "otpRequired": "The operator may require an OTP confirmation.",
+    "walletDebit": "Amount requested from the wallet: {{amount}}",
     "pay": "Start payment",
     "retry": "Retry payment",
     "check": "Check now",
@@ -979,11 +990,13 @@
     "errors": {
       "config": "Unable to load payment methods.",
       "phoneRequired": "Enter a valid Mobile Money number.",
+      "countryRequired": "Choose a country supported by this operator.",
       "promoRequired": "Enter a promo code.",
       "promo": "This promo code could not be applied.",
       "initiation": "Unable to start payment.",
       "confirmation": "Unable to confirm the payment status.",
-      "card": "The card payment could not be confirmed."
+      "card": "The card payment could not be confirmed.",
+      "cardSetup": "The payment server did not provide the card form. Try again later or contact support."
     }
   },
   "superAdminShipments": {

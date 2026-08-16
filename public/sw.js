@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sendam-pwa-v5';
+const CACHE_VERSION = 'sendam-pwa-v6';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const STATIC_ASSETS = [
   '/',
@@ -43,6 +43,16 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(request.url);
 
   if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  // Next.js development bundles must always come from the active dev server.
+  // Caching them can pair stale client code with fresh server HTML and break hydration.
+  if (
+    self.location.hostname === 'localhost' ||
+    self.location.hostname === '127.0.0.1' ||
+    requestUrl.pathname.startsWith('/_next/')
+  ) {
     return;
   }
 

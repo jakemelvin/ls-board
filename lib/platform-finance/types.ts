@@ -108,7 +108,7 @@ export interface PaymentAttemptResponse {
   id: number;
   reference: string;
   provider: PaymentProvider;
-  purpose?: 'SHIPMENT' | 'SUBSCRIPTION';
+  purpose?: 'SHIPMENT' | 'SUBSCRIPTION' | 'PARCEL_PICKUP';
   status: PaymentAttemptStatus;
   shipmentId?: number;
   shipmentReference?: string;
@@ -121,14 +121,19 @@ export interface PaymentAttemptResponse {
   billingTransactionReference?: string;
   subscriptionId?: number;
   companyId?: number;
+  pickupNegotiationId?: number;
+  pickupNegotiationReference?: string;
   amount: number;
   currency?: string;
   providerAmount?: number;
   providerCurrency?: string;
+  providerCountry?: string;
   exchangeRate?: number;
   providerTransactionId?: string;
   providerReference?: string;
+  providerExternalReference?: string;
   providerStatus?: string;
+  providerDetails?: PaymentProviderDetailsResponse;
   payerMsisdnMasked?: string;
   approvalUrl?: string;
   clientSecret?: string;
@@ -139,6 +144,21 @@ export interface PaymentAttemptResponse {
   createdAt?: string;
   updatedAt?: string;
   history?: PaymentAttemptHistoryResponse[];
+}
+
+export interface PaymentProviderDetailsResponse {
+  aggregator?: string;
+  externalReference?: string;
+  operator?: string;
+  country?: string;
+  message?: string;
+  pendingAction?: string;
+  otpRequired?: boolean;
+  fee?: number;
+  feePercent?: number;
+  netAmount?: number;
+  initiatedAt?: string;
+  completedAt?: string;
 }
 
 export interface ShipmentTransactionResponse {
@@ -203,7 +223,7 @@ export type GetTransactionsParams = GetAdminTransactionsParams;
 export interface GetAdminPaymentsParams {
   provider?: PaymentProvider;
   status?: PaymentAttemptStatus;
-  purpose?: 'SHIPMENT' | 'SUBSCRIPTION';
+  purpose?: 'SHIPMENT' | 'SUBSCRIPTION' | 'PARCEL_PICKUP';
   transactionId?: number;
   shipmentId?: number;
   billingTransactionId?: number;

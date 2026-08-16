@@ -45,6 +45,7 @@ import { notifyBillingStatusChanged } from '@/lib/billing/status';
 import type {
   BillingCycle,
   BillingDisplayCurrency,
+  BillingFeature,
   BillingInvoiceResponse,
   BillingPlanResponse,
   CompanyBillingDashboardResponse,
@@ -57,6 +58,7 @@ import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const DISPLAY_CURRENCIES: BillingDisplayCurrency[] = ['XAF', 'EUR', 'USD'];
+const BILLING_FEATURES: BillingFeature[] = ['SHIPMENT_SENDING', 'PARCEL_PICKUP'];
 
 interface CheckoutSelection {
   invoice: BillingInvoiceResponse;
@@ -138,6 +140,11 @@ export function BillingSubscriptionView({
       }),
     [dashboard?.availablePlans],
   );
+  const pickupEnabled = Boolean(
+    dashboard?.operationalSubscriptionReady &&
+      (usage?.parcelPickupEnabled || activeSubscription?.features.includes('PARCEL_PICKUP')),
+  );
+  const hasPickupPlan = sortedPlans.some((plan) => plan.features.includes('PARCEL_PICKUP'));
 
   async function createSubscription() {
     if (!token || !companyId || !selectedPlan) return;
@@ -281,6 +288,30 @@ export function BillingSubscriptionView({
         </Alert>
       )}
 
+      {activeSubscription && !pickupEnabled && hasPickupPlan && (
+        <Alert className="border-warning/40 bg-warning/10" data-testid="pickup-upgrade-alert">
+          <AlertTriangle />
+          <AlertTitle>{t('plans.pickupUpgradeTitle')}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{t('plans.pickupUpgradeDescription')}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                document.getElementById('pickup-compatible-plans')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                })
+              }
+            >
+              {t('plans.pickupUpgradeAction')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <CurrentPlanCard
           subscription={activeSubscription}
@@ -290,10 +321,15 @@ export function BillingSubscriptionView({
           onCancel={() => setCancelOpen(true)}
           onAutoRenewChange={(enabled) => void toggleAutoRenew(enabled)}
         />
-        <UsageCard usage={usage} quotaBlocked={dashboard.quotaBlocked} locale={locale} />
+        <UsageCard
+          usage={usage}
+          quotaBlocked={dashboard.quotaBlocked}
+          locale={locale}
+          pickupEnabled={pickupEnabled}
+        />
       </div>
 
-      <section className="space-y-4">
+      <section id="pickup-compatible-plans" className="scroll-mt-6 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold">{t('plans.title')}</h3>
@@ -485,6 +521,18 @@ function CurrentPlanCard({
           />
           <InfoTile label={t('current.endsAt')} value={formatDate(subscription.endsAt, locale)} />
         </div>
+        <div className="rounded-xl border border-border p-4" data-testid="current-plan-features">
+          <p className="mb-3 text-sm font-medium">{t('current.featuresTitle')}</p>
+          <div className="space-y-2">
+            {BILLING_FEATURES.map((feature) => (
+              <FeatureAccessRow
+                key={feature}
+                feature={feature}
+                included={subscription.features.includes(feature)}
+              />
+            ))}
+          </div>
+        </div>
         <div className="flex flex-col gap-3 rounded-xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium">{t('current.autoRenew')}</p>
@@ -512,10 +560,12 @@ function UsageCard({
   usage,
   quotaBlocked,
   locale,
+  pickupEnabled,
 }: {
   usage: CompanyBillingDashboardResponse['currentUsage'];
   quotaBlocked: boolean;
   locale: string;
+  pickupEnabled: boolean;
 }) {
   const { t } = useTranslation('billing');
   return (
@@ -576,6 +626,27 @@ function UsageCard({
             />
           </div>
         )}
+        <div
+          className={cn(
+            'flex items-center justify-between gap-3 rounded-xl border p-3',
+            pickupEnabled
+              ? 'border-success/30 bg-success/10'
+              : 'border-border bg-muted/40',
+          )}
+          data-testid="pickup-access-status"
+        >
+          <div className="flex items-center gap-2">
+            {pickupEnabled ? (
+              <Check className="h-4 w-4 shrink-0 text-success" />
+            ) : (
+              <XCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="text-sm font-medium">{t('usage.pickup')}</span>
+          </div>
+          <Badge variant={pickupEnabled ? 'default' : 'secondary'}>
+            {t(pickupEnabled ? 'usage.pickupEnabled' : 'usage.pickupDisabled')}
+          </Badge>
+        </div>
       </CardContent>
     </Card>
   );
@@ -600,14 +671,24 @@ function PlanCard({
 }) {
   const { t } = useTranslation('billing');
   return (
-    <Card className={cn(current && 'border-primary ring-2 ring-primary/15')}>
+    <Card
+      className={cn(current && 'border-primary ring-2 ring-primary/15')}
+      data-testid={`billing-plan-${plan.id}`}
+    >
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="text-lg">{plan.title}</CardTitle>
             <CardDescription className="mt-1 line-clamp-3">{plan.description}</CardDescription>
           </div>
-          {current ? <Badge>{t('plans.current')}</Badge> : <Sparkles className="h-5 w-5 text-primary" />}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {current ? <Badge>{t('plans.current')}</Badge> : <Sparkles className="h-5 w-5 text-primary" />}
+            {plan.features.includes('PARCEL_PICKUP') && (
+              <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
+                {t('plans.pickupReady')}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -629,11 +710,12 @@ function PlanCard({
           />
         </div>
         <div className="space-y-2">
-          {plan.features.map((feature) => (
-            <div key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-              {t(`features.${feature}`)}
-            </div>
+          {BILLING_FEATURES.map((feature) => (
+            <FeatureAccessRow
+              key={feature}
+              feature={feature}
+              included={plan.features.includes(feature)}
+            />
           ))}
         </div>
         {canManage ? (
@@ -647,6 +729,30 @@ function PlanCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function FeatureAccessRow({ feature, included }: { feature: BillingFeature; included: boolean }) {
+  const { t } = useTranslation('billing');
+  return (
+    <div
+      className={cn(
+        'flex items-start justify-between gap-3 text-sm',
+        included ? 'text-foreground' : 'text-muted-foreground',
+      )}
+    >
+      <span className="flex min-w-0 items-start gap-2">
+        {included ? (
+          <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+        ) : (
+          <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        )}
+        <span>{t(`features.${feature}`)}</span>
+      </span>
+      <span className="shrink-0 text-xs font-medium">
+        {t(included ? 'plans.featureIncluded' : 'plans.featureNotIncluded')}
+      </span>
+    </div>
   );
 }
 

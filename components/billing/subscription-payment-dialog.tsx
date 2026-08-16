@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MobileMoneyFields } from '@/components/payments/mobile-money-fields';
 import {
   getBillingInvoicePayments,
   initiateBillingPayment,
@@ -54,6 +55,7 @@ import { cn } from '@/lib/utils';
 const ONLINE_PROVIDERS: OnlinePaymentProvider[] = ['MTN', 'ORANGE', 'PAYPAL', 'STRIPE'];
 const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED']);
 const FAILED_STATUSES = new Set(['FAILED', 'CANCELLED', 'EXPIRED']);
+const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
 
 const PROVIDER_ICONS = {
   MTN: Smartphone,
@@ -81,15 +83,18 @@ export function SubscriptionPaymentDialog({
   const { t } = useTranslation('billing');
   const [config, setConfig] = useState<PaymentPublicConfigResponse | null>(null);
   const [provider, setProvider] = useState<OnlinePaymentProvider | null>(null);
+  const [country, setCountry] = useState('');
   const [attempt, setAttempt] = useState<PaymentAttemptResponse | null>(null);
   const [payerMsisdn, setPayerMsisdn] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [isStripeFinalizing, setIsStripeFinalizing] = useState(false);
   const [applyingPromo, setApplyingPromo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reportedSuccess = useRef(false);
+  const stripeFinalizationPollRef = useRef(0);
 
   const providers = useMemo(() => {
     const configured = new Set(config?.providers ?? []);
@@ -104,13 +109,15 @@ export function SubscriptionPaymentDialog({
   );
   const canRetry = Boolean(attempt && FAILED_STATUSES.has(attempt.status));
   const hasActiveAttempt = Boolean(attempt && !TERMINAL_STATUSES.has(attempt.status));
+  const stripeClientSecret = attempt?.provider === 'STRIPE' ? attempt.clientSecret : undefined;
 
   const complete = useCallback(async () => {
     if (reportedSuccess.current) return;
     reportedSuccess.current = true;
     clearBillingCheckout(invoice.id);
     await onPaymentSucceeded();
-  }, [invoice.id, onPaymentSucceeded]);
+    onOpenChange(false);
+  }, [invoice.id, onOpenChange, onPaymentSucceeded]);
 
   const consumeAttempt = useCallback(
     async (nextAttempt: PaymentAttemptResponse | null) => {
@@ -126,7 +133,10 @@ export function SubscriptionPaymentDialog({
     setLoading(true);
     setError(null);
     setAttempt(null);
+    setCountry('');
     reportedSuccess.current = false;
+    stripeFinalizationPollRef.current = 0;
+    setIsStripeFinalizing(false);
     saveBillingCheckout(invoice.companyId, subscription.id, invoice.id);
 
     Promise.all([
@@ -149,7 +159,9 @@ export function SubscriptionPaymentDialog({
           ) ??
           null;
         setProvider(initial);
-        if (latest?.status === 'SUCCEEDED') void complete();
+        if (latest && needsStripeClientSecret(latest)) {
+          setError(t('payment.errors.cardSetup'));
+        }
       })
       .catch((cause) => {
         if (!cancelled) setError(apiMessage(cause, t('payment.errors.load')));
@@ -161,42 +173,125 @@ export function SubscriptionPaymentDialog({
     return () => {
       cancelled = true;
     };
-  }, [complete, invoice.companyId, invoice.id, open, subscription.id, t, token]);
+  }, [invoice.companyId, invoice.id, open, subscription.id, t, token]);
 
   useEffect(() => {
-    if (!open || !token || !attempt || TERMINAL_STATUSES.has(attempt.status)) return;
+    if (
+      !open ||
+      !token ||
+      !attempt ||
+      !provider ||
+      attempt.provider === 'STRIPE' ||
+      TERMINAL_STATUSES.has(attempt.status) ||
+      needsStripeClientSecret(attempt)
+    ) return;
     const timer = window.setTimeout(() => {
-      getPaymentAttempt(token, attempt.reference)
+      confirmPaymentAttempt(token, provider, attempt.reference)
         .then((nextAttempt) => void consumeAttempt(nextAttempt))
         .catch(() => undefined);
-    }, 4_000);
+    }, 6_000);
     return () => window.clearTimeout(timer);
-  }, [attempt, consumeAttempt, open, token]);
+  }, [attempt, consumeAttempt, open, provider, token]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !token ||
+      !attempt ||
+      attempt.provider !== 'STRIPE' ||
+      !isStripeFinalizing
+    ) return;
+
+    if (TERMINAL_STATUSES.has(attempt.status)) {
+      setIsStripeFinalizing(false);
+      return;
+    }
+
+    const delay = STRIPE_FINALIZATION_DELAYS[stripeFinalizationPollRef.current];
+    if (delay === undefined) {
+      setIsStripeFinalizing(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      getPaymentAttempt(token, attempt.reference)
+        .then((nextAttempt) => {
+          if (cancelled) return;
+          if (TERMINAL_STATUSES.has(nextAttempt.status)) {
+            setIsStripeFinalizing(false);
+          } else {
+            stripeFinalizationPollRef.current += 1;
+          }
+          void consumeAttempt(nextAttempt);
+        })
+        .catch(() => {
+          if (!cancelled) setIsStripeFinalizing(false);
+        });
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [attempt, consumeAttempt, isStripeFinalizing, open, token]);
+
+  const handleStripeConfirmed = useCallback(
+    async (nextAttempt: PaymentAttemptResponse) => {
+      await consumeAttempt(nextAttempt);
+      if (TERMINAL_STATUSES.has(nextAttempt.status)) {
+        setIsStripeFinalizing(false);
+        return;
+      }
+
+      stripeFinalizationPollRef.current = 0;
+      setIsStripeFinalizing(true);
+    },
+    [consumeAttempt],
+  );
 
   useEffect(() => {
     if (!open || !token || !attempt) return;
     const refreshOnFocus = () => {
-      if (document.visibilityState === 'visible' && !TERMINAL_STATUSES.has(attempt.status)) {
-        getPaymentAttempt(token, attempt.reference)
+      if (
+        document.visibilityState === 'visible' &&
+        attempt.provider !== 'STRIPE' &&
+        !TERMINAL_STATUSES.has(attempt.status) &&
+        !needsStripeClientSecret(attempt)
+      ) {
+        const attemptProvider = provider ?? (
+          ONLINE_PROVIDERS.includes(attempt.provider as OnlinePaymentProvider)
+            ? attempt.provider as OnlinePaymentProvider
+            : null
+        );
+        if (!attemptProvider) return;
+        confirmPaymentAttempt(token, attemptProvider, attempt.reference)
           .then((nextAttempt) => void consumeAttempt(nextAttempt))
           .catch(() => undefined);
       }
     };
     document.addEventListener('visibilitychange', refreshOnFocus);
     return () => document.removeEventListener('visibilitychange', refreshOnFocus);
-  }, [attempt, consumeAttempt, open, token]);
+  }, [attempt, consumeAttempt, open, provider, token]);
 
   async function initiate() {
     if (!token || !provider || hasActiveAttempt) return;
-    if ((provider === 'MTN' || provider === 'ORANGE') && payerMsisdn.trim().length < 6) {
-      setError(t('payment.errors.phoneRequired'));
-      return;
+    if (provider === 'MTN' || provider === 'ORANGE') {
+      if (!country) {
+        setError(t('payment.errors.countryRequired'));
+        return;
+      }
+      if (payerMsisdn.trim().length < 6) {
+        setError(t('payment.errors.phoneRequired'));
+        return;
+      }
     }
 
     setSubmitting(true);
     setError(null);
     try {
       const nextAttempt = await initiateBillingPayment(token, invoice.id, provider, {
+        country: provider === 'MTN' || provider === 'ORANGE' ? country : undefined,
         payerMsisdn:
           provider === 'MTN' || provider === 'ORANGE' ? payerMsisdn.trim() : undefined,
         idempotencyKey: getOrCreateBillingIdempotencyKey(
@@ -208,6 +303,9 @@ export function SubscriptionPaymentDialog({
         ),
         description: t('payment.description', { values: { plan: invoice.planTitle } }),
       });
+      if (needsStripeClientSecret(nextAttempt)) {
+        setError(t('payment.errors.cardSetup'));
+      }
       await consumeAttempt(nextAttempt);
     } catch (cause) {
       const message = apiMessage(cause, t('payment.errors.initiation'));
@@ -223,7 +321,7 @@ export function SubscriptionPaymentDialog({
   }
 
   async function check() {
-    if (!token || !provider || !attempt) return;
+    if (!token || !provider || !attempt || attempt.provider === 'STRIPE') return;
     setChecking(true);
     setError(null);
     try {
@@ -287,7 +385,11 @@ export function SubscriptionPaymentDialog({
                       <button
                         key={item}
                         type="button"
-                        onClick={() => setProvider(item)}
+                        onClick={() => {
+                          setProvider(item);
+                          setCountry('');
+                          setPayerMsisdn('');
+                        }}
                         className={cn(
                           'flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-sm font-medium',
                           provider === item
@@ -303,12 +405,23 @@ export function SubscriptionPaymentDialog({
                 </div>
 
                 {(provider === 'MTN' || provider === 'ORANGE') && (
-                  <Input
-                    value={payerMsisdn}
-                    onChange={(event) => setPayerMsisdn(event.target.value)}
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder={t('payment.phonePlaceholder')}
+                  <MobileMoneyFields
+                    token={token}
+                    provider={provider}
+                    country={country}
+                    payerMsisdn={payerMsisdn}
+                    onCountryChange={setCountry}
+                    onPayerMsisdnChange={setPayerMsisdn}
+                    labels={{
+                      countryLabel: t('payment.countryLabel'),
+                      countryPlaceholder: t('payment.countryPlaceholder'),
+                      phoneLabel: t('payment.phoneLabel'),
+                      phonePlaceholder: t('payment.phonePlaceholder'),
+                      phoneHint: t('payment.phoneHint'),
+                      loadingCountries: t('payment.loadingCountries'),
+                      countriesError: t('payment.countriesError'),
+                      otpRequired: t('payment.otpRequired'),
+                    }}
                   />
                 )}
 
@@ -349,14 +462,14 @@ export function SubscriptionPaymentDialog({
               </Button>
             )}
 
-            {attempt?.clientSecret &&
-              provider === 'STRIPE' &&
+            {attempt &&
+              stripeClientSecret &&
               stripePromise &&
               attempt.status !== 'SUCCEEDED' && (
-                <Elements stripe={stripePromise} options={{ clientSecret: attempt.clientSecret }}>
+                <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
                   <StripeForm
                     paymentReference={attempt.reference}
-                    onConfirmed={(nextAttempt) => void consumeAttempt(nextAttempt)}
+                    onConfirmed={(nextAttempt) => void handleStripeConfirmed(nextAttempt)}
                     onError={setError}
                   />
                 </Elements>
@@ -380,14 +493,14 @@ export function SubscriptionPaymentDialog({
             <Button
               type="button"
               onClick={() => void initiate()}
-              disabled={submitting || !provider || providers.length === 0}
+              disabled={submitting || !provider || providers.length === 0 || ((provider === 'MTN' || provider === 'ORANGE') && !country)}
               className="gap-2"
             >
               {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
               {canRetry ? t('payment.retry') : t('payment.pay')}
             </Button>
           )}
-          {hasActiveAttempt && !attempt?.clientSecret && (
+          {hasActiveAttempt && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret && (
             <Button type="button" onClick={() => void check()} disabled={checking} className="gap-2">
               <RefreshCw className={cn('h-4 w-4', checking && 'animate-spin')} />
               {t('payment.check')}
@@ -418,6 +531,11 @@ function AttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
       <AlertTitle>{t(`payment.statuses.${attempt.status}`)}</AlertTitle>
       <AlertDescription className="space-y-1">
         <p>{t(success ? 'payment.success' : failed ? 'payment.failed' : 'payment.pending')}</p>
+        {attempt.providerDetails?.pendingAction && <p>{attempt.providerDetails.pendingAction}</p>}
+        {!success && !failed && attempt.providerDetails?.message && <p>{attempt.providerDetails.message}</p>}
+        {attempt.providerAmount !== undefined && attempt.providerCurrency && (
+          <p>{t('payment.walletDebit', { values: { amount: formatAmount(attempt.providerAmount, attempt.providerCurrency) } })}</p>
+        )}
         <p className="break-all font-mono text-xs">{attempt.reference}</p>
         {attempt.failureReason && <p>{attempt.failureReason}</p>}
       </AlertDescription>
@@ -484,4 +602,13 @@ function formatAmount(amount: number, currency: string) {
 
 function apiMessage(cause: unknown, fallback: string) {
   return cause instanceof ApiError ? cause.message : fallback;
+}
+
+function needsStripeClientSecret(attempt: PaymentAttemptResponse) {
+  return (
+    attempt.provider === 'STRIPE' &&
+    !TERMINAL_STATUSES.has(attempt.status) &&
+    !attempt.clientSecret &&
+    !attempt.approvalUrl
+  );
 }

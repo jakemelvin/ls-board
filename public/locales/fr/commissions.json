@@ -1,0 +1,50 @@
+{
+  "title": "Commissions",
+  "subtitle": "Comptabilité persistée des commissions collecteurs et transporteurs.",
+  "myTitle": "Mes commissions",
+  "mySubtitle": "Suivez vos montants acquis et confirmez les règlements reçus.",
+  "tabs": { "entries": "Écritures", "batches": "Lots de paiement", "toConfirm": "Paiements à confirmer" },
+  "summary": {
+    "toPay": "À payer", "awaiting": "Confirmation attendue", "paid": "Payé", "collectors": "Collecteurs",
+    "transporters": "Transporteurs", "generated": "Total généré", "disputed": "Contesté", "shipments": "Colis commissionnés",
+    "count": "{{count}} écriture(s)", "period": "Sur la période", "configuredRate": "Taux configuré : {{rate}} %"
+  },
+  "filters": {
+    "search": "Rechercher un bénéficiaire ou un colis…", "allStatuses": "Tous les statuts", "allRoles": "Tous les rôles"
+  },
+  "roles": { "COLLECTOR": "Collecteur", "TRANSPORTER": "Transporteur" },
+  "statuses": {
+    "ACCRUED": "À payer", "PAYMENT_PROPOSED": "Confirmation attendue", "PAYMENT_DISPUTED": "Contestée",
+    "PAID": "Payée", "CANCELLED": "Annulée"
+  },
+  "batchStatuses": {
+    "AWAITING_BENEFICIARY_CONFIRMATION": "Confirmation attendue", "PAID": "Payé", "REFUSED": "Refusé", "CANCELLED": "Annulé"
+  },
+  "historyActions": {
+    "ACCRUED": "Commission acquise", "PAYMENT_DECLARED": "Paiement déclaré", "PAYMENT_ACCEPTED": "Paiement accepté",
+    "PAYMENT_REFUSED": "Paiement refusé", "PAYMENT_DECLARATION_CANCELLED": "Déclaration annulée"
+  },
+  "table": {
+    "beneficiary": "Bénéficiaire", "shipment": "Colis", "source": "Source", "calculation": "Calcul", "status": "Statut",
+    "date": "Date", "actions": "Actions", "reference": "Référence", "amount": "Montant", "response": "Réponse"
+  },
+  "actions": {
+    "refresh": "Actualiser", "createBatch": "Déclarer le paiement", "details": "Détails", "cancelBatch": "Annuler le lot",
+    "accept": "Confirmer la réception", "refuse": "Contester", "confirm": "Confirmer", "cancel": "Annuler"
+  },
+  "selection": { "count": "{{count}} commission(s) sélectionnée(s)", "sameBeneficiary": "Un lot doit contenir les écritures d’un seul bénéficiaire." },
+  "dialogs": {
+    "batchTitle": "Déclarer un paiement", "batchDescription": "Le paiement restera en attente jusqu’à la confirmation du bénéficiaire.",
+    "note": "Note", "batchNotePlaceholder": "Ex. Règlement des commissions du mois", "detailTitle": "Détail de la commission",
+    "history": "Historique", "refuseTitle": "Contester le paiement", "refuseDescription": "Expliquez pourquoi le règlement déclaré n’a pas été reçu ou est incorrect.",
+    "refusePlaceholder": "Motif obligatoire", "acceptTitle": "Confirmer le paiement", "acceptDescription": "Cette confirmation clôt le lot et marque ses commissions comme payées.",
+    "cancelTitle": "Annuler la déclaration", "cancelDescription": "Les commissions du lot redeviendront disponibles pour une nouvelle régularisation."
+  },
+  "empty": { "entries": "Aucune commission ne correspond aux filtres.", "batches": "Aucun lot de paiement à afficher.", "history": "Aucun événement enregistré." },
+  "messages": {
+    "loadError": "Impossible de charger les commissions.", "batchCreated": "Paiement déclaré. La confirmation du bénéficiaire est maintenant attendue.",
+    "batchAccepted": "Paiement confirmé.", "batchRefused": "Paiement contesté.", "batchCancelled": "Déclaration de paiement annulée.",
+    "actionError": "L’action n’a pas pu être finalisée.", "stateReloaded": "L’état a changé sur le serveur. Les données ont été actualisées."
+  },
+  "details": { "base": "Base", "rate": "Taux snapshot", "batch": "Lot", "actor": "par {{actor}}" }
+}

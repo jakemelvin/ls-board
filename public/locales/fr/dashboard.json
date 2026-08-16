@@ -70,6 +70,8 @@
       "collectionPoints": "Gestion territoriale",
       "companyProfile": "Profil entreprise",
       "commissions": "Commissions",
+      "pickups": "Ramassages",
+      "pickupParcelTypes": "Types de colis de ramassage",
       "dashboard": "Tableau de bord",
       "dashboardShort": "Dashboard",
       "deliveryEstimates": "Délais de livraison",
@@ -871,6 +873,9 @@
   "collectorReception": {
     "scanner": {
       "cameraError": "Impossible d'accéder à la caméra. Autorisez son utilisation ou prenez une photo du QR code.",
+      "cameraHttpsRequired": "Le scan par caméra exige une connexion HTTPS sécurisée. Ouvrez l'application via son adresse https://, puis relancez le scan.",
+      "cameraPermissionDenied": "L'accès à la caméra est bloqué dans les réglages du navigateur. Autorisez Camera pour ce site, puis relancez le scan.",
+      "cameraUnavailable": "Aucune caméra n'est disponible sur cet appareil. Vous pouvez prendre ou choisir une photo du QR code.",
       "chooseImage": "Prendre ou choisir une photo",
       "description": "Placez le QR code du colis dans le cadre. La détection est automatique.",
       "hint": "Le scan identifie le colis, mais la réception devra toujours être confirmée manuellement.",
@@ -939,8 +944,14 @@
     "promoSuccessTitle": "Frais couverts par le code promo",
     "promoSuccessDescription": "Le code promo couvre entièrement les frais plateforme. Le shipment peut poursuivre sa prise en charge.",
     "phoneLabel": "Numéro Mobile Money",
+    "countryLabel": "Pays du portefeuille Mobile Money",
+    "countryPlaceholder": "Choisissez un pays",
     "phonePlaceholder": "Ex. 237690000000",
-    "phoneHint": "Utilisez le numéro qui recevra la demande de confirmation.",
+    "phoneHint": "Saisissez le numéro local ou international qui recevra la demande de confirmation.",
+    "loadingCountries": "Chargement des pays disponibles…",
+    "countriesError": "Impossible de charger les pays disponibles pour cet opérateur.",
+    "otpRequired": "Une confirmation OTP peut être demandée par l’opérateur.",
+    "walletDebit": "Montant demandé au portefeuille : {{amount}}",
     "pay": "Initier le paiement",
     "retry": "Réessayer le paiement",
     "check": "Vérifier maintenant",
@@ -979,11 +990,13 @@
     "errors": {
       "config": "Impossible de charger les moyens de paiement.",
       "phoneRequired": "Saisissez un numéro Mobile Money valide.",
+      "countryRequired": "Choisissez un pays autorisé pour cet opérateur.",
       "promoRequired": "Saisissez un code promo.",
       "promo": "Ce code promo n’a pas pu être appliqué.",
       "initiation": "Impossible d’initier le paiement.",
       "confirmation": "Impossible de confirmer le statut du paiement.",
-      "card": "Le paiement par carte n’a pas pu être confirmé."
+      "card": "Le paiement par carte n’a pas pu être confirmé.",
+      "cardSetup": "Le formulaire carte n’a pas été fourni par le serveur de paiement. Réessayez plus tard ou contactez le support."
     }
   },
   "superAdminShipments": {

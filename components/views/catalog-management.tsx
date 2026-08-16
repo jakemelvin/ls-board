@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Boxes, Waypoints } from 'lucide-react';
+import { Boxes, PackageOpen, Waypoints } from 'lucide-react';
 
 import { CatalogCrudManager } from '@/components/company/catalog-crud-manager';
 import { useTranslation } from '@/lib/i18n';
@@ -17,12 +17,14 @@ import {
 } from '@/lib/company/api';
 import { getTransportModeIcon } from '@/lib/transport-mode-icons';
 import { cn } from '@/lib/utils';
+import { PickupParcelTypesManagement } from '@/components/views/pickup-parcel-types-management';
 
-type CatalogTab = 'parcel-types' | 'transport-modes';
+type CatalogTab = 'parcel-types' | 'transport-modes' | 'pickup-parcel-types';
 
 const TABS: { id: CatalogTab; labelKey: string; icon: React.ElementType }[] = [
   { id: 'parcel-types', labelKey: 'catalog.tabs.parcelTypes', icon: Boxes },
   { id: 'transport-modes', labelKey: 'catalog.tabs.transportModes', icon: Waypoints },
+  { id: 'pickup-parcel-types', labelKey: 'shell.sections.pickupParcelTypes', icon: PackageOpen },
 ];
 
 export function CatalogManagement() {
@@ -54,7 +56,9 @@ export function CatalogManagement() {
         ))}
       </div>
 
-      {tab === 'parcel-types' ? (
+      {tab === 'pickup-parcel-types' ? (
+        <PickupParcelTypesManagement />
+      ) : tab === 'parcel-types' ? (
         <CatalogCrudManager
           title={t('catalog.tabs.parcelTypes')}
           subtitle={t('catalog.common.globalCatalogSubtitle')}

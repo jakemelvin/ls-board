@@ -9,9 +9,19 @@ export type OnlinePaymentProvider = Extract<
 >;
 
 export interface PaymentInitiationRequest {
+  country?: string;
   payerMsisdn?: string;
   idempotencyKey?: string;
   description?: string;
+}
+
+export interface PaymentCountryResponse {
+  code: string;
+  name: string;
+  currency: string;
+  callingCode: string;
+  provider: OnlinePaymentProvider;
+  otpRequired?: boolean;
 }
 
 export interface PaymentPublicConfigResponse {

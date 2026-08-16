@@ -1,0 +1,18 @@
+{
+  "title": "Commissions", "subtitle": "Persistent commission accounting for collectors and transporters.",
+  "myTitle": "My commissions", "mySubtitle": "Track accrued amounts and confirm payments received.",
+  "tabs": { "entries": "Entries", "batches": "Payment batches", "toConfirm": "Payments to confirm" },
+  "summary": { "toPay": "To pay", "awaiting": "Awaiting confirmation", "paid": "Paid", "collectors": "Collectors", "transporters": "Transporters", "generated": "Total generated", "disputed": "Disputed", "shipments": "Commissioned shipments", "count": "{{count}} entry/entries", "period": "For this period", "configuredRate": "Configured rate: {{rate}}%" },
+  "filters": { "search": "Search a beneficiary or shipment…", "allStatuses": "All statuses", "allRoles": "All roles" },
+  "roles": { "COLLECTOR": "Collector", "TRANSPORTER": "Transporter" },
+  "statuses": { "ACCRUED": "To pay", "PAYMENT_PROPOSED": "Awaiting confirmation", "PAYMENT_DISPUTED": "Disputed", "PAID": "Paid", "CANCELLED": "Cancelled" },
+  "batchStatuses": { "AWAITING_BENEFICIARY_CONFIRMATION": "Awaiting confirmation", "PAID": "Paid", "REFUSED": "Refused", "CANCELLED": "Cancelled" },
+  "historyActions": { "ACCRUED": "Commission accrued", "PAYMENT_DECLARED": "Payment declared", "PAYMENT_ACCEPTED": "Payment accepted", "PAYMENT_REFUSED": "Payment refused", "PAYMENT_DECLARATION_CANCELLED": "Declaration cancelled" },
+  "table": { "beneficiary": "Beneficiary", "shipment": "Shipment", "source": "Source", "calculation": "Calculation", "status": "Status", "date": "Date", "actions": "Actions", "reference": "Reference", "amount": "Amount", "response": "Response" },
+  "actions": { "refresh": "Refresh", "createBatch": "Declare payment", "details": "Details", "cancelBatch": "Cancel batch", "accept": "Confirm receipt", "refuse": "Dispute", "confirm": "Confirm", "cancel": "Cancel" },
+  "selection": { "count": "{{count}} selected commission(s)", "sameBeneficiary": "A batch can only contain entries for one beneficiary." },
+  "dialogs": { "batchTitle": "Declare a payment", "batchDescription": "The payment remains pending until the beneficiary confirms it.", "note": "Note", "batchNotePlaceholder": "E.g. Monthly commission payment", "detailTitle": "Commission details", "history": "History", "refuseTitle": "Dispute payment", "refuseDescription": "Explain why the declared payment was not received or is incorrect.", "refusePlaceholder": "Reason required", "acceptTitle": "Confirm payment", "acceptDescription": "This confirmation closes the batch and marks its commissions as paid.", "cancelTitle": "Cancel declaration", "cancelDescription": "The batch commissions will become available for a new settlement." },
+  "empty": { "entries": "No commission matches these filters.", "batches": "No payment batch to display.", "history": "No event recorded." },
+  "messages": { "loadError": "Unable to load commissions.", "batchCreated": "Payment declared. Beneficiary confirmation is now expected.", "batchAccepted": "Payment confirmed.", "batchRefused": "Payment disputed.", "batchCancelled": "Payment declaration cancelled.", "actionError": "The action could not be completed.", "stateReloaded": "Server state changed. Data has been refreshed." },
+  "details": { "base": "Base", "rate": "Snapshot rate", "batch": "Batch", "actor": "by {{actor}}" }
+}

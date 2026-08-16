@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MobileMoneyFields } from '@/components/payments/mobile-money-fields';
 import { toast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
@@ -36,6 +37,7 @@ import {
   confirmShipmentPayment,
   getPaymentAttempt,
   getPaymentConfiguration,
+  getShipmentPaymentAttempts,
   initiateShipmentPayment,
 } from '@/lib/payments/api';
 import type {
@@ -49,6 +51,7 @@ import { cn } from '@/lib/utils';
 
 const ONLINE_PROVIDERS: OnlinePaymentProvider[] = ['MTN', 'ORANGE', 'PAYPAL', 'STRIPE'];
 const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED']);
+const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
 
 const PROVIDER_ICONS = {
   MTN: Smartphone,
@@ -82,6 +85,7 @@ export function ShipmentPaymentDialog({
   const { formatMoney } = useCurrency();
   const [config, setConfig] = useState<PaymentPublicConfigResponse | null>(null);
   const [provider, setProvider] = useState<OnlinePaymentProvider | null>(null);
+  const [country, setCountry] = useState('');
   const [payerMsisdn, setPayerMsisdn] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoShipment, setPromoShipment] = useState<Shipment | null>(null);
@@ -92,8 +96,11 @@ export function ShipmentPaymentDialog({
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [isStripeFinalizing, setIsStripeFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reportedSuccessReference = useRef<string | null>(null);
+  const idempotencyKeyRef = useRef<string | null>(null);
+  const stripeFinalizationPollRef = useRef(0);
 
   const providers = useMemo(() => {
     const configured = new Set(config?.providers ?? []);
@@ -122,8 +129,9 @@ export function ShipmentPaymentDialog({
         description: t('shipmentPayment.successDescription'),
       });
       await onPaymentSucceeded(payment);
+      onOpenChange(false);
     },
-    [onPaymentSucceeded, t],
+    [onOpenChange, onPaymentSucceeded, t],
   );
 
   useEffect(() => {
@@ -133,6 +141,7 @@ export function ShipmentPaymentDialog({
     setLoadingConfig(true);
     setConfig(null);
     setProvider(null);
+    setCountry('');
     setAttempt(null);
     setPayerMsisdn('');
     setPromoCode('');
@@ -142,16 +151,29 @@ export function ShipmentPaymentDialog({
     setPromoError(null);
     setError(null);
     reportedSuccessReference.current = null;
+    idempotencyKeyRef.current = null;
+    stripeFinalizationPollRef.current = 0;
+    setIsStripeFinalizing(false);
 
-    getPaymentConfiguration(token)
-      .then((response) => {
+    Promise.all([getPaymentConfiguration(token), getShipmentPaymentAttempts(token, shipment.id)])
+      .then(([response, attempts]) => {
         if (cancelled) return;
         setConfig(response);
+        const latestAttempt = attempts[0] ?? null;
+        setAttempt(latestAttempt);
         const configured = new Set(response.providers ?? []);
+        const latestProvider = latestAttempt?.provider;
         const firstProvider = ONLINE_PROVIDERS.find(
           (item) => configured.has(item) && (item !== 'STRIPE' || response.stripePublishableKey),
         );
-        setProvider(firstProvider ?? null);
+        setProvider(
+          latestProvider && ONLINE_PROVIDERS.includes(latestProvider as OnlinePaymentProvider)
+            ? latestProvider as OnlinePaymentProvider
+            : firstProvider ?? null,
+        );
+        if (latestAttempt && needsStripeClientSecret(latestAttempt)) {
+          setError(t('shipmentPayment.errors.cardSetup'));
+        }
       })
       .catch((paymentError) => {
         if (!cancelled) setError(apiMessage(paymentError, t('shipmentPayment.errors.config')));
@@ -166,39 +188,120 @@ export function ShipmentPaymentDialog({
   }, [open, shipment.id, t, token]);
 
   useEffect(() => {
-    if (!open || !token || !attempt || TERMINAL_STATUSES.has(attempt.status)) return;
+    if (
+      !open ||
+      !token ||
+      !attempt ||
+      !provider ||
+      attempt.provider === 'STRIPE' ||
+      TERMINAL_STATUSES.has(attempt.status) ||
+      needsStripeClientSecret(attempt)
+    ) return;
 
     const timer = window.setTimeout(() => {
-      getPaymentAttempt(token, attempt.reference)
+      confirmShipmentPayment(token, provider, attempt.reference)
         .then((payment) => {
           setAttempt(payment);
+          if (TERMINAL_STATUSES.has(payment.status)) idempotencyKeyRef.current = null;
           setError(null);
           void reportSuccess(payment);
         })
         .catch(() => undefined);
-    }, 4_000);
+    }, 6_000);
 
     return () => window.clearTimeout(timer);
-  }, [attempt, open, reportSuccess, token]);
+  }, [attempt, open, provider, reportSuccess, token]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !token ||
+      !attempt ||
+      attempt.provider !== 'STRIPE' ||
+      !isStripeFinalizing
+    ) return;
+
+    if (TERMINAL_STATUSES.has(attempt.status)) {
+      setIsStripeFinalizing(false);
+      return;
+    }
+
+    const delay = STRIPE_FINALIZATION_DELAYS[stripeFinalizationPollRef.current];
+    if (delay === undefined) {
+      setIsStripeFinalizing(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      getPaymentAttempt(token, attempt.reference)
+        .then((payment) => {
+          if (cancelled) return;
+          setAttempt(payment);
+          if (TERMINAL_STATUSES.has(payment.status)) {
+            idempotencyKeyRef.current = null;
+            setIsStripeFinalizing(false);
+            void reportSuccess(payment);
+          } else {
+            stripeFinalizationPollRef.current += 1;
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setIsStripeFinalizing(false);
+        });
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [attempt, isStripeFinalizing, open, reportSuccess, token]);
+
+  const handleStripeConfirmed = useCallback(
+    async (payment: PaymentAttemptResponse) => {
+      setAttempt(payment);
+      if (TERMINAL_STATUSES.has(payment.status)) {
+        idempotencyKeyRef.current = null;
+        setIsStripeFinalizing(false);
+        await reportSuccess(payment);
+        return;
+      }
+
+      stripeFinalizationPollRef.current = 0;
+      setIsStripeFinalizing(true);
+    },
+    [reportSuccess],
+  );
 
   async function initiatePayment() {
     if (!token || !provider) return;
 
-    if ((provider === 'MTN' || provider === 'ORANGE') && payerMsisdn.trim().length < 6) {
-      setError(t('shipmentPayment.errors.phoneRequired'));
-      return;
+    if (provider === 'MTN' || provider === 'ORANGE') {
+      if (!country) {
+        setError(t('shipmentPayment.errors.countryRequired'));
+        return;
+      }
+      if (payerMsisdn.trim().length < 6) {
+        setError(t('shipmentPayment.errors.phoneRequired'));
+        return;
+      }
     }
 
     setSubmitting(true);
     setError(null);
     try {
       const payment = await initiateShipmentPayment(token, provider, shipment.id, {
+        country: provider === 'MTN' || provider === 'ORANGE' ? country : undefined,
         payerMsisdn:
           provider === 'MTN' || provider === 'ORANGE' ? payerMsisdn.trim() : undefined,
-        idempotencyKey: createIdempotencyKey(shipment.id),
+        idempotencyKey: idempotencyKeyRef.current ??= createIdempotencyKey(shipment.id),
         description: `Platform fee for shipment ${shipment.reference ?? `#${shipment.id}`}`,
       });
       setAttempt(payment);
+      if (TERMINAL_STATUSES.has(payment.status)) idempotencyKeyRef.current = null;
+      if (needsStripeClientSecret(payment)) {
+        setError(t('shipmentPayment.errors.cardSetup'));
+      }
       await reportSuccess(payment);
     } catch (paymentError) {
       setError(apiMessage(paymentError, t('shipmentPayment.errors.initiation')));
@@ -208,12 +311,13 @@ export function ShipmentPaymentDialog({
   }
 
   async function checkPayment() {
-    if (!token || !attempt || !provider) return;
+    if (!token || !attempt || !provider || attempt.provider === 'STRIPE') return;
     setChecking(true);
     setError(null);
     try {
       const payment = await confirmShipmentPayment(token, provider, attempt.reference);
       setAttempt(payment);
+      if (TERMINAL_STATUSES.has(payment.status)) idempotencyKeyRef.current = null;
       await reportSuccess(payment);
     } catch (paymentError) {
       setError(apiMessage(paymentError, t('shipmentPayment.errors.confirmation')));
@@ -274,9 +378,10 @@ export function ShipmentPaymentDialog({
   const amount = promoShipment
     ? getRemainingPlatformFee(promoShipment)
     : Math.max((shipment.feeAmount ?? 0) - (shipment.discountAmount ?? 0), 0);
-  const hasStarted = Boolean(attempt);
   const isSuccessful = attempt?.status === 'SUCCEEDED' || promoCompleted;
   const canRetry = attempt ? ['FAILED', 'CANCELLED', 'EXPIRED'].includes(attempt.status) : false;
+  const hasActiveAttempt = Boolean(attempt && !TERMINAL_STATUSES.has(attempt.status));
+  const stripeClientSecret = attempt?.provider === 'STRIPE' ? attempt.clientSecret : undefined;
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !submitting && !applyingPromo && onOpenChange(nextOpen)}>
@@ -311,7 +416,7 @@ export function ShipmentPaymentDialog({
             </div>
           </div>
 
-          {!promoCompleted && !hasStarted && (
+          {!promoCompleted && !hasActiveAttempt && (
             <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -399,7 +504,7 @@ export function ShipmentPaymentDialog({
                 </Alert>
               ) : (
                 <>
-                  {!hasStarted && (
+                  {!hasActiveAttempt && (
                     <div className="space-y-4">
                       <div>
                         <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.chooseProvider')}</p>
@@ -415,6 +520,8 @@ export function ShipmentPaymentDialog({
                                 aria-checked={selected}
                                 onClick={() => {
                                   setProvider(item);
+                                  setCountry('');
+                                  setPayerMsisdn('');
                                   setError(null);
                                 }}
                                 className={cn(
@@ -435,17 +542,24 @@ export function ShipmentPaymentDialog({
                       </div>
 
                       {(provider === 'MTN' || provider === 'ORANGE') && (
-                        <label className="block space-y-1.5">
-                          <span className="text-sm font-medium text-foreground">{t('shipmentPayment.phoneLabel')}</span>
-                          <Input
-                            value={payerMsisdn}
-                            onChange={(event) => setPayerMsisdn(event.target.value)}
-                            inputMode="tel"
-                            autoComplete="tel"
-                            placeholder={t('shipmentPayment.phonePlaceholder')}
-                          />
-                          <span className="block text-xs leading-5 text-muted-foreground">{t('shipmentPayment.phoneHint')}</span>
-                        </label>
+                        <MobileMoneyFields
+                          token={token}
+                          provider={provider}
+                          country={country}
+                          payerMsisdn={payerMsisdn}
+                          onCountryChange={setCountry}
+                          onPayerMsisdnChange={setPayerMsisdn}
+                          labels={{
+                            countryLabel: t('shipmentPayment.countryLabel'),
+                            countryPlaceholder: t('shipmentPayment.countryPlaceholder'),
+                            phoneLabel: t('shipmentPayment.phoneLabel'),
+                            phonePlaceholder: t('shipmentPayment.phonePlaceholder'),
+                            phoneHint: t('shipmentPayment.phoneHint'),
+                            loadingCountries: t('shipmentPayment.loadingCountries'),
+                            countriesError: t('shipmentPayment.countriesError'),
+                            otpRequired: t('shipmentPayment.otpRequired'),
+                          }}
+                        />
                       )}
                     </div>
                   )}
@@ -463,14 +577,11 @@ export function ShipmentPaymentDialog({
                     </Button>
                   )}
 
-                  {attempt?.clientSecret && provider === 'STRIPE' && stripePromise && attempt.status !== 'SUCCEEDED' && (
-                    <Elements stripe={stripePromise} options={{ clientSecret: attempt.clientSecret }}>
+                  {attempt && stripeClientSecret && stripePromise && attempt.status !== 'SUCCEEDED' && (
+                    <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
                       <StripePaymentForm
                         paymentReference={attempt.reference}
-                        onConfirmed={(payment) => {
-                          setAttempt(payment);
-                          void reportSuccess(payment);
-                        }}
+                        onConfirmed={(payment) => void handleStripeConfirmed(payment)}
                         onError={setError}
                       />
                     </Elements>
@@ -493,12 +604,12 @@ export function ShipmentPaymentDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting || applyingPromo}>
             {isSuccessful ? t('shipmentPayment.close') : t('shipmentPayment.payLater')}
           </Button>
-          {!promoCompleted && (!hasStarted || canRetry) ? (
-            <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0} className="gap-2">
+          {!promoCompleted && (!hasActiveAttempt || canRetry) ? (
+            <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0 || ((provider === 'MTN' || provider === 'ORANGE') && !country)} className="gap-2">
               {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
               {canRetry ? t('shipmentPayment.retry') : t('shipmentPayment.pay')}
             </Button>
-          ) : !isSuccessful && !attempt?.clientSecret ? (
+          ) : !isSuccessful && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret ? (
             <Button type="button" onClick={() => void checkPayment()} disabled={checking} className="gap-2">
               <RefreshCw className={cn('h-4 w-4', checking && 'animate-spin')} />
               {t('shipmentPayment.check')}
@@ -521,6 +632,11 @@ function PaymentAttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
       <AlertTitle>{t(`shipmentPayment.statuses.${attempt.status}`)}</AlertTitle>
       <AlertDescription>
         <p>{t(successful ? 'shipmentPayment.successDescription' : failed ? 'shipmentPayment.failedDescription' : 'shipmentPayment.pendingDescription')}</p>
+        {attempt.providerDetails?.pendingAction && <p>{attempt.providerDetails.pendingAction}</p>}
+        {!successful && !failed && attempt.providerDetails?.message && <p>{attempt.providerDetails.message}</p>}
+        {attempt.providerAmount !== undefined && attempt.providerCurrency && (
+          <p>{t('shipmentPayment.walletDebit', { values: { amount: formatPaymentAmount(attempt.providerAmount, attempt.providerCurrency) } })}</p>
+        )}
         <p className="font-mono text-xs">{attempt.reference}</p>
         {attempt.failureReason && <p>{attempt.failureReason}</p>}
       </AlertDescription>
@@ -583,6 +699,27 @@ function createIdempotencyKey(shipmentId: number) {
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `shipment-${shipmentId}-${random}`.slice(0, 120);
+}
+
+function formatPaymentAmount(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${amount} ${currency}`;
+  }
+}
+
+function needsStripeClientSecret(attempt: PaymentAttemptResponse) {
+  return (
+    attempt.provider === 'STRIPE' &&
+    !TERMINAL_STATUSES.has(attempt.status) &&
+    !attempt.clientSecret &&
+    !attempt.approvalUrl
+  );
 }
 
 function getRemainingPlatformFee(shipment: Pick<Shipment, 'feeAmount' | 'discountAmount'>) {

@@ -7,6 +7,7 @@ test('collector can pay any shipment visible in their collection scope', async (
   let paymentBody = '';
   let promoBody = '';
   let ownShipmentPaid = false;
+  let ownPaymentRequestCount = 0;
   let otherShipmentPaid = false;
 
   const ownShipment = () => ({
@@ -111,8 +112,45 @@ test('collector can pay any shipment visible in their collection scope', async (
       return;
     }
 
+    if (url.pathname === '/api/delivery/payments/providers/MTN/countries') {
+      await json([{
+        code: 'CM',
+        name: 'Cameroun',
+        currency: 'XAF',
+        callingCode: '+237',
+        provider: 'MTN',
+        otpRequired: false,
+      }]);
+      return;
+    }
+
+    if (
+      /^\/api\/delivery\/payments\/shipments\/(701|702)\/attempts$/.test(url.pathname) &&
+      request.method() === 'GET'
+    ) {
+      await json([]);
+      return;
+    }
+
     if (url.pathname === '/api/delivery/payments/MTN/shipments/701') {
       paymentBody = request.postData() ?? '';
+      ownPaymentRequestCount += 1;
+      if (ownPaymentRequestCount === 1) {
+        await json({
+          id: 1,
+          reference: 'PAY-701-MTN-FAILED',
+          provider: 'MTN',
+          purpose: 'SHIPMENT',
+          status: 'FAILED',
+          shipmentId: 701,
+          amount: 500,
+          currency: 'XAF',
+          providerAmount: 500,
+          providerCurrency: 'XAF',
+          failureReason: 'Solde insuffisant',
+        });
+        return;
+      }
       ownShipmentPaid = true;
       await json({
         id: 1,
@@ -165,6 +203,12 @@ test('collector can pay any shipment visible in their collection scope', async (
   await dialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
 
   await expect.poll(() => paymentBody).toContain('237690123456');
+  expect(JSON.parse(paymentBody)).toMatchObject({ country: 'CM' });
+  await expect(dialog.getByText(/Paiement échoué|Payment failed/)).toBeVisible();
+  await expect(dialog.getByLabel(/Pays du portefeuille|wallet country/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Réessayer le paiement|Retry payment/ })).toBeEnabled();
+  await dialog.getByRole('button', { name: /Réessayer le paiement|Retry payment/ }).click();
+  await expect.poll(() => ownPaymentRequestCount).toBe(2);
   await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toHaveCount(0);
 
   await page.getByRole('button', { name: /Retour a la liste|Back to.*list/i }).click();

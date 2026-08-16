@@ -22,6 +22,7 @@
     "noneTitle": "No active subscription",
     "noneDescription": "Choose an eligible plan to make the company operational.",
     "description": "Contract plan currently applied to the company.",
+    "featuresTitle": "Active plan features",
     "cycle": "Cycle", "startsAt": "Start", "endsAt": "End",
     "autoRenew": "Automatic renewal",
     "autoRenewHint": "A new invoice will be prepared at expiry, without a silent charge.",
@@ -31,12 +32,17 @@
     "title": "Calendar-month quota", "period": "From {{start}} to {{end}}",
     "unavailable": "Quota data will be available after a subscription is activated.",
     "unlimited": "Unlimited", "used": "{{count}} shipment(s) counted this month.",
-    "remaining": "{{count}} shipment(s) remaining.", "national": "National shipments", "international": "International shipments"
+    "remaining": "{{count}} shipment(s) remaining.", "national": "National shipments", "international": "International shipments",
+    "pickup": "Pickup access", "pickupEnabled": "Included", "pickupDisabled": "Not included"
   },
   "plans": {
     "title": "Available plans", "description": "EUR and USD prices are for display; invoices remain accounted for in XAF.",
     "emptyTitle": "No available plans", "emptyDescription": "No active offer is eligible for this company’s country.",
     "current": "Current plan", "active": "Active plan", "choose": "Choose this plan", "scope": "Scope", "quota": "Quota",
+    "pickupReady": "Pickup included", "featureIncluded": "Included", "featureNotIncluded": "Not included",
+    "pickupUpgradeTitle": "Your active plan does not include pickup",
+    "pickupUpgradeDescription": "Choose a plan with the Parcel pickup feature to publish and manage opportunities.",
+    "pickupUpgradeAction": "View compatible plans",
     "shipmentsPerMonth": "{{count}} / month", "priceSuffix": { "MONTHLY": "per month", "ANNUAL": "per year" }
   },
   "checkout": {
@@ -52,7 +58,7 @@
   },
   "payment": {
     "title": "Invoice payment", "subtitle": "Invoice {{reference}} — {{plan}}", "amountDue": "Amount due in accounting currency",
-    "chooseProvider": "Choose a payment method", "phonePlaceholder": "+237 6XX XXX XXX", "promoPlaceholder": "Promo code",
+    "chooseProvider": "Choose a payment method", "countryLabel": "Mobile Money wallet country", "countryPlaceholder": "Choose a country", "phoneLabel": "Mobile Money number", "phonePlaceholder": "+237 6XX XXX XXX", "phoneHint": "Enter the local or international number that will receive the confirmation request.", "loadingCountries": "Loading available countries…", "countriesError": "Unable to load the countries available for this operator.", "otpRequired": "The operator may require an OTP confirmation.", "walletDebit": "Amount requested from the wallet: {{amount}}", "promoPlaceholder": "Promo code",
     "applyPromo": "Apply", "continueProvider": "Continue with provider", "payLater": "Pay later", "pay": "Start payment",
     "retry": "New attempt", "check": "Check payment", "confirmCard": "Confirm card payment", "description": "{{plan}} subscription",
     "errorTitle": "Payment was not completed", "success": "Payment is confirmed. The dashboard will refresh.",
@@ -60,9 +66,9 @@
     "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Credit card" },
     "statuses": { "CREATED": "Attempt created", "PENDING": "Payment pending", "REQUIRES_ACTION": "Action required", "PROCESSING": "Payment processing", "SUCCEEDED": "Payment confirmed", "FAILED": "Payment failed", "CANCELLED": "Payment cancelled", "EXPIRED": "Payment expired" },
     "errors": {
-      "load": "Unable to load payment methods and attempts.", "phoneRequired": "A payer number is required for MTN or Orange Money.",
+      "load": "Unable to load payment methods and attempts.", "phoneRequired": "A payer number is required for MTN or Orange Money.", "countryRequired": "Choose a country supported by this operator.",
       "initiation": "Unable to start payment.", "confirmation": "Unable to confirm payment.", "promoRequired": "Enter a promo code.",
-      "promo": "This promo code cannot settle the invoice.", "card": "The card payment could not be confirmed."
+      "promo": "This promo code cannot settle the invoice.", "card": "The card payment could not be confirmed.", "cardSetup": "The payment server did not provide the card form. Try again later or contact support."
     }
   },
   "admin": {

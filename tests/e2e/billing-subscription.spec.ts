@@ -155,6 +155,17 @@ test('company subscribes and billing only becomes active after backend confirmat
       await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
       return;
     }
+    if (url.pathname === '/api/delivery/payments/providers/MTN/countries') {
+      await json([{
+        code: 'CM',
+        name: 'Cameroun',
+        currency: 'XAF',
+        callingCode: '+237',
+        provider: 'MTN',
+        otpRequired: false,
+      }]);
+      return;
+    }
     if (url.pathname === '/api/delivery/billing/invoices/93/payments' && request.method() === 'GET') {
       await json([]);
       return;
@@ -242,8 +253,9 @@ test('company subscribes and billing only becomes active after backend confirmat
   await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
 
   await expect.poll(() => paymentBody).toContain('+237690123456');
-  const parsedPaymentBody = JSON.parse(paymentBody) as { idempotencyKey: string };
+  const parsedPaymentBody = JSON.parse(paymentBody) as { idempotencyKey: string; country: string };
   expect(parsedPaymentBody.idempotencyKey).toMatch(/^billing-42-93-/);
+  expect(parsedPaymentBody.country).toBe('CM');
   await expect(paymentDialog.getByText(/Paiement en attente|Payment pending/)).toBeVisible();
   await paymentDialog.getByRole('button', { name: /Vérifier le paiement|Check payment/ }).click();
 
@@ -253,6 +265,10 @@ test('company subscribes and billing only becomes active after backend confirmat
     /Plan actif|Actif|Active plan|Active/,
   );
   await expect(page.getByText(/12 \/ 500/)).toBeVisible();
+  await expect(page.getByTestId('current-plan-features')).toContainText(
+    /Ramassage des colis|Parcel pickup/,
+  );
+  await expect(page.getByTestId('pickup-access-status')).toContainText(/Inclus|Included/);
   await expect(page.getByText(/Payée|Paid/, { exact: true }).filter({ visible: true })).toBeVisible();
 });
 
@@ -302,7 +318,7 @@ test('employee sees the inactive-plan warning without subscription actions', asy
         alertMessage: 'Choisissez un plan pour activer les envois.',
         activeSubscription: null,
         currentUsage: null,
-        availablePlans: [plan],
+        availablePlans: [{ ...plan, features: ['SHIPMENT_SENDING'] }],
         recentInvoices: [],
       });
       return;
@@ -340,6 +356,10 @@ test('employee sees the inactive-plan warning without subscription actions', asy
     page.getByText(/administrateur de l’entreprise|company administrator must activate/),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: /Choisir ce plan|Choose this plan/ })).toHaveCount(0);
+  await expect(page.getByTestId('billing-plan-7')).toContainText(
+    /Ramassage des colis|Parcel pickup/,
+  );
+  await expect(page.getByTestId('billing-plan-7')).toContainText(/Non inclus|Not included/);
 });
 
 test('super admin can create a subscription plan from platform finance', async ({ page }) => {

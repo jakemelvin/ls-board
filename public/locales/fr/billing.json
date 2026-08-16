@@ -48,6 +48,7 @@
     "noneTitle": "Aucun abonnement actif",
     "noneDescription": "Choisissez une offre éligible pour rendre l’entreprise opérationnelle.",
     "description": "Plan contractuel actuellement appliqué à l’entreprise.",
+    "featuresTitle": "Fonctionnalités du plan actif",
     "cycle": "Cycle",
     "startsAt": "Début",
     "endsAt": "Fin",
@@ -63,7 +64,10 @@
     "used": "{{count}} envoi(s) comptabilisé(s) ce mois.",
     "remaining": "{{count}} envoi(s) restant(s).",
     "national": "Envois nationaux",
-    "international": "Envois internationaux"
+    "international": "Envois internationaux",
+    "pickup": "Accès au ramassage",
+    "pickupEnabled": "Inclus",
+    "pickupDisabled": "Non inclus"
   },
   "plans": {
     "title": "Plans disponibles",
@@ -75,6 +79,12 @@
     "choose": "Choisir ce plan",
     "scope": "Périmètre",
     "quota": "Quota",
+    "pickupReady": "Ramassage inclus",
+    "featureIncluded": "Inclus",
+    "featureNotIncluded": "Non inclus",
+    "pickupUpgradeTitle": "Votre plan actif n’inclut pas le ramassage",
+    "pickupUpgradeDescription": "Choisissez une offre contenant la fonctionnalité Ramassage des colis pour publier et gérer des opportunités.",
+    "pickupUpgradeAction": "Voir les plans compatibles",
     "shipmentsPerMonth": "{{count}} / mois",
     "priceSuffix": { "MONTHLY": "par mois", "ANNUAL": "par an" }
   },
@@ -108,7 +118,15 @@
     "subtitle": "Facture {{reference}} — {{plan}}",
     "amountDue": "Montant dû en devise comptable",
     "chooseProvider": "Choisissez un moyen de paiement",
+    "countryLabel": "Pays du portefeuille Mobile Money",
+    "countryPlaceholder": "Choisissez un pays",
+    "phoneLabel": "Numéro Mobile Money",
     "phonePlaceholder": "+237 6XX XXX XXX",
+    "phoneHint": "Saisissez le numéro local ou international qui recevra la demande de confirmation.",
+    "loadingCountries": "Chargement des pays disponibles…",
+    "countriesError": "Impossible de charger les pays disponibles pour cet opérateur.",
+    "otpRequired": "Une confirmation OTP peut être demandée par l’opérateur.",
+    "walletDebit": "Montant demandé au portefeuille : {{amount}}",
     "promoPlaceholder": "Code promo",
     "applyPromo": "Appliquer",
     "continueProvider": "Continuer chez le fournisseur",
@@ -136,11 +154,13 @@
     "errors": {
       "load": "Impossible de charger les moyens et tentatives de paiement.",
       "phoneRequired": "Le numéro du payeur est requis pour MTN ou Orange Money.",
+      "countryRequired": "Choisissez un pays autorisé pour cet opérateur.",
       "initiation": "Impossible d’initier le paiement.",
       "confirmation": "Impossible de confirmer le paiement.",
       "promoRequired": "Saisissez un code promo.",
       "promo": "Ce code promo ne peut pas solder la facture.",
-      "card": "Le paiement par carte n’a pas pu être confirmé."
+      "card": "Le paiement par carte n’a pas pu être confirmé.",
+      "cardSetup": "Le formulaire carte n’a pas été fourni par le serveur de paiement. Réessayez plus tard ou contactez le support."
     }
   },
   "admin": {

@@ -8,10 +8,16 @@ export function PwaServiceWorkerRegister() {
       return;
     }
 
-    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    const canRegister = process.env.NODE_ENV === 'production' || isLocalhost;
-
-    if (!canRegister) {
+    if (process.env.NODE_ENV !== 'production') {
+      void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter((cacheName) => cacheName.startsWith('sendam-pwa-'))
+            .map((cacheName) => caches.delete(cacheName)),
+        );
+      });
       return;
     }
 

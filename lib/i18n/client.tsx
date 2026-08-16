@@ -24,6 +24,10 @@ import englishRegister from '@/public/locales/en/register.json'
 import englishShipmentCreate from '@/public/locales/en/shipment-create.json'
 import defaultBilling from '@/public/locales/fr/billing.json'
 import englishBilling from '@/public/locales/en/billing.json'
+import defaultCommissions from '@/public/locales/fr/commissions.json'
+import englishCommissions from '@/public/locales/en/commissions.json'
+import defaultPickups from '@/public/locales/fr/pickups.json'
+import englishPickups from '@/public/locales/en/pickups.json'
 
 import { defaultLocale, defaultNamespace, fallbackNamespace, locales, namespaces } from './settings'
 import type { Locale, Namespace } from './settings'
@@ -51,7 +55,7 @@ type I18nContextValue = {
 }
 
 const STORAGE_KEY = 'sendam_locale'
-const I18N_ASSET_VERSION = '2026-06-14-super-admin-shipments'
+const I18N_ASSET_VERSION = '2026-08-16-commissions-pickups'
 const localeResourceRequests = new Map<Locale, Promise<TranslationResources>>()
 
 const bundledResources: Record<Locale, TranslationResources> = {
@@ -63,6 +67,8 @@ const bundledResources: Record<Locale, TranslationResources> = {
     register: defaultRegister as TranslationFile,
     'shipment-create': defaultShipmentCreate as TranslationFile,
     billing: defaultBilling as TranslationFile,
+    commissions: defaultCommissions as TranslationFile,
+    pickups: defaultPickups as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -72,6 +78,8 @@ const bundledResources: Record<Locale, TranslationResources> = {
     register: englishRegister as TranslationFile,
     'shipment-create': englishShipmentCreate as TranslationFile,
     billing: englishBilling as TranslationFile,
+    commissions: englishCommissions as TranslationFile,
+    pickups: englishPickups as TranslationFile,
   },
 }
 

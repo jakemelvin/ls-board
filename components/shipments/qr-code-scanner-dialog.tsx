@@ -22,6 +22,20 @@ type BarcodeDetectorInstance = {
 };
 type BarcodeDetectorConstructor = new (options: { formats: string[] }) => BarcodeDetectorInstance;
 
+function getCameraErrorKey(error?: unknown) {
+  if (!window.isSecureContext) return 'collectorReception.scanner.cameraHttpsRequired';
+
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'collectorReception.scanner.cameraPermissionDenied';
+  }
+
+  if (error instanceof DOMException && error.name === 'NotFoundError') {
+    return 'collectorReception.scanner.cameraUnavailable';
+  }
+
+  return 'collectorReception.scanner.cameraError';
+}
+
 function loadImageFile(file: File) {
   return new Promise<{ image: HTMLImageElement; url: string }>((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -182,13 +196,17 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
       if (cancelled || controlsRef.current) return;
       stopScanner();
       setIsStarting(false);
-      setCameraError(translateRef.current('collectorReception.scanner.cameraError'));
+      setCameraError(translateRef.current(getCameraErrorKey()));
     }, CAMERA_START_TIMEOUT_MS);
 
     const startScanner = async () => {
       if (!videoRef.current) return;
 
       try {
+        if (!window.isSecureContext) {
+          throw new Error('Insecure context');
+        }
+
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error('Camera API unavailable');
         }
@@ -235,10 +253,10 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
         }
         controlsRef.current = controls;
         window.clearTimeout(startupTimeout);
-      } catch {
+      } catch (error) {
         if (!cancelled) {
           stopScanner();
-          setCameraError(translateRef.current('collectorReception.scanner.cameraError'));
+          setCameraError(translateRef.current(getCameraErrorKey(error)));
         }
       } finally {
         if (!cancelled) setIsStarting(false);
