@@ -67,6 +67,7 @@ test('map uses nearby and location collection-point endpoints', async ({ page })
     if (url.pathname === '/api/delivery/collection-points/search/by-location') {
       await json([
         searchResult({ id: 7, name: 'Point Bonapriso', companyId: 1, companyName: 'Express Delivery', latitude: 4.02, longitude: 9.69 }),
+        searchResult({ id: 8, name: 'Point Yaounde', companyId: 2, companyName: 'Reseau Centre', latitude: 3.8667, longitude: 11.5167, cityId: 2, cityName: 'Yaounde' }),
       ]);
       return;
     }
@@ -97,6 +98,7 @@ test('map uses nearby and location collection-point endpoints', async ({ page })
   await page.getByLabel(/Ville|City/).selectOption('1');
   await expect(page.getByText('Point Bonapriso').first()).toBeVisible();
   const locationRequest = requestedUrls.find((entry) => entry.includes('/search/by-location'));
+  await expect(page.getByText('Point Yaounde')).not.toBeVisible();
   expect(locationRequest).toContain('countryId=47');
   expect(locationRequest).toContain('cityId=1');
 });
@@ -109,6 +111,8 @@ function searchResult({
   distanceKm,
   latitude,
   longitude,
+  cityId = 1,
+  cityName = 'Douala',
 }: {
   id: number;
   name: string;
@@ -117,6 +121,8 @@ function searchResult({
   distanceKm?: number;
   latitude: number;
   longitude: number;
+  cityId?: number;
+  cityName?: string;
 }) {
   return {
     companyId,
@@ -127,9 +133,9 @@ function searchResult({
       id,
       reference: `CP-${id}`,
       name,
-      city: { cityId: 1, cityName: 'Douala', countryId: 47, countryName: 'Cameroun' },
-      zone: { id: 1, name: 'Douala', city: { cityName: 'Douala' } },
-      address: 'Douala, Cameroun',
+      city: { cityId, cityName, countryId: 47, countryName: 'Cameroun' },
+      zone: { id: 1, name: cityName, city: { cityName } },
+      address: `${cityName}, Cameroun`,
       phone: '237600000000',
       latitude,
       longitude,

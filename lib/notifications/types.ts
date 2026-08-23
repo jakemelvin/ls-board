@@ -13,7 +13,9 @@ export type NotificationType =
   | 'SHIPMENT_READY_FOR_PICKUP'
   | 'SHIPMENT_DELIVERED'
   | 'SHIPMENT_CANCELLED'
-  | 'PAYMENT_STATUS_UPDATED';
+  | 'PAYMENT_STATUS_UPDATED'
+  | 'COMMISSION_STATUS_UPDATED'
+  | 'PARCEL_PICKUP_UPDATED';
 
 export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type NotificationChannel = 'IN_APP' | 'PUSH' | 'EMAIL';

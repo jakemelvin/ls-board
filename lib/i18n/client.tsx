@@ -23,6 +23,8 @@ import englishPending from '@/public/locales/en/pending.json'
 import englishRegister from '@/public/locales/en/register.json'
 import englishShipmentCreate from '@/public/locales/en/shipment-create.json'
 import defaultBilling from '@/public/locales/fr/billing.json'
+import defaultLegal from '@/public/locales/fr/legal.json'
+import englishLegal from '@/public/locales/en/legal.json'
 import englishBilling from '@/public/locales/en/billing.json'
 import defaultCommissions from '@/public/locales/fr/commissions.json'
 import englishCommissions from '@/public/locales/en/commissions.json'
@@ -69,6 +71,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     billing: defaultBilling as TranslationFile,
     commissions: defaultCommissions as TranslationFile,
     pickups: defaultPickups as TranslationFile,
+    legal: defaultLegal as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -80,6 +83,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     billing: englishBilling as TranslationFile,
     commissions: englishCommissions as TranslationFile,
     pickups: englishPickups as TranslationFile,
+    legal: englishLegal as TranslationFile,
   },
 }
 

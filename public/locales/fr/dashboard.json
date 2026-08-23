@@ -596,6 +596,8 @@
       "ACCOUNT": "Compte",
       "COMPANY_ANNOUNCEMENT": "Annonce entreprise",
       "COMPANY_REVIEW": "Revue entreprise",
+      "COMMISSION_STATUS_UPDATED": "Commission",
+      "PARCEL_PICKUP_UPDATED": "Ramassage de colis",
       "PAYMENT_STATUS_UPDATED": "Paiement",
       "PROMOTION": "Promotion",
       "SHIPMENT_CANCELLED": "Colis annulé",

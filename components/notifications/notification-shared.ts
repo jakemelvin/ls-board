@@ -40,6 +40,8 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
   'SHIPMENT_DELIVERED',
   'SHIPMENT_CANCELLED',
   'PAYMENT_STATUS_UPDATED',
+  'COMMISSION_STATUS_UPDATED',
+  'PARCEL_PICKUP_UPDATED',
 ];
 
 export const NOTIFICATION_PRIORITIES: NotificationPriority[] = [
@@ -111,7 +113,23 @@ export const notificationTypeMeta: Record<
     icon: CreditCard,
     className: 'border-chart-1/20 bg-chart-1/10 text-chart-1',
   },
+  COMMISSION_STATUS_UPDATED: {
+    icon: CreditCard,
+    className: 'border-chart-1/20 bg-chart-1/10 text-chart-1',
+  },
+  PARCEL_PICKUP_UPDATED: {
+    icon: PackageCheck,
+    className: 'border-chart-5/20 bg-chart-5/10 text-chart-5',
+  },
 };
+
+/**
+ * The API can introduce a notification type before the frontend is deployed.
+ * Render it with the generic system treatment instead of breaking the inbox.
+ */
+export function getNotificationTypeMeta(type: string | undefined) {
+  return notificationTypeMeta[type as NotificationType] ?? notificationTypeMeta.SYSTEM;
+}
 
 export function formatNotificationDate(value: string | undefined, locale: string) {
   if (!value) return '';

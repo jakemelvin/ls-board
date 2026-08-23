@@ -42,8 +42,8 @@ import type {
 import { cn } from '@/lib/utils';
 import {
   formatNotificationDate,
+  getNotificationTypeMeta,
   NOTIFICATION_STATUSES,
-  notificationTypeMeta,
   priorityClassName,
 } from './notification-shared';
 
@@ -321,7 +321,7 @@ export function NotificationBell({ token }: NotificationBellProps) {
             <div className="divide-y divide-border">
               {notifications.map((notification) => {
                 const busy = actionId === notification.id;
-                const typeMeta = notificationTypeMeta[notification.type];
+                const typeMeta = getNotificationTypeMeta(notification.type);
                 const TypeIcon = typeMeta.icon;
 
                 return (

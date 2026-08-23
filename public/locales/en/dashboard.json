@@ -596,6 +596,8 @@
       "ACCOUNT": "Account",
       "COMPANY_ANNOUNCEMENT": "Company announcement",
       "COMPANY_REVIEW": "Company review",
+      "COMMISSION_STATUS_UPDATED": "Commission",
+      "PARCEL_PICKUP_UPDATED": "Parcel pickup",
       "PAYMENT_STATUS_UPDATED": "Payment",
       "PROMOTION": "Promotion",
       "SHIPMENT_CANCELLED": "Shipment cancelled",

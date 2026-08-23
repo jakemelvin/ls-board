@@ -79,10 +79,10 @@ import type {
 import { cn } from '@/lib/utils';
 import {
   formatNotificationDate,
+  getNotificationTypeMeta,
   NOTIFICATION_PRIORITIES,
   NOTIFICATION_STATUSES,
   NOTIFICATION_TYPES,
-  notificationTypeMeta,
   priorityClassName,
 } from '@/components/notifications/notification-shared';
 
@@ -346,7 +346,7 @@ function NotificationCard({
 }) {
   const { t } = useTranslation('dashboard');
   const busy = actionId === notification.id;
-  const typeMeta = notificationTypeMeta[notification.type];
+  const typeMeta = getNotificationTypeMeta(notification.type);
   const TypeIcon = typeMeta.icon;
 
   return (

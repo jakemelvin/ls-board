@@ -199,11 +199,16 @@ export function CollectionPointsMap({ currentRole, currentUser }: CollectionPoin
         });
         if (!isLatestRequest(requestId)) return;
         setSearchMode('LOCATION');
+        const matchingLocation = response.filter(
+          (item) =>
+            item.collectionPoint.city.countryId === nextCountryId &&
+            item.collectionPoint.city.cityId === nextCityId,
+        );
         setUserLocation(null);
-        setSearchResults(response);
+        setSearchResults(matchingLocation);
         setMessage(
-          response.length > 0
-            ? t('collectionPointsMap.messages.locationResults', { values: { count: response.length } })
+          matchingLocation.length > 0
+            ? t('collectionPointsMap.messages.locationResults', { values: { count: matchingLocation.length } })
             : t('collectionPointsMap.messages.noLocationResults'),
         );
       } catch (cause) {

@@ -149,6 +149,7 @@ export interface CollectionPointResponse {
   name: string;
   city: {
     cityName: string;
+    cityId: number;
     countryId: number;
   };
   zone: ZoneResponse;

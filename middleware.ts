@@ -4,7 +4,13 @@ import { isTokenExpired } from '@/lib/auth/session';
 
 const AUTH_COOKIE = 'sendam_auth_token';
 
-const PUBLIC_PATHS = ['/login', '/register', '/pending', '/forgot-password'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/register',
+  '/pending',
+  '/forgot-password',
+  '/conditions-generales',
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
