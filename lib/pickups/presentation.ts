@@ -12,6 +12,7 @@ export const PICKUP_OPPORTUNITY_STATUS_KEYS: Record<ParcelPickupOpportunityStatu
 
 export const PICKUP_NEGOTIATION_STATUS_KEYS: Record<ParcelPickupNegotiationStatus, string> = {
   PENDING_COMPANY_REVIEW: 'negotiationStatuses.PENDING_COMPANY_REVIEW',
+  PENDING_CLIENT_REVIEW: 'negotiationStatuses.PENDING_CLIENT_REVIEW',
   REJECTED: 'negotiationStatuses.REJECTED',
   AWAITING_DEPOSIT_PAYMENT: 'negotiationStatuses.AWAITING_DEPOSIT_PAYMENT',
   DEPOSIT_PAYMENT_PENDING: 'negotiationStatuses.DEPOSIT_PAYMENT_PENDING',
@@ -41,7 +42,7 @@ export function getPickupStatusClassName(
   if (status === 'ACTIVE' || status === 'AGREED' || status === 'DELIVERED') {
     return 'bg-success/15 text-success';
   }
-  if (status === 'PENDING_COMPANY_REVIEW' || status === 'AWAITING_DEPOSIT_PAYMENT') {
+  if (status === 'PENDING_COMPANY_REVIEW' || status === 'PENDING_CLIENT_REVIEW' || status === 'AWAITING_DEPOSIT_PAYMENT') {
     return 'bg-warning/15 text-warning';
   }
   if (status === 'DEPOSIT_PAYMENT_PENDING' || status === 'PICKED_UP' || status === 'IN_TRANSIT') {

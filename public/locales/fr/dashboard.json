@@ -94,7 +94,8 @@
       "settings": "Paramètres",
       "team": "Gestion d'équipe",
       "transferRequests": "Demandes de prise",
-      "transportModes": "Modes de transport"
+      "transportModes": "Modes de transport",
+      "pickupAdministration": "Administration ramassage"
     }
   },
   "profile": {
@@ -1189,9 +1190,9 @@
       "fees": "Frais shipment",
       "payments": "Modes paiement",
       "promos": "Codes promo",
-      "traceability": "Transactions et paiements"
-      ,"plans": "Plans d'abonnement"
-      ,"subscriptions": "Abonnements entreprises"
+      "traceability": "Transactions et paiements",
+      "plans": "Plans d'abonnement",
+      "subscriptions": "Abonnements entreprises"
     },
     "trace": {
       "allProviders": "Tous les fournisseurs",
@@ -1213,7 +1214,9 @@
       "companyTitle": "Transactions et paiements",
       "details": "Details",
       "empty": "Aucune donnee financiere disponible.",
-      "errors": { "load": "Impossible de charger la tracabilite financiere." },
+      "errors": {
+        "load": "Impossible de charger la tracabilite financiere."
+      },
       "failedAttempts": "Tentatives echouees",
       "filterProvider": "Filtrer par fournisseur",
       "filterPurpose": "Filtrer par finalité",

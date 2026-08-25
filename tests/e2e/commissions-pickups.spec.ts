@@ -96,15 +96,16 @@ test('company declares a commission batch without marking it paid', async ({ pag
 });
 
 test('company pickup view trusts server capacity and accepts a proposal', async ({ page }) => {
-  let decisionPayload: { note?: string } | null = null;
+  let decisionPayload: { messageId?: number } | null = null;
   let servedCityLoads = 0;
   await installCompanyBaseRoutes(page, async (route, url) => {
+    if (url.pathname === '/api/delivery/pickups/negotiation-messages') { await json(route, [{ id: 23, intervenant: 'COMPANY', language: 'FR', text: 'Montant confirmé.', active: true }]); return true; }
     if (url.pathname === '/api/delivery/pickups/companies/17/opportunities') {
       await json(route, { content: [{ id: 31, reference: 'PUO-31', companyId: 17, companyName: 'Express Delivery', originCityId: 1, originCity: 'Douala', destinationCityId: 2, destinationCity: 'Yaoundé', vehicleType: 'VAN', maxAvailableVolumeM3: 18.5, availableVolumeM3: 16, price: 30000, currency: 'XAF', travelDate: '2026-08-25', publicationStartsAt: '2026-08-15T08:00:00', status: 'ACTIVE', driverFullName: 'Jean Driver', driverContactVisible: false, createdAt: '2026-08-14T08:00:00' }], totalPages: 1, totalElements: 1, number: 0, size: 20, first: true, last: true, empty: false });
       return true;
     }
     if (url.pathname === '/api/delivery/pickups/companies/17/negotiations' && route.request().method() === 'GET') {
-      await json(route, { content: [{ activityType: 'PARCEL_PICKUP', id: 55, reference: 'PUN-55', opportunity: { id: 31, reference: 'PUO-31', companyId: 17, companyName: 'Express Delivery', originCityId: 1, originCity: 'Douala', destinationCityId: 2, destinationCity: 'Yaoundé', vehicleType: 'VAN', maxAvailableVolumeM3: 18.5, availableVolumeM3: 16, price: 30000, currency: 'XAF', travelDate: '2026-08-25', publicationStartsAt: '2026-08-15T08:00:00', status: 'ACTIVE', driverFullName: 'Jean Driver', driverContactVisible: false, createdAt: '2026-08-14T08:00:00' }, clientId: 99, clientName: 'Client Test', parcelTypeId: 3, parcelTypeName: 'Cartons', proposalType: 'COUNTER_OFFER', requestedVolumeM3: 2.5, proposedPrice: 25000, currency: 'XAF', status: 'PENDING_COMPANY_REVIEW', contactsUnlocked: false, trackingHistory: [], createdAt: '2026-08-16T08:00:00' }], totalPages: 1, totalElements: 1, number: 0, size: 20, first: true, last: true, empty: false });
+      await json(route, { content: [{ activityType: 'PARCEL_PICKUP', id: 55, reference: 'PUN-55', opportunity: { id: 31, reference: 'PUO-31', companyId: 17, companyName: 'Express Delivery', originCityId: 1, originCity: 'Douala', destinationCityId: 2, destinationCity: 'Yaoundé', vehicleType: 'VAN', maxAvailableVolumeM3: 18.5, availableVolumeM3: 16, price: 30000, currency: 'XAF', travelDate: '2026-08-25', publicationStartsAt: '2026-08-15T08:00:00', status: 'ACTIVE', driverFullName: 'Jean Driver', driverContactVisible: false, createdAt: '2026-08-14T08:00:00' }, clientId: 99, clientName: 'Client Test', parcelTypeId: 3, parcelTypeName: 'Cartons', proposalType: 'COUNTER_OFFER', requestedVolumeM3: 2.5, proposedPrice: 25000, currency: 'XAF', status: 'PENDING_COMPANY_REVIEW', actionRequiredBy: 'COMPANY', canCounterOffer: true, contactsUnlocked: false, trackingHistory: [], createdAt: '2026-08-16T08:00:00' }], totalPages: 1, totalElements: 1, number: 0, size: 20, first: true, last: true, empty: false });
       return true;
     }
     if (url.pathname === '/api/delivery/pickups/companies/17/negotiations/55/accept') {
@@ -147,12 +148,10 @@ test('company pickup view trusts server capacity and accepts a proposal', async 
   await expect(page.getByText('16 / 18.5 m³')).toBeVisible();
   await page.getByRole('tab', { name: /Propositions|Proposals/ }).click();
   await page.getByRole('button', { name: /Accepter|Accept/ }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByLabel(/Note/).fill('Capacité vérifiée');
-  await dialog.getByRole('button', { name: /Accepter|Accept/ }).click();
+  const dialog = page.getByRole('dialog');  await dialog.getByRole('button', { name: /Accepter|Accept/ }).click();
   await expect.poll(() => decisionPayload).not.toBeNull();
-  const submittedDecision = decisionPayload as unknown as { note: string };
-  expect(submittedDecision.note).toBe('Capacité vérifiée');
+  const submittedDecision = decisionPayload as unknown as { messageId?: number };
+  expect(submittedDecision).toEqual({});
   await expect(page.getByText(/acompte du client|client deposit/i)).toBeVisible();
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     expect(await page.locator('main').evaluate((element) => element.scrollWidth > element.clientWidth + 1)).toBe(false);

@@ -1,9 +1,12 @@
 import type { Page } from '@/lib/admin/types';
 
 export type ParcelPickupOpportunityStatus = 'ACTIVE' | 'CLOSED' | 'CANCELLED';
-export type ParcelPickupProposalType = 'ACCEPT_LISTED_PRICE' | 'COUNTER_OFFER';
+export type ParcelPickupProposalType = 'ACCEPT_LISTED_PRICE' | 'PROPOSE_PRICE' | 'COUNTER_OFFER';
+export type PickupNegotiationParty = 'CLIENT' | 'COMPANY';
+export type PickupMessageLanguage = 'FR' | 'EN';
 export type ParcelPickupNegotiationStatus =
   | 'PENDING_COMPANY_REVIEW'
+  | 'PENDING_CLIENT_REVIEW'
   | 'REJECTED'
   | 'AWAITING_DEPOSIT_PAYMENT'
   | 'DEPOSIT_PAYMENT_PENDING'
@@ -90,11 +93,67 @@ export interface ParcelPickupProposalRequest {
   proposalType: ParcelPickupProposalType;
   requestedVolumeM3: number;
   proposedPrice?: number;
-  note?: string;
+  messageId?: number;
 }
 
 export interface ParcelPickupDecisionRequest {
-  note?: string;
+  messageId?: number;
+}
+
+export interface ParcelPickupCounterOfferRequest {
+  amount: number;
+  messageId?: number;
+}
+
+export interface PickupNegotiationMessageResponse {
+  id: number;
+  intervenant: PickupNegotiationParty;
+  language: PickupMessageLanguage;
+  text: string;
+  active: boolean;
+}
+
+export interface PickupNegotiationMessageRequest {
+  intervenant: PickupNegotiationParty;
+  language: PickupMessageLanguage;
+  text: string;
+  active?: boolean;
+}
+
+export interface PickupConfigurationResponse {
+  maxCounterOffers: number;
+  depositPercentage: number;
+  updatedAt?: string | null;
+  updatedByUserId?: number | null;
+  updatedByName?: string | null;
+}
+
+export interface UpdatePickupConfigurationRequest {
+  maxCounterOffers: number;
+  depositPercentage: number;
+  reason?: string;
+}
+
+export interface PickupConfigurationHistoryResponse {
+  id: number;
+  previousMaxCounterOffers?: number | null;
+  newMaxCounterOffers: number;
+  previousDepositPercentage?: number | null;
+  newDepositPercentage: number;
+  changedByUserId?: number | null;
+  changedByName?: string | null;
+  reason?: string | null;
+  createdAt: string;
+}
+export interface ParcelPickupOfferResponse {
+  id?: number;
+  offeredBy: PickupNegotiationParty;
+  offerType: ParcelPickupProposalType;
+  amount?: number | null;
+  sequenceNumber: number;
+  predefinedMessageId?: number | null;
+  message?: string | null;
+  accepted: boolean;
 }
 
 export interface ParcelPickupTrackingRequest {
@@ -125,7 +184,15 @@ export interface ParcelPickupNegotiationResponse {
   proposalType: ParcelPickupProposalType;
   requestedVolumeM3: number;
   proposedPrice?: number | null;
+  lastOfferBy?: PickupNegotiationParty | null;
+  actionRequiredBy?: PickupNegotiationParty | null;
+  counterOfferCount?: number;
+  maxCounterOffers?: number;
+  counterOffersRemaining?: number;
+  counterOfferLimitReached?: boolean;
+  canCounterOffer?: boolean;
   agreedPrice?: number | null;
+  depositPercentage?: number | null;
   depositAmount?: number | null;
   remainingAmount?: number | null;
   currency: string;
@@ -135,6 +202,7 @@ export interface ParcelPickupNegotiationResponse {
   companyPhone?: string | null;
   driverWhatsapp?: string | null;
   trackingHistory?: ParcelPickupTrackingResponse[];
+  offers?: ParcelPickupOfferResponse[];
   reviewedAt?: string | null;
   createdAt: string;
   updatedAt?: string | null;

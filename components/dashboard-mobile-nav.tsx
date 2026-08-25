@@ -33,6 +33,7 @@ const primaryItems = [
 const SUPER_ADMIN_ITEMS = [
   { id: 'super-admin', labelKey: 'shell.sections.administration', icon: ShieldCheck },
   { id: 'catalog', labelKey: 'shell.sections.catalog', icon: Boxes },
+  { id: 'pickup-administration', labelKey: 'shell.sections.pickupAdministration', icon: ShieldCheck },
   { id: 'super-admin-shipments', labelKey: 'shell.sections.platformShipmentsShort', icon: PackageSearch },
   { id: 'platform-finance', labelKey: 'shell.sections.platformFinanceShort', icon: CreditCard },
 ];

@@ -94,7 +94,8 @@
       "settings": "Settings",
       "team": "Team management",
       "transferRequests": "Pickup requests",
-      "transportModes": "Transport modes"
+      "transportModes": "Transport modes",
+      "pickupAdministration": "Pickup administration"
     }
   },
   "profile": {
@@ -1189,9 +1190,9 @@
       "fees": "Shipment fees",
       "payments": "Payment modes",
       "promos": "Promo codes",
-      "traceability": "Transactions and payments"
-      ,"plans": "Subscription plans"
-      ,"subscriptions": "Company subscriptions"
+      "traceability": "Transactions and payments",
+      "plans": "Subscription plans",
+      "subscriptions": "Company subscriptions"
     },
     "trace": {
       "allProviders": "All providers",
@@ -1213,7 +1214,9 @@
       "companyTitle": "Transactions and payments",
       "details": "Details",
       "empty": "No financial data available.",
-      "errors": { "load": "Unable to load financial traceability." },
+      "errors": {
+        "load": "Unable to load financial traceability."
+      },
       "failedAttempts": "Failed attempts",
       "filterProvider": "Filter by provider",
       "filterPurpose": "Filter by purpose",

@@ -3,6 +3,7 @@ import type {
   NegotiationListParams,
   OpportunityListParams,
   ParcelPickupDecisionRequest,
+  ParcelPickupCounterOfferRequest,
   ParcelPickupNegotiationPage,
   ParcelPickupNegotiationResponse,
   ParcelPickupOpportunityPage,
@@ -11,6 +12,11 @@ import type {
   ParcelPickupTrackingRequest,
   PickupParcelTypeRequest,
   PickupParcelTypeResponse,
+  PickupNegotiationMessageResponse,
+  PickupNegotiationMessageRequest,
+  PickupConfigurationResponse,
+  PickupConfigurationHistoryResponse,
+  UpdatePickupConfigurationRequest,
 } from './types';
 
 function withQuery(path: string, params: Record<string, unknown>) {
@@ -166,6 +172,49 @@ export function rejectCompanyPickupNegotiation(
   );
 }
 
+export function counterOfferCompanyPickupNegotiation(
+  token: string,
+  companyId: number,
+  negotiationId: number,
+  data: ParcelPickupCounterOfferRequest,
+): Promise<ParcelPickupNegotiationResponse> {
+  return apiClient.post<ParcelPickupNegotiationResponse>(
+    `/api/delivery/pickups/companies/${companyId}/negotiations/${negotiationId}/counter-offers`,
+    data,
+    token,
+  );
+}
+
+export function getPickupAdministrationConfiguration(token: string): Promise<PickupConfigurationResponse> {
+  return apiClient.get<PickupConfigurationResponse>('/api/delivery/pickups/admin/configuration', token);
+}
+
+export function updatePickupAdministrationConfiguration(token: string, data: UpdatePickupConfigurationRequest): Promise<PickupConfigurationResponse> {
+  return apiClient.put<PickupConfigurationResponse>('/api/delivery/pickups/admin/configuration', data, token);
+}
+
+export function getPickupConfigurationHistory(token: string, page = 0, size = 20): Promise<import('@/lib/admin/types').Page<PickupConfigurationHistoryResponse>> {
+  return apiClient.get<import('@/lib/admin/types').Page<PickupConfigurationHistoryResponse>>(withQuery('/api/delivery/pickups/admin/configuration/history', { page, size, sort: 'createdAt,desc' }), token);
+}
+
+export function getPickupAdministrationMessages(token: string, params: { intervenant?: string; language?: string; active?: boolean; page?: number; size?: number } = {}): Promise<import('@/lib/admin/types').Page<PickupNegotiationMessageResponse>> {
+  return apiClient.get<import('@/lib/admin/types').Page<PickupNegotiationMessageResponse>>(withQuery('/api/delivery/pickups/admin/negotiation-messages', { page: 0, size: 50, sort: 'text,asc', ...params }), token);
+}
+
+export function createPickupNegotiationMessage(token: string, data: PickupNegotiationMessageRequest): Promise<PickupNegotiationMessageResponse> {
+  return apiClient.post<PickupNegotiationMessageResponse>('/api/delivery/pickups/admin/negotiation-messages', data, token);
+}
+
+export function updatePickupNegotiationMessage(token: string, id: number, data: PickupNegotiationMessageRequest): Promise<PickupNegotiationMessageResponse> {
+  return apiClient.put<PickupNegotiationMessageResponse>(`/api/delivery/pickups/admin/negotiation-messages/${id}`, data, token);
+}
+
+export function setPickupNegotiationMessageActive(token: string, id: number, active: boolean): Promise<PickupNegotiationMessageResponse> {
+  return apiClient.patch<PickupNegotiationMessageResponse>(`/api/delivery/pickups/admin/negotiation-messages/${id}/activation?active=${active}`, undefined, token);
+}
+export function getPickupNegotiationMessages(token: string): Promise<PickupNegotiationMessageResponse[]> {
+  return apiClient.get<PickupNegotiationMessageResponse[]>('/api/delivery/pickups/negotiation-messages', token);
+}
 export function getPickupNegotiation(
   token: string,
   negotiationId: number,

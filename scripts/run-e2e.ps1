@@ -48,7 +48,7 @@ try {
 
   $env:PLAYWRIGHT_BASE_URL = $baseUrl
   $env:PLAYWRIGHT_SKIP_WEBSERVER = '1'
-  & $nodeBin $playwrightCli test @args
+  & $nodeBin $playwrightCli test --workers=1 @args
   exit $LASTEXITCODE
 } finally {
   if ($startedServer -and $server -and -not $server.HasExited) {

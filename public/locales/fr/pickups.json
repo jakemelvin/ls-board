@@ -1,17 +1,196 @@
 {
-  "title": "Ramassages", "subtitle": "Publiez vos capacités disponibles et pilotez les accords de ramassage.",
-  "tabs": { "opportunities": "Opportunités", "negotiations": "Propositions" },
-  "actions": { "create": "Publier un trajet", "refresh": "Actualiser", "details": "Détails", "close": "Clôturer", "cancel": "Annuler", "edit": "Modifier", "accept": "Accepter", "reject": "Refuser", "confirm": "Confirmer", "managePlan": "Voir les abonnements", "track": "Mettre à jour le suivi" },
-  "plan": { "title": "Ramassage non inclus dans le plan", "description": "La création et les décisions nécessitent la fonctionnalité PARCEL_PICKUP. Les données existantes restent consultables." },
-  "filters": { "allStatuses": "Tous les statuts" },
-  "cities": { "select": "Sélectionnez une ville", "search": "Rechercher une ville ou un pays…", "loading": "Chargement des villes desservies…", "empty": "Aucune ville desservie trouvée.", "loadError": "Impossible de charger les villes desservies.", "servedOnly": "Seules les villes desservies par une entreprise opérationnelle sont proposées.", "selectedUnavailable": "Ville actuellement indisponible — sélectionnez-en une autre" },
-  "opportunityStatuses": { "ACTIVE": "Active", "CLOSED": "Clôturée", "CANCELLED": "Annulée" },
-  "negotiationStatuses": { "PENDING_COMPANY_REVIEW": "À examiner", "REJECTED": "Refusée", "AWAITING_DEPOSIT_PAYMENT": "Acompte attendu", "DEPOSIT_PAYMENT_PENDING": "Paiement en cours", "AGREED": "Accord conclu", "PICKED_UP": "Colis récupéré", "IN_TRANSIT": "En transit", "DELIVERED": "Livré", "CANCELLED": "Annulée" },
-  "trackingActions": { "PROPOSAL_CREATED": "Proposition créée", "COMPANY_ACCEPTED": "Proposition acceptée", "COMPANY_REJECTED": "Proposition refusée", "DEPOSIT_PAYMENT_INITIATED": "Paiement initié", "DEPOSIT_PAYMENT_CONFIRMED": "Acompte confirmé", "DEPOSIT_PAYMENT_FAILED": "Paiement échoué", "PICKUP_CONFIRMED": "Confirmer le ramassage", "TRANSPORT_STARTED": "Démarrer le transport", "DELIVERY_CONFIRMED": "Confirmer la livraison", "CANCELLED": "Annulé" },
-  "fields": { "reference": "Référence", "route": "Itinéraire", "driver": "Chauffeur", "driverWhatsapp": "WhatsApp chauffeur", "origin": "Ville de départ", "destination": "Ville d’arrivée", "vehicle": "Type de véhicule", "capacity": "Capacité maximale (m³)", "available": "Capacité disponible", "price": "Prix publié", "travelDate": "Date de voyage", "windowStart": "Début de passage", "windowEnd": "Fin de passage", "description": "Description", "publication": "Début de publication", "client": "Client", "parcelType": "Type de colis", "volume": "Volume demandé", "proposal": "Prix proposé", "agreed": "Prix convenu", "deposit": "Acompte (25 %)", "remaining": "Solde", "contacts": "Contacts déverrouillés", "note": "Note", "internalDriver": "Chauffeur interne" },
-  "dialogs": { "createTitle": "Publier une opportunité", "createDescription": "La capacité disponible sera contrôlée et réservée par le serveur.", "acceptTitle": "Accepter la proposition", "acceptDescription": "Le prix et le volume seront verrouillés. Le client devra payer l’acompte de 25 %.", "rejectTitle": "Refuser la proposition", "rejectDescription": "La proposition sera clôturée et le client sera notifié.", "trackingTitle": "Suivi du ramassage", "trackingDescription": "Les transitions doivent être exécutées dans l’ordre.", "notePlaceholder": "Ajoutez un contexte utile…", "closeTitle": "Clôturer l’opportunité", "closeDescription": "Aucune nouvelle proposition ne pourra être créée.", "cancelTitle": "Annuler l’opportunité", "cancelDescription": "L’annulation peut être refusée si une capacité est déjà réservée." },
-  "empty": { "opportunities": "Aucune opportunité de ramassage.", "negotiations": "Aucune proposition à afficher.", "tracking": "Aucun événement de suivi." },
-  "messages": { "loadError": "Impossible de charger les ramassages.", "created": "Opportunité publiée.", "updated": "Opportunité mise à jour.", "closed": "Opportunité clôturée.", "cancelled": "Opportunité annulée.", "accepted": "Proposition acceptée. L’acompte du client est maintenant attendu.", "rejected": "Proposition refusée.", "tracked": "Suivi mis à jour.", "actionError": "L’action n’a pas pu être finalisée.", "stateReloaded": "L’état serveur a changé. Les données ont été actualisées.", "featureRequired": "Votre abonnement actif n’inclut pas le ramassage." },
-  "validation": { "required": "Champ obligatoire", "differentCities": "Les villes de départ et d’arrivée doivent être différentes.", "positiveCapacity": "La capacité doit être supérieure à zéro." },
-  "catalog": { "title": "Types de colis de ramassage", "subtitle": "Référentiel distinct des types de colis shipment.", "create": "Ajouter un type", "edit": "Modifier le type", "name": "Nom", "description": "Description", "active": "Actif", "inactive": "Inactif", "saved": "Type de colis enregistré.", "statusUpdated": "Statut mis à jour.", "empty": "Aucun type de colis de ramassage." }
+  "title": "Ramassages",
+  "subtitle": "Publiez vos capacités disponibles et pilotez les accords de ramassage.",
+  "tabs": {
+    "opportunities": "Opportunités",
+    "negotiations": "Propositions"
+  },
+  "actions": {
+    "create": "Publier un trajet",
+    "refresh": "Actualiser",
+    "details": "Détails",
+    "close": "Clôturer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "accept": "Accepter",
+    "reject": "Refuser",
+    "confirm": "Confirmer",
+    "managePlan": "Voir les abonnements",
+    "track": "Mettre à jour le suivi",
+    "counterOffer": "Contre-offrir"
+  },
+  "plan": {
+    "title": "Ramassage non inclus dans le plan",
+    "description": "La création et les décisions nécessitent la fonctionnalité PARCEL_PICKUP. Les données existantes restent consultables."
+  },
+  "filters": {
+    "allStatuses": "Tous les statuts"
+  },
+  "cities": {
+    "select": "Sélectionnez une ville",
+    "search": "Rechercher une ville ou un pays…",
+    "loading": "Chargement des villes desservies…",
+    "empty": "Aucune ville desservie trouvée.",
+    "loadError": "Impossible de charger les villes desservies.",
+    "servedOnly": "Seules les villes desservies par une entreprise opérationnelle sont proposées.",
+    "selectedUnavailable": "Ville actuellement indisponible — sélectionnez-en une autre"
+  },
+  "opportunityStatuses": {
+    "ACTIVE": "Active",
+    "CLOSED": "Clôturée",
+    "CANCELLED": "Annulée"
+  },
+  "negotiationStatuses": {
+    "PENDING_COMPANY_REVIEW": "À examiner",
+    "REJECTED": "Refusée",
+    "AWAITING_DEPOSIT_PAYMENT": "Acompte attendu",
+    "DEPOSIT_PAYMENT_PENDING": "Paiement en cours",
+    "AGREED": "Accord conclu",
+    "PICKED_UP": "Colis récupéré",
+    "IN_TRANSIT": "En transit",
+    "DELIVERED": "Livré",
+    "CANCELLED": "Annulée",
+    "PENDING_CLIENT_REVIEW": "En attente du client"
+  },
+  "trackingActions": {
+    "PROPOSAL_CREATED": "Proposition créée",
+    "COMPANY_ACCEPTED": "Proposition acceptée",
+    "COMPANY_REJECTED": "Proposition refusée",
+    "DEPOSIT_PAYMENT_INITIATED": "Paiement initié",
+    "DEPOSIT_PAYMENT_CONFIRMED": "Acompte confirmé",
+    "DEPOSIT_PAYMENT_FAILED": "Paiement échoué",
+    "PICKUP_CONFIRMED": "Confirmer le ramassage",
+    "TRANSPORT_STARTED": "Démarrer le transport",
+    "DELIVERY_CONFIRMED": "Confirmer la livraison",
+    "CANCELLED": "Annulé"
+  },
+  "fields": {
+    "reference": "Référence",
+    "route": "Itinéraire",
+    "driver": "Chauffeur",
+    "driverWhatsapp": "WhatsApp chauffeur",
+    "origin": "Ville de départ",
+    "destination": "Ville d’arrivée",
+    "vehicle": "Type de véhicule",
+    "capacity": "Capacité maximale (m³)",
+    "available": "Capacité disponible",
+    "price": "Prix publié",
+    "travelDate": "Date de voyage",
+    "windowStart": "Début de passage",
+    "windowEnd": "Fin de passage",
+    "description": "Description",
+    "publication": "Début de publication",
+    "client": "Client",
+    "parcelType": "Type de colis",
+    "volume": "Volume demandé",
+    "proposal": "Prix proposé",
+    "agreed": "Prix convenu",
+    "deposit": "Acompte ({{percentage}} %)",
+    "remaining": "Solde",
+    "contacts": "Contacts déverrouillés",
+    "note": "Note",
+    "internalDriver": "Chauffeur interne",
+    "counterOfferAmount": "Montant de la contre-offre",
+    "predefinedMessage": "Message prédéfini",
+    "noMessage": "Sans message",
+    "offers": "Historique des offres"
+  },
+  "dialogs": {
+    "createTitle": "Publier une opportunité",
+    "createDescription": "La capacité disponible sera contrôlée et réservée par le serveur.",
+    "acceptTitle": "Accepter la proposition",
+    "acceptDescription": "Le prix et le volume seront verrouillés. Le client devra payer l’acompte de {{percentage}} %.",
+    "rejectTitle": "Refuser la proposition",
+    "rejectDescription": "La proposition sera clôturée et le client sera notifié.",
+    "trackingTitle": "Suivi du ramassage",
+    "trackingDescription": "Les transitions doivent être exécutées dans l’ordre.",
+    "notePlaceholder": "Ajoutez un contexte utile…",
+    "closeTitle": "Clôturer l’opportunité",
+    "closeDescription": "Aucune nouvelle proposition ne pourra être créée.",
+    "cancelTitle": "Annuler l’opportunité",
+    "cancelDescription": "L’annulation peut être refusée si une capacité est déjà réservée.",
+    "counterTitle": "Faire une contre-offre",
+    "counterDescription": "Le montant et le message prédéfini seront envoyés au client.",
+    "negotiationsDescription": "Consultez les offres et répondez aux propositions en attente."
+  },
+  "empty": {
+    "opportunities": "Aucune opportunité de ramassage.",
+    "negotiations": "Aucune proposition à afficher.",
+    "tracking": "Aucun événement de suivi."
+  },
+  "messages": {
+    "loadError": "Impossible de charger les ramassages.",
+    "created": "Opportunité publiée.",
+    "updated": "Opportunité mise à jour.",
+    "closed": "Opportunité clôturée.",
+    "cancelled": "Opportunité annulée.",
+    "accepted": "Proposition acceptée. L’acompte du client est maintenant attendu.",
+    "rejected": "Proposition refusée.",
+    "tracked": "Suivi mis à jour.",
+    "actionError": "L’action n’a pas pu être finalisée.",
+    "stateReloaded": "L’état serveur a changé. Les données ont été actualisées.",
+    "featureRequired": "Votre abonnement actif n’inclut pas le ramassage.",
+    "countered": "Contre-offre envoyée."
+  },
+  "validation": {
+    "required": "Champ obligatoire",
+    "differentCities": "Les villes de départ et d’arrivée doivent être différentes.",
+    "positiveCapacity": "La capacité doit être supérieure à zéro.",
+    "counterOfferAmount": "Saisissez un montant supérieur à zéro."
+  },
+  "catalog": {
+    "title": "Types de colis de ramassage",
+    "subtitle": "Référentiel distinct des types de colis shipment.",
+    "create": "Ajouter un type",
+    "edit": "Modifier le type",
+    "name": "Nom",
+    "description": "Description",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "saved": "Type de colis enregistré.",
+    "statusUpdated": "Statut mis à jour.",
+    "empty": "Aucun type de colis de ramassage."
+  },
+  "administration": {
+    "title": "Administration du ramassage",
+    "subtitle": "Définissez les règles de négociation et les messages autorisés.",
+    "configuration": {
+      "title": "Règles actives",
+      "description": "Les valeurs s’appliquent aux nouvelles négociations. Les discussions existantes conservent leur instantané.",
+      "maxCounterOffers": "Nombre maximal de contre-offres",
+      "depositPercentage": "Pourcentage d’acompte",
+      "reason": "Motif de la modification (facultatif)",
+      "save": "Enregistrer les règles"
+    },
+    "history": {
+      "title": "Historique des règles",
+      "description": "Traçabilité des changements de limite et d’acompte.",
+      "empty": "Aucune modification enregistrée."
+    },
+    "catalog": {
+      "title": "Messages prédéfinis",
+      "description": "Les clients et compagnies sélectionnent un message autorisé : aucun texte libre n’est transmis.",
+      "create": "Créer un message",
+      "edit": "Modifier le message",
+      "dialogDescription": "Le texte est envoyé comme modèle contrôlé pour l’audience et la langue choisies.",
+      "party": "Intervenant",
+      "language": "Langue",
+      "status": "Statut",
+      "text": "Texte du message",
+      "all": "Tous",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "empty": "Aucun message ne correspond aux filtres."
+    },
+    "messages": {
+      "loadError": "Impossible de charger l’administration du ramassage.",
+      "invalidConfiguration": "La limite doit être entre 1 et 100 et l’acompte entre 0 et 100.",
+      "configurationSaved": "Règles de ramassage enregistrées.",
+      "messageSaved": "Message enregistré.",
+      "messageUpdated": "Statut du message mis à jour.",
+      "saveError": "La modification n’a pas pu être enregistrée."
+    }
+  }
 }

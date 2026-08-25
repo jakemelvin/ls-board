@@ -1,17 +1,196 @@
 {
-  "title": "Pickups", "subtitle": "Publish available capacity and manage pickup agreements.",
-  "tabs": { "opportunities": "Opportunities", "negotiations": "Proposals" },
-  "actions": { "create": "Publish a trip", "refresh": "Refresh", "details": "Details", "close": "Close", "cancel": "Cancel", "edit": "Edit", "accept": "Accept", "reject": "Reject", "confirm": "Confirm", "managePlan": "View subscriptions", "track": "Update tracking" },
-  "plan": { "title": "Pickup is not included in this plan", "description": "Creating and deciding requires the PARCEL_PICKUP feature. Existing data remains readable." },
-  "filters": { "allStatuses": "All statuses" },
-  "cities": { "select": "Select a city", "search": "Search for a city or country…", "loading": "Loading served cities…", "empty": "No served city found.", "loadError": "Unable to load served cities.", "servedOnly": "Only cities served by an operational company are available.", "selectedUnavailable": "Currently unavailable city — select another one" },
-  "opportunityStatuses": { "ACTIVE": "Active", "CLOSED": "Closed", "CANCELLED": "Cancelled" },
-  "negotiationStatuses": { "PENDING_COMPANY_REVIEW": "To review", "REJECTED": "Rejected", "AWAITING_DEPOSIT_PAYMENT": "Awaiting deposit", "DEPOSIT_PAYMENT_PENDING": "Payment pending", "AGREED": "Agreed", "PICKED_UP": "Picked up", "IN_TRANSIT": "In transit", "DELIVERED": "Delivered", "CANCELLED": "Cancelled" },
-  "trackingActions": { "PROPOSAL_CREATED": "Proposal created", "COMPANY_ACCEPTED": "Proposal accepted", "COMPANY_REJECTED": "Proposal rejected", "DEPOSIT_PAYMENT_INITIATED": "Payment initiated", "DEPOSIT_PAYMENT_CONFIRMED": "Deposit confirmed", "DEPOSIT_PAYMENT_FAILED": "Payment failed", "PICKUP_CONFIRMED": "Confirm pickup", "TRANSPORT_STARTED": "Start transport", "DELIVERY_CONFIRMED": "Confirm delivery", "CANCELLED": "Cancelled" },
-  "fields": { "reference": "Reference", "route": "Route", "driver": "Driver", "driverWhatsapp": "Driver WhatsApp", "origin": "Origin city", "destination": "Destination city", "vehicle": "Vehicle type", "capacity": "Maximum capacity (m³)", "available": "Available capacity", "price": "Listed price", "travelDate": "Travel date", "windowStart": "Pickup window start", "windowEnd": "Pickup window end", "description": "Description", "publication": "Publication starts", "client": "Client", "parcelType": "Parcel type", "volume": "Requested volume", "proposal": "Proposed price", "agreed": "Agreed price", "deposit": "Deposit (25%)", "remaining": "Balance", "contacts": "Unlocked contacts", "note": "Note", "internalDriver": "Internal driver" },
-  "dialogs": { "createTitle": "Publish an opportunity", "createDescription": "Available capacity is controlled and reserved by the server.", "acceptTitle": "Accept proposal", "acceptDescription": "Price and volume will be locked. The client must pay the 25% deposit.", "rejectTitle": "Reject proposal", "rejectDescription": "The proposal will be closed and the client notified.", "trackingTitle": "Pickup tracking", "trackingDescription": "Transitions must be completed in order.", "notePlaceholder": "Add useful context…", "closeTitle": "Close opportunity", "closeDescription": "No new proposals can be created.", "cancelTitle": "Cancel opportunity", "cancelDescription": "Cancellation may be rejected if capacity is already reserved." },
-  "empty": { "opportunities": "No pickup opportunity.", "negotiations": "No proposal to display.", "tracking": "No tracking event." },
-  "messages": { "loadError": "Unable to load pickups.", "created": "Opportunity published.", "updated": "Opportunity updated.", "closed": "Opportunity closed.", "cancelled": "Opportunity cancelled.", "accepted": "Proposal accepted. The client deposit is now expected.", "rejected": "Proposal rejected.", "tracked": "Tracking updated.", "actionError": "The action could not be completed.", "stateReloaded": "Server state changed. Data has been refreshed.", "featureRequired": "Your active subscription does not include pickup." },
-  "validation": { "required": "Required field", "differentCities": "Origin and destination cities must be different.", "positiveCapacity": "Capacity must be greater than zero." },
-  "catalog": { "title": "Pickup parcel types", "subtitle": "Catalog separate from shipment parcel types.", "create": "Add type", "edit": "Edit type", "name": "Name", "description": "Description", "active": "Active", "inactive": "Inactive", "saved": "Parcel type saved.", "statusUpdated": "Status updated.", "empty": "No pickup parcel type." }
+  "title": "Pickups",
+  "subtitle": "Publish available capacity and manage pickup agreements.",
+  "tabs": {
+    "opportunities": "Opportunities",
+    "negotiations": "Proposals"
+  },
+  "actions": {
+    "create": "Publish a trip",
+    "refresh": "Refresh",
+    "details": "Details",
+    "close": "Close",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "accept": "Accept",
+    "reject": "Reject",
+    "confirm": "Confirm",
+    "managePlan": "View subscriptions",
+    "track": "Update tracking",
+    "counterOffer": "Counter-offer"
+  },
+  "plan": {
+    "title": "Pickup is not included in this plan",
+    "description": "Creating and deciding requires the PARCEL_PICKUP feature. Existing data remains readable."
+  },
+  "filters": {
+    "allStatuses": "All statuses"
+  },
+  "cities": {
+    "select": "Select a city",
+    "search": "Search for a city or country…",
+    "loading": "Loading served cities…",
+    "empty": "No served city found.",
+    "loadError": "Unable to load served cities.",
+    "servedOnly": "Only cities served by an operational company are available.",
+    "selectedUnavailable": "Currently unavailable city — select another one"
+  },
+  "opportunityStatuses": {
+    "ACTIVE": "Active",
+    "CLOSED": "Closed",
+    "CANCELLED": "Cancelled"
+  },
+  "negotiationStatuses": {
+    "PENDING_COMPANY_REVIEW": "To review",
+    "PENDING_CLIENT_REVIEW": "Awaiting client",
+    "REJECTED": "Rejected",
+    "AWAITING_DEPOSIT_PAYMENT": "Awaiting deposit",
+    "DEPOSIT_PAYMENT_PENDING": "Payment pending",
+    "AGREED": "Agreed",
+    "PICKED_UP": "Picked up",
+    "IN_TRANSIT": "In transit",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled"
+  },
+  "trackingActions": {
+    "PROPOSAL_CREATED": "Proposal created",
+    "COMPANY_ACCEPTED": "Proposal accepted",
+    "COMPANY_REJECTED": "Proposal rejected",
+    "DEPOSIT_PAYMENT_INITIATED": "Payment initiated",
+    "DEPOSIT_PAYMENT_CONFIRMED": "Deposit confirmed",
+    "DEPOSIT_PAYMENT_FAILED": "Payment failed",
+    "PICKUP_CONFIRMED": "Confirm pickup",
+    "TRANSPORT_STARTED": "Start transport",
+    "DELIVERY_CONFIRMED": "Confirm delivery",
+    "CANCELLED": "Cancelled"
+  },
+  "fields": {
+    "reference": "Reference",
+    "route": "Route",
+    "driver": "Driver",
+    "driverWhatsapp": "Driver WhatsApp",
+    "origin": "Origin city",
+    "destination": "Destination city",
+    "vehicle": "Vehicle type",
+    "capacity": "Maximum capacity (m³)",
+    "available": "Available capacity",
+    "price": "Listed price",
+    "travelDate": "Travel date",
+    "windowStart": "Pickup window start",
+    "windowEnd": "Pickup window end",
+    "description": "Description",
+    "publication": "Publication starts",
+    "client": "Client",
+    "parcelType": "Parcel type",
+    "volume": "Requested volume",
+    "proposal": "Proposed price",
+    "agreed": "Agreed price",
+    "deposit": "Deposit ({{percentage}}%)",
+    "remaining": "Balance",
+    "contacts": "Unlocked contacts",
+    "note": "Note",
+    "internalDriver": "Internal driver",
+    "counterOfferAmount": "Counter-offer amount",
+    "predefinedMessage": "Predefined message",
+    "noMessage": "No message",
+    "offers": "Offer history"
+  },
+  "dialogs": {
+    "createTitle": "Publish an opportunity",
+    "createDescription": "Available capacity is controlled and reserved by the server.",
+    "acceptTitle": "Accept proposal",
+    "acceptDescription": "Price and volume will be locked. The client must pay the {{percentage}}% deposit.",
+    "rejectTitle": "Reject proposal",
+    "rejectDescription": "The proposal will be closed and the client notified.",
+    "trackingTitle": "Pickup tracking",
+    "trackingDescription": "Transitions must be completed in order.",
+    "notePlaceholder": "Add useful context…",
+    "closeTitle": "Close opportunity",
+    "closeDescription": "No new proposals can be created.",
+    "counterTitle": "Make a counter-offer",
+    "counterDescription": "The amount and predefined message will be sent to the client.",
+    "cancelTitle": "Cancel opportunity",
+    "cancelDescription": "Cancellation may be rejected if capacity is already reserved.",
+    "negotiationsDescription": "Review offers and respond to pending proposals."
+  },
+  "empty": {
+    "opportunities": "No pickup opportunity.",
+    "negotiations": "No proposal to display.",
+    "tracking": "No tracking event."
+  },
+  "messages": {
+    "loadError": "Unable to load pickups.",
+    "created": "Opportunity published.",
+    "updated": "Opportunity updated.",
+    "closed": "Opportunity closed.",
+    "cancelled": "Opportunity cancelled.",
+    "accepted": "Proposal accepted. The client deposit is now expected.",
+    "rejected": "Proposal rejected.",
+    "tracked": "Tracking updated.",
+    "countered": "Counter-offer sent.",
+    "actionError": "The action could not be completed.",
+    "stateReloaded": "Server state changed. Data has been refreshed.",
+    "featureRequired": "Your active subscription does not include pickup."
+  },
+  "validation": {
+    "required": "Required field",
+    "differentCities": "Origin and destination cities must be different.",
+    "positiveCapacity": "Capacity must be greater than zero.",
+    "counterOfferAmount": "Enter an amount greater than zero."
+  },
+  "catalog": {
+    "title": "Pickup parcel types",
+    "subtitle": "Catalog separate from shipment parcel types.",
+    "create": "Add type",
+    "edit": "Edit type",
+    "name": "Name",
+    "description": "Description",
+    "active": "Active",
+    "inactive": "Inactive",
+    "saved": "Parcel type saved.",
+    "statusUpdated": "Status updated.",
+    "empty": "No pickup parcel type."
+  },
+  "administration": {
+    "title": "Pickup administration",
+    "subtitle": "Set negotiation rules and authorised messages.",
+    "configuration": {
+      "title": "Active rules",
+      "description": "Values apply to new negotiations. Existing discussions retain their snapshot.",
+      "maxCounterOffers": "Maximum counter-offers",
+      "depositPercentage": "Deposit percentage",
+      "reason": "Change reason (optional)",
+      "save": "Save rules"
+    },
+    "history": {
+      "title": "Rules history",
+      "description": "Audit trail for limit and deposit changes.",
+      "empty": "No change recorded."
+    },
+    "catalog": {
+      "title": "Predefined messages",
+      "description": "Clients and companies choose an authorised message; no free text is sent.",
+      "create": "Create message",
+      "edit": "Edit message",
+      "dialogDescription": "The text is sent as a controlled template for the selected audience and language.",
+      "party": "Audience",
+      "language": "Language",
+      "status": "Status",
+      "text": "Message text",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "empty": "No message matches the filters."
+    },
+    "messages": {
+      "loadError": "Unable to load pickup administration.",
+      "invalidConfiguration": "The limit must be between 1 and 100 and deposit between 0 and 100.",
+      "configurationSaved": "Pickup rules saved.",
+      "messageSaved": "Message saved.",
+      "messageUpdated": "Message status updated.",
+      "saveError": "The change could not be saved."
+    }
+  }
 }

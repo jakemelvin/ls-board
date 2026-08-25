@@ -18,6 +18,7 @@ import { BillingSubscriptionView } from '@/components/views/billing-subscription
 import { CommissionManagement } from '@/components/views/commission-management';
 import { MyCommissions } from '@/components/views/my-commissions';
 import { ParcelPickupManagement } from '@/components/views/parcel-pickup-management';
+import { PickupAdministration } from '@/components/views/pickup-administration';
 import { TeamManagement } from '@/components/views/team-management';
 import { ParcelTypesManagement } from '@/components/views/parcel-types-management';
 import { TransportModesManagement } from '@/components/views/transport-modes-management';
@@ -230,6 +231,8 @@ export default function DashboardPage() {
       // Super Admin
       case 'super-admin':
         return <SuperAdminManagement />;
+      case 'pickup-administration':
+        return <PickupAdministration />;
       case 'super-admin-shipments':
         return <SuperAdminShipmentsView />;
       case 'catalog':
