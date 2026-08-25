@@ -147,4 +147,5 @@ if (typeof window !== 'undefined') {
     });
     browserWindow.__sendamAuthExpiryChecksRegistered = true;
   }
+
 }

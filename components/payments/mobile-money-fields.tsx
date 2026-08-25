@@ -51,9 +51,8 @@ export function MobileMoneyFields({
     getPaymentProviderCountries(token, provider)
       .then((response) => {
         if (cancelled) return;
-        const availableCountries = Array.isArray(response) ? response : [];
-        setCountries(availableCountries);
-        const defaultCountry = availableCountries.find((item) => item.code === 'CM') ?? availableCountries[0];
+        setCountries(response);
+        const defaultCountry = response.find((item) => item.code === 'CM') ?? response[0];
         onCountryChange(defaultCountry?.code ?? '');
       })
       .catch(() => {

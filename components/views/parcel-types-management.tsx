@@ -9,16 +9,19 @@ import {
   addCompanyParcelType,
   removeCompanyParcelType,
 } from '@/lib/company/api';
+import { useTranslation } from '@/lib/i18n';
 
 export function ParcelTypesManagement() {
+  const { t } = useTranslation('dashboard');
+
   return (
     <CompanyGuard>
       {({ companyId, company }) => (
         <CatalogAssignmentManager
           companyId={companyId}
-          title="Types de colis"
-          subtitle={`Sélectionnez les types de colis pris en charge par ${company.name}.`}
-          itemLabel="type de colis"
+          title={t('catalogAssignments.parcelTypes.title')}
+          subtitle={t('catalogAssignments.parcelTypes.subtitle', { values: { company: company.name } })}
+          itemLabel={t('catalog.itemLabels.parcelType')}
           icon={Package}
           loadCatalog={getParcelTypes}
           loadAssigned={async (token, id) => (await getCompanyParcelTypes(token, id)).parcelTypes}

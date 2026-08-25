@@ -1,0 +1,113 @@
+{
+  "memberDialog": {
+    "title": "Ajouter un membre",
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "username": "Nom d'utilisateur",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "password": "Mot de passe",
+      "role": "Rôle",
+      "language": "Langue",
+      "commission": "Commission (%)",
+      "country": "Pays",
+      "city": "Ville",
+      "gender": "Genre",
+      "idCardNumber": "Numéro de pièce d'identité",
+      "address": "Adresse"
+    },
+    "roles": {
+      "employee": "Employé",
+      "collector": "Collecteur",
+      "transporter": "Transporteur"
+    },
+    "options": {
+      "choose": "Choisissez",
+      "french": "Français",
+      "loading": "Chargement...",
+      "select": "Sélectionnez",
+      "unspecified": "Non précisé",
+      "male": "Homme",
+      "female": "Femme",
+      "other": "Autre"
+    },
+    "hints": {
+      "commission": "Laissez vide si aucune commission spécifique."
+    },
+    "validation": {
+      "required": "Requis",
+      "username": "Lettres, chiffres, . _ - (3-20 car.)",
+      "password": "8 caractères minimum"
+    },
+    "errors": {
+      "create": "Erreur lors de la création"
+    },
+    "actions": {
+      "creating": "Création",
+      "create": "Créer le membre"
+    }
+  },
+  "readiness": {
+    "status": {
+      "ready": "Opérationnelle",
+      "incomplete": "À compléter"
+    },
+    "checkedAt": "Contrôle du {{date}}",
+    "description": "Lecture détaillée des prérequis techniques, terrain et logistiques.",
+    "close": "Fermer",
+    "global": "État global",
+    "remaining": "Blocages restants",
+    "noBlocking": "Aucun blocage critique détecté.",
+    "blockingCount": "{{count}} élément(s) empêchent encore une exploitation complète.",
+    "allSatisfied": "Tous les prérequis critiques remontés par l'API sont satisfaits.",
+    "checks": {
+      "parcelTypes": "Types de colis",
+      "transportModes": "Modes de transport",
+      "pricing": "Tarification",
+      "deliveryEstimates": "Estimations de livraison",
+      "zones": "Zones géographiques",
+      "collectionPoints": "Points de collecte",
+      "responsibles": "Responsables de points",
+      "transporters": "Transporteurs",
+      "fleets": "Flottes assignées"
+    },
+    "pricing": {
+      "title": "Tarification",
+      "description": "Couverture par mode de transport.",
+      "configured": "Tarifs configurés",
+      "compatibility": "Compatibilité enveloppes",
+      "complete": "OK",
+      "incomplete": "Incomplet",
+      "missingModes": "Modes sans tarification",
+      "missingConfigurations": "Configurations tarifaires manquantes",
+      "missingEnvelopeModes": "Modes non compatibles enveloppes",
+      "allModes": "Tous les modes actifs ont une tarification.",
+      "allConfigurations": "Toutes les configurations tarifaires requises sont couvertes.",
+      "allEnvelopeModes": "Les tarifs sont compatibles avec les envois enveloppe."
+    },
+    "estimates": {
+      "title": "Estimations",
+      "description": "Délais de livraison par configuration.",
+      "configured": "Estimations configurées",
+      "missingModes": "Modes sans estimation",
+      "missingConfigurations": "Configurations d'estimation manquantes",
+      "allModes": "Tous les modes actifs ont une estimation.",
+      "allConfigurations": "Toutes les configurations d'estimation sont couvertes."
+    },
+    "network": {
+      "title": "Réseau terrain",
+      "description": "Zones, points et responsables.",
+      "zones": "Zones",
+      "collectionPoints": "Points de collecte",
+      "pointsWithResponsible": "Points avec responsable"
+    },
+    "capacity": {
+      "title": "Capacité logistique",
+      "description": "Équipe et flotte mobilisables.",
+      "transporters": "Transporteurs actifs",
+      "fleets": "Flottes assignées",
+      "parcelTypes": "Types de colis"
+    }
+  }
+}

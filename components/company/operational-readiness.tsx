@@ -12,6 +12,7 @@ import { Badge } from '@/components/company/company-shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CompanyOperationalReadiness } from '@/lib/admin/types';
+import { useTranslation } from '@/lib/i18n';
 
 interface OperationalReadinessCheck {
   label: string;
@@ -43,8 +44,8 @@ function getOperationalReadinessChecks(
   ];
 }
 
-export function formatOperationalReadinessDate(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
+export function formatOperationalReadinessDate(value: string, locale = 'fr') {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -57,6 +58,7 @@ export function OperationalReadinessDialog({
   data: CompanyOperationalReadiness | null;
   onClose: () => void;
 }) {
+  const { t, locale } = useTranslation('company');
   if (!data) return null;
 
   const checks = getOperationalReadinessChecks(data);
@@ -70,16 +72,16 @@ export function OperationalReadinessDialog({
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={data.exploitable ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}>
                 {data.exploitable ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                {data.exploitable ? 'Operationnelle' : 'A completer'}
+                {data.exploitable ? t('readiness.status.ready') : t('readiness.status.incomplete')}
               </Badge>
               <Badge className="bg-secondary text-secondary-foreground">
-                Controle du {formatOperationalReadinessDate(data.checkedAt)}
+                {t('readiness.checkedAt', { values: { date: formatOperationalReadinessDate(data.checkedAt, locale) } })}
               </Badge>
             </div>
             <div>
               <h3 className="text-xl font-semibold text-foreground">{data.companyName}</h3>
               <p className="text-sm text-muted-foreground">
-                Lecture detaillee des prerequis techniques, terrain et logistiques.
+                {t('readiness.description')}
               </p>
             </div>
           </div>
@@ -92,7 +94,7 @@ export function OperationalReadinessDialog({
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Etat global</CardTitle>
+                <CardTitle className="text-base">{t('readiness.global')}</CardTitle>
                 <CardDescription>{data.summary}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -119,10 +121,10 @@ export function OperationalReadinessDialog({
 
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Blocages restants</CardTitle>
+                <CardTitle className="text-base">{t('readiness.remaining')}</CardTitle>
                 <CardDescription>
                   {data.missingItems.length === 0
-                    ? 'Aucun blocage critique detecte.'
+                    ? t('readiness.noBlocking')
                     : `${data.missingItems.length} element(s) empechent encore une exploitation complete.`}
                 </CardDescription>
               </CardHeader>
@@ -151,8 +153,8 @@ export function OperationalReadinessDialog({
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Tarification</CardTitle>
-                <CardDescription>Couverture par mode de transport.</CardDescription>
+                <CardTitle className="text-base">{t('readiness.pricing.title')}</CardTitle>
+                <CardDescription>{t('readiness.pricing.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <InfoRow label="Tarifs configures" value={data.pricingCount} ok={data.pricingConfigured} />
@@ -180,8 +182,8 @@ export function OperationalReadinessDialog({
 
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Estimations</CardTitle>
-                <CardDescription>Delais de livraison par configuration.</CardDescription>
+                <CardTitle className="text-base">{t('readiness.estimates.title')}</CardTitle>
+                <CardDescription>{t('readiness.estimates.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <InfoRow
@@ -206,8 +208,8 @@ export function OperationalReadinessDialog({
 
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Reseau terrain</CardTitle>
-                <CardDescription>Zones, points et responsables.</CardDescription>
+                <CardTitle className="text-base">{t('readiness.network.title')}</CardTitle>
+                <CardDescription>{t('readiness.network.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <InfoRow label="Zones" value={data.zoneCount} ok={data.zonesConfigured} />
@@ -222,8 +224,8 @@ export function OperationalReadinessDialog({
 
             <Card className="border-border bg-background/50">
               <CardHeader>
-                <CardTitle className="text-base">Capacite logistique</CardTitle>
-                <CardDescription>Equipe et flotte mobilisables.</CardDescription>
+                <CardTitle className="text-base">{t('readiness.capacity.title')}</CardTitle>
+                <CardDescription>{t('readiness.capacity.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <InfoRow label="Transporteurs actifs" value={data.transporterCount} ok={data.transportersConfigured} />

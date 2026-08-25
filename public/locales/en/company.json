@@ -1,0 +1,113 @@
+{
+  "memberDialog": {
+    "title": "Add a member",
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "username": "Username",
+      "email": "Email",
+      "phone": "Phone",
+      "password": "Password",
+      "role": "Role",
+      "language": "Language",
+      "commission": "Commission (%)",
+      "country": "Country",
+      "city": "City",
+      "gender": "Gender",
+      "idCardNumber": "ID card number",
+      "address": "Address"
+    },
+    "roles": {
+      "employee": "Employee",
+      "collector": "Collector",
+      "transporter": "Transporter"
+    },
+    "options": {
+      "choose": "Choosk�u���f",
+      "french": "French",
+      "loading": "Loadinf��y��y�",
+      "select": "Select�w^~)�v",
+      "unspecified": "Unspecified",
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "hints": {
+      "commission": "Leave blank if there is no specific commission."
+    },
+    "validation": {
+      "required": "Required",
+      "username": "Letters, numbers, . _ - (3-20 chars)",
+      "password": "At least 8 characters"
+    },
+    "errors": {
+      "create": "Unable to create the member"
+    },
+    "actions": {
+      "creating": "Creatinf��y��y�",
+      "create": "Create member"
+    }
+  },
+  "readiness": {
+    "status": {
+      "ready": "Operational",
+      "incomplete": "Incomplete"
+    },
+    "checkedAt": "Checked on {{date}}",
+    "description": "Detailed review of technical, field, and logistics requirements.",
+    "close": "Close",
+    "global": "Overall status",
+    "remaining": "Remaining blockers",
+    "noBlocking": "No critical blocker detected.",
+    "blockingCount": "{{count}} item(s) still prevent full operation.",
+    "allSatisfied": "All critical requirements reported by the API are met.",
+    "checks": {
+      "parcelTypes": "Parcel types",
+      "transportModes": "Transport modes",
+      "pricing": "Pricing",
+      "deliveryEstimates": "Delivery estimates",
+      "zones": "Geographic zones",
+      "collectionPoints": "Collection points",
+      "responsibles": "Point managers",
+      "transporters": "Transporters",
+      "fleets": "Assigned fleets"
+    },
+    "pricing": {
+      "title": "Pricing",
+      "description": "Coverage by transport mode.",
+      "configured": "Configured prices",
+      "compatibility": "Envelope compatibility",
+      "complete": "OK",
+      "incomplete": "Incomplete",
+      "missingModes": "Modes without pricing",
+      "missingConfigurations": "Missing price configurations",
+      "missingEnvelopeModes": "Modes not compatible with envelopes",
+      "allModes": "All active modes have pricing.",
+      "allConfigurations": "All required price configurations are covered.",
+      "allEnvelopeModes": "Prices are compatible with envelope shipments."
+    },
+    "estimates": {
+      "title": "Estimates",
+      "description": "Delivery times by configuration.",
+      "configured": "Configured estimates",
+      "missingModes": "Modes without estimates",
+      "missingConfigurations": "Missing estimate configurations",
+      "allModes": "All active modes have an estimate.",
+      "allConfigurations": "All required estimate configurations are covered."
+    },
+    "network": {
+      "title": "Field network",
+      "description": "Zones, points, and managers.",
+      "zones": "Zones",
+      "collectionPoints": "Collection points",
+      "pointsWithResponsible": "Points with manager"
+    },
+    "capacity": {
+      "title": "Logistics capacity",
+      "description": "Available team and fleet.",
+      "transporters": "Active transporters",
+      "fleets": "Assigned fleets",
+      "parcelTypes": "Parcel types"
+    }
+  }
+}

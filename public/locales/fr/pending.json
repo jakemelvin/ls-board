@@ -1,5 +1,13 @@
 {
   "title": "Compte en attente",
-  "description": "Votre compte est en attente de validation."
+  "description": "Votre compte est en attente de validation.",
+  "heading": "Demande en cours d'examen",
+  "body": "Votre entreprise a été enregistrée avec succès. Un super administrateur SENDAMhub doit approuver votre compte avant que vous puissiez accéder à la plateforme.",
+  "steps": {
+    "requestReceived": { "label": "Demande reçue", "description": "Votre demande de création de compte a bien été enregistrée." },
+    "reviewInProgress": { "label": "Examen en cours", "description": "Notre équipe vérifie les informations de votre entreprise." },
+    "emailNotification": { "label": "Notification par e-mail", "description": "Vous recevrez un e-mail dès que votre compte sera approuvé." }
+  },
+  "estimatedTime": { "label": "Délai estimé :", "description": "24 à 48 heures ouvrées. En cas de besoin, contactez {{email}}." },
+  "actions": { "backToLogin": "Retour à la connexion", "checkStatus": "Vérifier le statut" }
 }
-

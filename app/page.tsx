@@ -39,20 +39,10 @@ import { CompanyPaymentTraceability } from '@/components/views/platform-payment-
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { NotificationsManagement } from '@/components/views/notifications-management';
 import { CompanyProfileView } from '@/components/views/company-profile';
-import { DEMO_USERS, type UserRole, type User } from '@/lib/mock-data';
+import type { UserRole, User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { CompanyContextProvider, useCompanyContext } from '@/lib/company/use-company';
-import { useStore } from '@/lib/store';
 import type { ApiRole, AuthUser } from '@/lib/auth/types';
-
-// Map roles to their default users
-const ROLE_USERS: Record<UserRole, User> = {
-  SUPER_ADMIN: DEMO_USERS.find((u) => u.role === 'SUPER_ADMIN')!,
-  ADMIN: DEMO_USERS.find((u) => u.role === 'ADMIN')!,
-  EMPLOYEE: DEMO_USERS.find((u) => u.role === 'EMPLOYEE')!,
-  COLLECTOR: DEMO_USERS.find((u) => u.role === 'COLLECTOR')!,
-  TRANSPORTER: DEMO_USERS.find((u) => u.role === 'TRANSPORTER')!,
-};
 
 // Default section for each role
 const DEFAULT_SECTIONS: Record<UserRole, string> = {
@@ -82,7 +72,6 @@ function mapApiRoleToUserRole(role: ApiRole | undefined): UserRole {
 export default function DashboardPage() {
   const router = useRouter();
   const { token, role: authRole, isHydrated, user: authUser } = useAuthStore();
-  const { users } = useStore();
   const shouldShowCompanyBrand =
     authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY';
   const companyContext = useCompanyContext({
@@ -130,17 +119,9 @@ export default function DashboardPage() {
     didSyncRoleFromAuth.current = true;
   }, [authRole, isHydrated]);
 
-  const demoUser =
-    users.find((user) => user.role === currentRole) ?? ROLE_USERS[currentRole];
-
   const currentUser = useMemo(() => {
-    const authenticatedRole = mapApiRoleToUserRole(authRole);
-    if (currentRole !== authenticatedRole) {
-      return demoUser;
-    }
-
-    return mergeAuthenticatedUser(demoUser, authUser);
-  }, [authRole, authUser, currentRole, demoUser]);
+    return createAuthenticatedUser(authUser, currentRole);
+  }, [authUser, currentRole]);
 
   if (!isHydrated || !token || !hasSyncedRoleFromAuth) {
     return (
@@ -311,28 +292,28 @@ export default function DashboardPage() {
   );
 }
 
-function mergeAuthenticatedUser(fallback: User, authUser?: AuthUser): User {
-  if (!authUser) {
-    return fallback;
-  }
-
-  const firstName = authUser.firstName ?? fallback.firstName;
-  const lastName = authUser.lastName ?? fallback.lastName;
-  const name = [firstName, lastName].filter(Boolean).join(' ').trim() || fallback.name;
+function createAuthenticatedUser(authUser: AuthUser | undefined, role: UserRole): User {
+  const firstName = authUser?.firstName?.trim() ?? '';
+  const lastName = authUser?.lastName?.trim() ?? '';
+  const username = authUser?.username?.trim() ?? '';
+  const name = [firstName, lastName].filter(Boolean).join(' ').trim() || username || 'Utilisateur';
 
   return {
-    ...fallback,
-    id: String(authUser.id ?? fallback.id),
-    email: authUser.email ?? fallback.email,
+    id: String(authUser?.id ?? ''),
+    email: authUser?.email ?? '',
     name,
     firstName,
     lastName,
-    username: authUser.username ?? fallback.username,
-    phone: authUser.phone ?? fallback.phone,
-    cityId: authUser.city ?? fallback.cityId,
-    address: authUser.address ?? fallback.address,
+    username,
+    phone: authUser?.phone ?? '',
+    countryId: '',
+    cityId: authUser?.city ?? '',
+    address: authUser?.address,
+    password: '',
+    role,
+    status: authUser?.status === 'SUSPENDED' ? 'SUSPENDED' : authUser?.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     avatar: getInitials(name),
-    profilePhotoUrl: authUser.profileImageUrl ?? fallback.profilePhotoUrl,
+    profilePhotoUrl: authUser?.profileImageUrl,
   };
 }
 

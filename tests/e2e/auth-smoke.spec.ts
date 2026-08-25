@@ -1,16 +1,23 @@
 import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.route('https://dstest.easywaka.com/api/delivery/auth/login', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        token: 'playwright-smoke-token',
-        userId: 1,
-        role: 'SUPER_ADMIN',
-      }),
-    });
+  await page.route('https://dstest.easywaka.com/**', async (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname === '/api/delivery/auth/login') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'playwright-smoke-token',
+          userId: 1,
+          role: 'SUPER_ADMIN',
+        }),
+      });
+      return;
+    }
+
+    await route.abort();
   });
 });
 

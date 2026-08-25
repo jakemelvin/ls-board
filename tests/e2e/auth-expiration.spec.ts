@@ -10,8 +10,8 @@ function createJwt(expirationTimeInSeconds: number) {
 }
 
 test('disconnects the user as soon as the access token expires', async ({ page }) => {
-  const expirationTime = Date.UTC(2030, 0, 1, 0, 0, 2);
-  await page.clock.install({ time: new Date(expirationTime - 2_000) });
+  const expirationTime = Date.now() + 10_000;
+  await page.clock.install({ time: new Date(expirationTime - 10_000) });
   await page.route('https://dstest.easywaka.com/**', async (route) => {
     const url = new URL(route.request().url());
 
@@ -37,7 +37,7 @@ test('disconnects the user as soon as the access token expires', async ({ page }
   await page.getByRole('button', { name: /Se connecter|Sign in/ }).click();
 
   await expect(page).toHaveURL('/');
-  await page.clock.fastForward(2_001);
+  await page.clock.fastForward(10_001);
   await expect(page).toHaveURL(/\/login\?reason=session-expired/, {
     timeout: 10_000,
   });

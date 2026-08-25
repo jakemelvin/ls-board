@@ -9,12 +9,13 @@ import { getCountries } from '@/lib/auth/api';
 import { createCompanySubAccount } from '@/lib/company/api';
 import type { CountryResponse, ApiRole, Gender } from '@/lib/auth/types';
 import type { UserResponse } from '@/lib/admin/types';
+import { useTranslation } from '@/lib/i18n';
 
 /** Roles a company admin is allowed to provision through sub-accounts. */
-export const MEMBER_ROLES: { value: ApiRole; label: string }[] = [
-  { value: 'EMPLOYEE_COMPANY', label: 'Employé' },
-  { value: 'COLLECTOR', label: 'Collecteur' },
-  { value: 'TRANSPORTER', label: 'Transporteur' },
+export const MEMBER_ROLES: { value: ApiRole; labelKey: string }[] = [
+  { value: 'EMPLOYEE_COMPANY', labelKey: 'roles.employee' },
+  { value: 'COLLECTOR', labelKey: 'roles.collector' },
+  { value: 'TRANSPORTER', labelKey: 'roles.transporter' },
 ];
 
 const COMMISSION_ROLES: ApiRole[] = ['COLLECTOR', 'TRANSPORTER'];
@@ -64,16 +65,16 @@ interface MemberErrors {
   city?: string;
 }
 
-function validate(f: MemberForm): MemberErrors {
+function validate(f: MemberForm, t: (key: string) => string): MemberErrors {
   const e: MemberErrors = {};
-  if (!f.firstName.trim()) e.firstName = 'Requis';
-  if (!f.lastName.trim()) e.lastName = 'Requis';
-  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) e.username = 'Lettres, chiffres, . _ - (3-20 car.)';
-  if (!f.phone.trim()) e.phone = 'Requis';
+  if (!f.firstName.trim()) e.firstName = t('memberDialog.validation.required');
+  if (!f.lastName.trim()) e.lastName = t('memberDialog.validation.required');
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) e.username = t('memberDialog.validation.username');
+  if (!f.phone.trim()) e.phone = t('memberDialog.validation.required');
   if (!f.password || f.password.length < 8) e.password = '8 caractères minimum';
-  if (!f.role) e.role = 'Requis';
-  if (!f.countryId) e.countryId = 'Requis';
-  if (!f.city.trim()) e.city = 'Requis';
+  if (!f.role) e.role = t('memberDialog.validation.required');
+  if (!f.countryId) e.countryId = t('memberDialog.validation.required');
+  if (!f.city.trim()) e.city = t('memberDialog.validation.required');
   return e;
 }
 
@@ -90,6 +91,7 @@ export function CreateMemberDialog({
   onCreated: (user: UserResponse) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('company');
   const [form, setForm] = useState<MemberForm>(emptyForm());
   const [errors, setErrors] = useState<MemberErrors>({});
   const [countries, setCountries] = useState<CountryResponse[]>([]);
@@ -119,7 +121,7 @@ export function CreateMemberDialog({
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async () => {
-    const errs = validate(form);
+    const errs = validate(form, t);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
@@ -180,7 +182,7 @@ export function CreateMemberDialog({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <UserPlus className="h-4 w-4" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Ajouter un membre</h2>
+            <h2 className="text-base font-semibold text-foreground">{t('memberDialog.title')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -204,21 +206,21 @@ export function CreateMemberDialog({
               {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Nom *</Label>
+              <Label>{t('memberDialog.fields.lastName')} *</Label>
               <input className={inputCls(errors.lastName)} placeholder="Dupont" value={form.lastName} onChange={set('lastName')} />
               {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Nom d'utilisateur *</Label>
+            <Label>{t('memberDialog.fields.username')} *</Label>
             <input className={inputCls(errors.username)} placeholder="jean.dupont" value={form.username} onChange={set('username')} />
             {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Email</Label>
+              <Label>{t('memberDialog.fields.email')}</Label>
               <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.email} onChange={set('email')} />
             </div>
             <div className="space-y-1.5">
@@ -229,7 +231,7 @@ export function CreateMemberDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Mot de passe *</Label>
+            <Label>{t('memberDialog.fields.password')} *</Label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -256,13 +258,13 @@ export function CreateMemberDialog({
               <select className={selectCls(errors.role)} value={form.role} onChange={set('role')}>
                 <option value="">Choisir…</option>
                 {MEMBER_ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                  <option key={r.value} value={r.value}>{t(r.labelKey)}</option>
                 ))}
               </select>
               {errors.role && <p className="text-xs text-destructive">{errors.role}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Langue</Label>
+              <Label>{t('memberDialog.fields.language')}</Label>
               <select className={selectCls()} value={form.language} onChange={set('language')}>
                 <option value="fr">Français</option>
                 <option value="en">English</option>
@@ -272,7 +274,7 @@ export function CreateMemberDialog({
 
           {showCommission && (
             <div className="space-y-1.5">
-              <Label>Commission (%)</Label>
+              <Label>{t('memberDialog.fields.commission')}</Label>
               <input
                 type="number"
                 min="0"
@@ -289,7 +291,7 @@ export function CreateMemberDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Pays *</Label>
+              <Label>{t('memberDialog.fields.country')} *</Label>
               <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
                 <option value="">{countriesLoading ? 'Chargement…' : 'Sélectionner…'}</option>
                 {countries.map((c) => (
@@ -299,7 +301,7 @@ export function CreateMemberDialog({
               {errors.countryId && <p className="text-xs text-destructive">{errors.countryId}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Ville *</Label>
+              <Label>{t('memberDialog.fields.city')} *</Label>
               <input className={inputCls(errors.city)} placeholder="Dakar" value={form.city} onChange={set('city')} />
               {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
             </div>
@@ -307,12 +309,12 @@ export function CreateMemberDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Genre</Label>
+              <Label>{t('memberDialog.fields.gender')}</Label>
               <select className={selectCls()} value={form.gender} onChange={set('gender')}>
                 <option value="">Non précisé</option>
-                <option value="MALE">Homme</option>
-                <option value="FEMALE">Femme</option>
-                <option value="OTHER">Autre</option>
+                <option value="MALE">{t('memberDialog.options.male')}</option>
+                <option value="FEMALE">{t('memberDialog.options.female')}</option>
+                <option value="OTHER">{t('memberDialog.options.other')}</option>
               </select>
             </div>
             <div className="space-y-1.5">
@@ -322,13 +324,13 @@ export function CreateMemberDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Adresse</Label>
+            <Label>{t('memberDialog.fields.address')}</Label>
             <input className={inputCls()} placeholder="12 Rue de la Paix, Plateau" value={form.address} onChange={set('address')} />
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? (
               <span className="flex items-center gap-2">

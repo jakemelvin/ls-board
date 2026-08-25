@@ -15,9 +15,35 @@ export function getPaymentProviderCountries(
   token: string,
   provider: Extract<OnlinePaymentProvider, 'MTN' | 'ORANGE'>,
 ): Promise<PaymentCountryResponse[]> {
-  return apiClient.get<PaymentCountryResponse[]>(
-    `/api/delivery/payments/providers/${provider}/countries`,
-    token,
+  return apiClient
+    .get<PaymentCountriesPayload>(
+      `/api/delivery/payments/providers/${provider}/countries`,
+      token,
+    )
+    .then((payload) => normalizePaymentProviderCountries(payload, provider));
+}
+
+type PaymentCountriesPayload =
+  | PaymentCountryResponse[]
+  | { content?: PaymentCountryResponse[] };
+
+function normalizePaymentProviderCountries(
+  payload: PaymentCountriesPayload,
+  provider: Extract<OnlinePaymentProvider, 'MTN' | 'ORANGE'>,
+): PaymentCountryResponse[] {
+  const countries = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.content)
+      ? payload.content
+      : [];
+
+  return countries.filter(
+    (country): country is PaymentCountryResponse =>
+      country?.provider === provider &&
+      typeof country.code === 'string' &&
+      typeof country.name === 'string' &&
+      typeof country.currency === 'string' &&
+      typeof country.callingCode === 'string',
   );
 }
 

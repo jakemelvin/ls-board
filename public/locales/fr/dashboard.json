@@ -127,6 +127,48 @@
     "title": "Mon profil"
   },
   "collectorDashboard": {
+    "availability": "Disponibilité du point",
+    "capacity": "Capacité",
+    "loading": "Chargement du tableau de bord collecteur...",
+    "title": "Tableau de bord collecteur",
+    "empty": {
+      "title": "Aucun point assigné",
+      "description": "Ce collecteur n’a pas encore de point de collecte rattaché."
+    },
+    "metrics": {
+      "pendingReceptions": "Réceptions à valider",
+      "localStock": "Colis en stock local",
+      "pendingPickupRequests": "Demandes de prise en attente",
+      "arrivedAtPoint": "Colis arrivés au point"
+    },
+    "commissions": {
+      "title": "Mes commissions",
+      "description": "Montants générés par les opérations associées à votre point."
+    },
+    "priorities": {
+      "title": "Priorités immédiates",
+      "description": "Éléments renvoyés par le backend pour guider le traitement."
+    },
+    "recentOperations": {
+      "title": "Dernières opérations",
+      "description": "Opérations récentes confirmées par l’API.",
+      "empty": "Aucune opération récente."
+    },
+    "pendingReceptions": {
+      "title": "Réceptions en attente",
+      "description": "Colis clients à vérifier en priorité.",
+      "documentsAvailable": "Documents disponibles",
+      "kycToCheck": "KYC à vérifier",
+      "toCheck": "À vérifier",
+      "empty": "Aucun colis client en attente de validation."
+    },
+    "table": {
+      "reference": "Référence",
+      "sender": "Expéditeur",
+      "kyc": "KYC",
+      "destination": "Destination",
+      "weight": "Poids"
+    },
     "location": {
       "address": "Adresse",
       "description": "Apercu cartographique du point de collecte assigne.",
@@ -893,6 +935,8 @@
       "scanParcel": "Scanner un colis",
       "scanReference": "Scanner",
       "searching": "Recherche du colis...",
+      "retryCamera": "Réessayer la caméra",
+      "startCamera": "Activer la caméra",
       "starting": "Ouverture de la caméra...",
       "title": "Scanner le QR code"
     },
@@ -1336,5 +1380,76 @@
     },
     "subtitle": "Mettez a jour la marque, les coordonnees et les parametres de paiement de votre entreprise.",
     "title": "Profil entreprise"
+  },
+  "catalogAssignments": {
+    "parcelTypes": {
+      "title": "Types de colis",
+      "subtitle": "Activez les types de colis proposés à votre entreprise."
+    },
+    "transportModes": {
+      "title": "Modes de transport",
+      "subtitle": "Activez les modes de transport disponibles pour votre entreprise.",
+      "confirmDeactivate": {
+        "title": "Désactiver ce mode ?",
+        "description": "Les colis utilisant ce mode ne pourront plus être créés.",
+        "action": "Désactiver"
+      }
+    }
+  },
+  "pickupRequest": {
+    "title": "Nouvelle demande de ramassage",
+    "subtitle": "Sélectionnez les colis prêts à être ramassés.",
+    "errors": {
+      "sessionExpired": "Votre session a expiré.",
+      "load": "Impossible de charger les colis disponibles.",
+      "send": "Impossible d'envoyer la demande."
+    },
+    "fallbacks": {
+      "origin": "Point d'origine",
+      "noOrigin": "Aucun point d'origine",
+      "parcelType": "Type de colis",
+      "sender": "Expéditeur",
+      "receiver": "Destinataire",
+      "destination": "Destination"
+    },
+    "messages": {
+      "sentTitle": "Demande envoyée",
+      "sentDescription": "Votre demande de ramassage a été transmise.",
+      "rejectedTitle": "Demande refusée"
+    },
+    "actions": {
+      "reset": "Réinitialiser",
+      "sendRequest": "Envoyer la demande",
+      "send": "Envoyer",
+      "sending": "Envoi…"
+    },
+    "selection": {
+      "count": "{{count}} colis sélectionné(s)"
+    },
+    "empty": {
+      "title": "Aucun colis disponible",
+      "description": "Aucun colis n'est actuellement prêt pour une demande de ramassage."
+    },
+    "group": {
+      "available": "Colis disponibles",
+      "selectedSuffix": "sélectionné(s)",
+      "locked": "Indisponible"
+    },
+    "columns": {
+      "reference": "Référence",
+      "customer": "Client",
+      "destination": "Destination",
+      "status": "Statut",
+      "createdAt": "Créé le"
+    },
+    "receiver": "Destinataire",
+    "dialog": {
+      "title": "Confirmer la demande",
+      "description": "Vérifiez les colis et ajoutez une note si nécessaire.",
+      "origin": "Point d'origine",
+      "parcels": "Colis",
+      "note": "Note",
+      "notePlaceholder": "Instructions pour le collecteur…"
+    }
   }
 }

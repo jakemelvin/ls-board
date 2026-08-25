@@ -115,6 +115,18 @@ test('collector receives an unpaid collection-point shipment only after physical
       return;
     }
 
+    if (url.pathname === '/api/delivery/payments/providers/MTN/countries') {
+      await json([{
+        code: 'CM',
+        name: 'Cameroun',
+        currency: 'XAF',
+        callingCode: '+237',
+        provider: 'MTN',
+        otpRequired: false,
+      }]);
+      return;
+    }
+
     if (url.pathname === '/api/delivery/payments/MTN/shipments/702') {
       platformPaymentBody = request.postData() ?? '';
       feePendingShipmentPaid = true;
@@ -183,6 +195,9 @@ test('collector receives an unpaid collection-point shipment only after physical
     await expect(
       scannerDialog.getByRole('button', { name: /Prendre ou choisir une photo|Take or choose a photo/ }),
     ).toBeVisible();
+    await expect(
+      scannerDialog.getByRole('button', { name: /Activer la caméra|Enable camera/ }),
+    ).toBeVisible();
     await scannerDialog.locator('input[type="file"]').setInputFiles({
       name: 'shipment-701-qr.svg',
       mimeType: 'image/svg+xml',
@@ -206,7 +221,7 @@ test('collector receives an unpaid collection-point shipment only after physical
   await paymentDialog.getByPlaceholder(/237690000000/).fill('237690123456');
   await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
   await expect.poll(() => platformPaymentBody).toContain('237690123456');
-  await paymentDialog.getByRole('button', { name: /Fermer|Close/, exact: true }).first().click();
+  await expect(paymentDialog).toBeHidden();
   await expect(feePendingSurface.getByText(/A encaisser sur place|Collect on site/)).toBeVisible();
 
   await cashShipmentSurface.getByRole('button', { name: /Encaisser et receptionner|Collect and receive/ }).click();

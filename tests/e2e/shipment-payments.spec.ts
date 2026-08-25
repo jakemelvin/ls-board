@@ -113,14 +113,16 @@ test('collector can pay any shipment visible in their collection scope', async (
     }
 
     if (url.pathname === '/api/delivery/payments/providers/MTN/countries') {
-      await json([{
-        code: 'CM',
-        name: 'Cameroun',
-        currency: 'XAF',
-        callingCode: '+237',
-        provider: 'MTN',
-        otpRequired: false,
-      }]);
+      await json({
+        content: [{
+          code: 'CM',
+          name: 'Cameroun',
+          currency: 'XAF',
+          callingCode: '+237',
+          provider: 'MTN',
+          otpRequired: false,
+        }],
+      });
       return;
     }
 

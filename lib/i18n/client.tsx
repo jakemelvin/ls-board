@@ -30,6 +30,8 @@ import defaultCommissions from '@/public/locales/fr/commissions.json'
 import englishCommissions from '@/public/locales/en/commissions.json'
 import defaultPickups from '@/public/locales/fr/pickups.json'
 import englishPickups from '@/public/locales/en/pickups.json'
+import defaultCompany from '@/public/locales/fr/company.json'
+import englishCompany from '@/public/locales/en/company.json'
 
 import { defaultLocale, defaultNamespace, fallbackNamespace, locales, namespaces } from './settings'
 import type { Locale, Namespace } from './settings'
@@ -57,7 +59,7 @@ type I18nContextValue = {
 }
 
 const STORAGE_KEY = 'sendam_locale'
-const I18N_ASSET_VERSION = '2026-08-16-commissions-pickups'
+const I18N_ASSET_VERSION = '2026-08-25-company-translations'
 const localeResourceRequests = new Map<Locale, Promise<TranslationResources>>()
 
 const bundledResources: Record<Locale, TranslationResources> = {
@@ -72,6 +74,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     commissions: defaultCommissions as TranslationFile,
     pickups: defaultPickups as TranslationFile,
     legal: defaultLegal as TranslationFile,
+    company: defaultCompany as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -84,6 +87,7 @@ const bundledResources: Record<Locale, TranslationResources> = {
     commissions: englishCommissions as TranslationFile,
     pickups: englishPickups as TranslationFile,
     legal: englishLegal as TranslationFile,
+    company: englishCompany as TranslationFile,
   },
 }
 

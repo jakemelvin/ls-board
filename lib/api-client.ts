@@ -115,6 +115,7 @@ async function executeRequest<T>(
     cachedGetResponses.clear();
   }
   if (!text) return undefined as T;
+
   return JSON.parse(text) as T;
 }
 

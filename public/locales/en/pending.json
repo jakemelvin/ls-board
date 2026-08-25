@@ -1,5 +1,13 @@
 {
   "title": "Account pending",
-  "description": "Your account is waiting for validation."
+  "description": "Your account is waiting for validation.",
+  "heading": "Account approval in progress",
+  "body": "Your company has been registered successfully. A SENDAMhub super administrator must approve your account before you can access the platform.",
+  "steps": {
+    "requestReceived": { "label": "Request received", "description": "Your account creation request has been recorded." },
+    "reviewInProgress": { "label": "Review in progress", "description": "Our team is reviewing your company information." },
+    "emailNotification": { "label": "Email notification", "description": "You will receive an email as soon as your account is approved." }
+  },
+  "estimatedTime": { "label": "Estimated time:", "description": "24 to 48 business hours. If you need help, contact {{email}}." },
+  "actions": { "backToLogin": "Back to sign in", "checkStatus": "Check status" }
 }
-

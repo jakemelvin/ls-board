@@ -10,16 +10,19 @@ import {
   removeCompanyTransportMode,
 } from '@/lib/company/api';
 import { getTransportModeIcon } from '@/lib/transport-mode-icons';
+import { useTranslation } from '@/lib/i18n';
 
 export function TransportModesManagement() {
+  const { t } = useTranslation('dashboard');
+
   return (
     <CompanyGuard>
       {({ companyId, company }) => (
         <CatalogAssignmentManager
           companyId={companyId}
-          title="Modes de transport"
-          subtitle={`Sélectionnez les modes de transport opérés par ${company.name}.`}
-          itemLabel="mode de transport"
+          title={t('catalogAssignments.transportModes.title')}
+          subtitle={t('catalogAssignments.transportModes.subtitle', { values: { company: company.name } })}
+          itemLabel={t('catalog.itemLabels.transportMode')}
           icon={Waypoints}
           getItemIcon={(item) => getTransportModeIcon(item.name)}
           loadCatalog={getTransportModes}
@@ -29,9 +32,9 @@ export function TransportModesManagement() {
           add={addCompanyTransportMode}
           remove={removeCompanyTransportMode}
           getRemovalConfirmation={(item) => ({
-            title: 'Confirmer la desactivation',
-            description: `La desactivation de « ${item.name} » supprimera egalement les tarifications qui lui sont liees. Voulez-vous continuer ?`,
-            confirmLabel: 'Desactiver',
+            title: t('catalogAssignments.transportModes.confirmDeactivate.title'),
+            description: t('catalogAssignments.transportModes.confirmDeactivate.description', { values: { name: item.name } }),
+            confirmLabel: t('catalogAssignments.transportModes.confirmDeactivate.action'),
             destructive: true,
           })}
         />

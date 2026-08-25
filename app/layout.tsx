@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { ProductionMonitoring } from '@/components/production-monitoring'
 import { Toaster } from '@/components/ui/toaster'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import { I18nProvider } from '@/components/i18n-provider'
@@ -55,7 +56,10 @@ export default function RootLayout({
         <I18nProvider><CurrencyProvider>{children}</CurrencyProvider></I18nProvider>
         <Toaster />
         <PwaServiceWorkerRegister />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.NODE_ENV === 'production' && <>
+          <Analytics />
+          <ProductionMonitoring />
+        </>}
       </body>
     </html>
   )

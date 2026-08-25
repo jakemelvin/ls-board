@@ -158,6 +158,8 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const startupTimeoutRef = useRef<number | null>(null);
+  const scannerAttemptRef = useRef(0);
   const onOpenChangeRef = useRef(onOpenChange);
   const onScanRef = useRef(onScan);
   const translateRef = useRef(t);
@@ -173,6 +175,10 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
   }, [onOpenChange, onScan, t]);
 
   const stopScanner = useCallback(() => {
+    if (startupTimeoutRef.current !== null) {
+      window.clearTimeout(startupTimeoutRef.current);
+      startupTimeoutRef.current = null;
+    }
     controlsRef.current?.stop();
     controlsRef.current = null;
     const stream = videoRef.current?.srcObject;
@@ -182,34 +188,28 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      stopScanner();
-      return;
-    }
-
-    let cancelled = false;
+  const startScanner = useCallback(() => {
+    // Safari on iOS can suppress camera permission requests that originate from an effect.
+    // Keep getUserMedia in the button's synchronous click path.
+    const attempt = scannerAttemptRef.current + 1;
+    scannerAttemptRef.current = attempt;
     hasScannedRef.current = false;
+    stopScanner();
     setCameraError(null);
     setIsStarting(true);
-    const startupTimeout = window.setTimeout(() => {
-      if (cancelled || controlsRef.current) return;
-      stopScanner();
-      setIsStarting(false);
-      setCameraError(translateRef.current(getCameraErrorKey()));
-    }, CAMERA_START_TIMEOUT_MS);
 
-    const startScanner = async () => {
-      if (!videoRef.current) return;
-
+    const start = async () => {
       try {
-        if (!window.isSecureContext) {
-          throw new Error('Insecure context');
-        }
+        if (!window.isSecureContext) throw new Error('Insecure context');
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera API unavailable');
 
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('Camera API unavailable');
-        }
+        startupTimeoutRef.current = window.setTimeout(() => {
+          if (scannerAttemptRef.current !== attempt) return;
+          scannerAttemptRef.current += 1;
+          stopScanner();
+          setIsStarting(false);
+          setCameraError(translateRef.current(getCameraErrorKey()));
+        }, CAMERA_START_TIMEOUT_MS);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
@@ -219,16 +219,19 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
             height: { ideal: 720 },
           },
         });
-        if (cancelled) {
+        if (scannerAttemptRef.current !== attempt) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
         const video = videoRef.current;
+        if (!video) {
+          stream.getTracks().forEach((track) => track.stop());
+          throw new Error('Camera preview unavailable');
+        }
         video.srcObject = stream;
         video.muted = true;
         video.setAttribute('playsinline', 'true');
-        if (!cancelled) setIsStarting(false);
         await video.play();
 
         const reader = new BrowserQRCodeReader(undefined, {
@@ -239,7 +242,7 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
           stream,
           video,
           (result) => {
-            if (!result || hasScannedRef.current || cancelled) return;
+            if (!result || hasScannedRef.current || scannerAttemptRef.current !== attempt) return;
             hasScannedRef.current = true;
             controlsRef.current?.stop();
             onScanRef.current(result.getText());
@@ -247,30 +250,43 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
           },
         );
 
-        if (cancelled) {
+        if (scannerAttemptRef.current !== attempt) {
           controls.stop();
           return;
         }
         controlsRef.current = controls;
-        window.clearTimeout(startupTimeout);
+        if (startupTimeoutRef.current !== null) {
+          window.clearTimeout(startupTimeoutRef.current);
+          startupTimeoutRef.current = null;
+        }
       } catch (error) {
-        if (!cancelled) {
+        if (scannerAttemptRef.current === attempt) {
           stopScanner();
           setCameraError(translateRef.current(getCameraErrorKey(error)));
         }
       } finally {
-        if (!cancelled) setIsStarting(false);
+        if (scannerAttemptRef.current === attempt) setIsStarting(false);
       }
     };
 
-    void startScanner();
+    void start();
+  }, [stopScanner]);
 
+  useEffect(() => {
+    if (open) return;
+    scannerAttemptRef.current += 1;
+    hasScannedRef.current = false;
+    setCameraError(null);
+    setIsStarting(false);
+    stopScanner();
+  }, [open, stopScanner]);
+
+  useEffect(() => {
     return () => {
-      cancelled = true;
-      window.clearTimeout(startupTimeout);
+      scannerAttemptRef.current += 1;
       stopScanner();
     };
-  }, [open, stopScanner]);
+  }, [stopScanner]);
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -340,6 +356,21 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
           onChange={(event) => void handleFileChange(event)}
         />
         <DialogFooter>
+          <Button
+            type="button"
+            className="w-full gap-2"
+            onClick={startScanner}
+            disabled={isStarting || isDecodingFile}
+          >
+            {isStarting ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+            {cameraError
+              ? t('collectorReception.scanner.retryCamera')
+              : t('collectorReception.scanner.startCamera')}
+          </Button>
           <Button
             type="button"
             variant="outline"

@@ -39,8 +39,10 @@ import {
 } from '@/lib/shipments/presentation';
 import type { TransporterReadyShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 export function PickupRequest() {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const [shipments, setShipments] = useState<TransporterReadyShipment[]>([]);
   const [page, setPage] = useState(0);
@@ -57,7 +59,7 @@ export function PickupRequest() {
 
   const loadShipments = useCallback(async () => {
     if (!token) {
-      setError('Session expiree');
+      setError(t('pickupRequest.errors.sessionExpired'));
       setLoading(false);
       return;
     }
@@ -78,7 +80,7 @@ export function PickupRequest() {
       setError(
         err instanceof ApiError
           ? err.message
-          : 'Impossible de charger les colis disponibles.',
+          : t('pickupRequest.errors.load'),
       );
       setShipments([]);
       setTotalPages(0);
@@ -86,7 +88,7 @@ export function PickupRequest() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, token]);
+  }, [page, pageSize, t, token]);
 
   useEffect(() => {
     void loadShipments();
@@ -102,10 +104,10 @@ export function PickupRequest() {
 
     return Array.from(groups.entries()).map(([originId, items]) => ({
       originId,
-      originName: items[0]?.originCollectionPointName ?? 'Point non renseigne',
+      originName: items[0]?.originCollectionPointName ?? t('pickupRequest.fallbacks.origin'),
       items,
     }));
-  }, [shipments]);
+  }, [shipments, t]);
 
   const selectedShipments = shipments.filter((shipment) =>
     selectedShipmentIds.includes(shipment.shipmentId),
@@ -113,7 +115,7 @@ export function PickupRequest() {
 
   const selectedOriginName =
     shipmentsByOrigin.find((group) => group.originId === selectedOriginId)?.originName ??
-    'Point non selectionne';
+    t('pickupRequest.fallbacks.noOrigin');
 
   const toggleShipment = (shipment: TransporterReadyShipment) => {
     const originId = shipment.originCollectionPointId ?? 0;
@@ -149,17 +151,17 @@ export function PickupRequest() {
       });
 
       toast({
-        title: 'Demande envoyee',
-        description: `${selectedShipmentIds.length} colis transmis au collecteur pour validation.`,
+        title: t('pickupRequest.messages.sentTitle'),
+        description: t('pickupRequest.messages.sentDescription', { values: { count: selectedShipmentIds.length } }),
       });
       setIsConfirmOpen(false);
       resetSelection();
       await loadShipments();
     } catch (err) {
       toast({
-        title: 'Demande refusee',
+        title: t('pickupRequest.messages.rejectedTitle'),
         description:
-          err instanceof ApiError ? err.message : "Impossible d'envoyer la demande.",
+          err instanceof ApiError ? err.message : t('pickupRequest.errors.send'),
         variant: 'destructive',
       });
     } finally {
@@ -171,14 +173,14 @@ export function PickupRequest() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Nouvelle demande de prise</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('pickupRequest.title')}</h2>
           <p className="text-muted-foreground">
-            Selectionnez les colis prets au transport et envoyez une demande au collecteur.
+            {t('pickupRequest.subtitle')}
           </p>
         </div>
         <Button variant="outline" className="w-fit gap-2" onClick={() => void loadShipments()}>
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
+          {t('common.refresh')}
         </Button>
       </div>
 
@@ -188,17 +190,17 @@ export function PickupRequest() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="font-medium text-foreground">
-                  {selectedShipmentIds.length} colis selectionne(s)
+                  {t('pickupRequest.selection.count', { values: { count: selectedShipmentIds.length } })}
                 </p>
                 <p className="text-sm text-muted-foreground">{selectedOriginName}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" onClick={resetSelection} disabled={submitting}>
-                  Reinitialiser
+                  {t('pickupRequest.actions.reset')}
                 </Button>
                 <Button className="gap-2" onClick={() => setIsConfirmOpen(true)}>
                   <Send className="h-4 w-4" />
-                  Envoyer la demande
+                  {t('pickupRequest.actions.sendRequest')}
                 </Button>
               </div>
             </div>
@@ -211,7 +213,7 @@ export function PickupRequest() {
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <Button variant="outline" onClick={() => void loadShipments()}>
-              Reessayer
+              {t('common.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -223,9 +225,9 @@ export function PickupRequest() {
         <Card className="border-border bg-card">
           <CardContent className="flex flex-col items-center justify-center py-14 text-center">
             <Package className="h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 text-lg font-medium text-foreground">Aucun colis disponible</p>
+            <p className="mt-4 text-lg font-medium text-foreground">{t('pickupRequest.empty.title')}</p>
             <p className="text-sm text-muted-foreground">
-              Les colis prets au transport apparaitront ici apres validation par le collecteur.
+              {t('pickupRequest.empty.description')}
             </p>
           </CardContent>
         </Card>
@@ -256,13 +258,13 @@ export function PickupRequest() {
                       <div className="min-w-0">
                         <CardTitle className="truncate text-base">{group.originName}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {group.items.length} colis disponible(s)
-                          {selectedInGroup > 0 ? `, ${selectedInGroup} selectionne(s)` : ''}
+                          {t('pickupRequest.group.available', { values: { count: group.items.length } })}
+                          {selectedInGroup > 0 ? t('pickupRequest.group.selectedSuffix', { values: { count: selectedInGroup } }) : ''}
                         </p>
                       </div>
                     </div>
                     {isLockedByOtherOrigin && (
-                      <Badge variant="outline">Selection active sur un autre point</Badge>
+                      <Badge variant="outline">{t('pickupRequest.group.locked')}</Badge>
                     )}
                   </div>
                 </CardHeader>
@@ -272,11 +274,11 @@ export function PickupRequest() {
                       <TableHeader>
                         <TableRow className="border-border hover:bg-transparent">
                           <TableHead className="w-12" />
-                          <TableHead className="text-muted-foreground">Reference</TableHead>
-                          <TableHead className="text-muted-foreground">Client</TableHead>
-                          <TableHead className="text-muted-foreground">Destination</TableHead>
-                          <TableHead className="text-muted-foreground">Statut</TableHead>
-                          <TableHead className="text-muted-foreground">Cree le</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickupRequest.columns.reference')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickupRequest.columns.customer')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickupRequest.columns.destination')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickupRequest.columns.status')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickupRequest.columns.createdAt')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -313,20 +315,20 @@ export function PickupRequest() {
                                   <CopyTrackingNumberButton trackingNumber={shipment.reference} />
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                  {shipment.parcelTypeName ?? 'Type non renseigne'}
+                                  {shipment.parcelTypeName ?? t('pickupRequest.fallbacks.parcelType')}
                                   {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
                                 </p>
                               </TableCell>
                               <TableCell>
                                 <p className="text-sm font-medium text-foreground">
-                                  {shipment.senderFullName ?? 'Expediteur non renseigne'}
+                                  {shipment.senderFullName ?? t('pickupRequest.fallbacks.sender')}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  vers {shipment.receiverFullName ?? 'destinataire non renseigne'}
+                                  {t('pickupRequest.receiver', { values: { name: shipment.receiverFullName ?? t('pickupRequest.fallbacks.receiver') } })}
                                 </p>
                               </TableCell>
                               <TableCell className="text-sm text-foreground">
-                                {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+                                {shipment.destinationCollectionPointName ?? t('pickupRequest.fallbacks.destination')}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-wrap gap-2">
@@ -379,32 +381,32 @@ export function PickupRequest() {
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Confirmer la demande</DialogTitle>
+            <DialogTitle className="text-foreground">{t('pickupRequest.dialog.title')}</DialogTitle>
             <DialogDescription>
-              Le collecteur du point devra approuver cette demande avant embarquement.
+              {t('pickupRequest.dialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-secondary p-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Point origine</span>
+                <span className="text-sm text-muted-foreground">{t('pickupRequest.dialog.origin')}</span>
                 <span className="text-right text-sm font-medium text-foreground">
                   {selectedOriginName}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">Colis</span>
+                <span className="text-sm text-muted-foreground">{t('pickupRequest.dialog.parcels')}</span>
                 <span className="text-sm font-medium text-foreground">
                   {selectedShipmentIds.length}
                 </span>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Note au collecteur</label>
+              <label className="text-sm font-medium text-foreground">{t('pickupRequest.dialog.note')}</label>
               <Textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Exemple: passage prevu a 15h30"
+                placeholder={t('pickupRequest.dialog.notePlaceholder')}
                 className="min-h-[100px] bg-secondary"
                 disabled={submitting}
               />
@@ -425,11 +427,11 @@ export function PickupRequest() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={submitting}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button onClick={() => void handleCreateRequest()} disabled={submitting} className="gap-2">
               {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-              {submitting ? 'Envoi...' : 'Envoyer'}
+              {submitting ? t('pickupRequest.actions.sending') : t('pickupRequest.actions.send')}
             </Button>
           </DialogFooter>
         </DialogContent>

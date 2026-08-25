@@ -76,9 +76,9 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
         <CardContent className="flex min-h-[320px] flex-col items-center justify-center gap-4 p-8 text-center">
           <MapPin className="h-10 w-10 text-muted-foreground" />
           <div>
-            <p className="text-lg font-semibold text-foreground">Aucun point assigne</p>
+            <p className="text-lg font-semibold text-foreground">{t('collectorDashboard.empty.title')}</p>
             <p className="text-sm text-muted-foreground">
-              Ce collecteur n&apos;a pas encore de point de collecte rattache.
+              {t('collectorDashboard.empty.description')}
             </p>
           </div>
         </CardContent>
@@ -90,7 +90,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
     <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Tableau de bord collecteur</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('collectorDashboard.title')}</h2>
           <p className="text-muted-foreground">
             {point?.name ?? displayName}
             {point?.cityName ? ` - ${point.cityName}` : ''}
@@ -99,7 +99,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
         <div className="rounded-2xl border border-border bg-card px-4 py-3 lg:min-w-80">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm text-muted-foreground">Disponibilite du point</p>
+              <p className="text-sm text-muted-foreground">{t('collectorDashboard.availability')}</p>
               <p className="mt-1 text-sm font-semibold text-foreground">
                 {formatOpeningHours(point?.openingHours)}
               </p>
@@ -114,7 +114,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
             </span>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
-            <span className="text-muted-foreground">Capacite</span>
+            <span className="text-muted-foreground">{t('collectorDashboard.capacity')}</span>
             <span className="font-semibold text-foreground">
               {round(point?.currentLoad)} / {round(point?.maxCapacity)} {point?.capacityUnit ?? ''}
             </span>
@@ -127,7 +127,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           <CardContent className="flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className={cn('flex items-center gap-3', error ? 'text-destructive' : 'text-muted-foreground')}>
               {error ? <AlertTriangle className="h-5 w-5" /> : <RefreshCw className="h-5 w-5 animate-spin" />}
-              <span>{error ?? 'Chargement du dashboard collecteur...'}</span>
+              <span>{error ?? t('collectorDashboard.loading')}</span>
             </div>
             {error && (
               <Button variant="outline" size="sm" className="gap-2" onClick={() => void loadDashboard()}>
@@ -144,25 +144,25 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           icon={Package}
           iconClassName="bg-warning/20 text-warning"
           value={round(metrics?.pendingReceptionCount)}
-          label="Receptions a valider"
+          label={t('collectorDashboard.metrics.pendingReceptions')}
         />
         <DashboardMetric
           icon={Warehouse}
           iconClassName="bg-primary/20 text-primary"
           value={round(metrics?.localStockCount)}
-          label="Colis en stock local"
+          label={t('collectorDashboard.metrics.localStock')}
         />
         <DashboardMetric
           icon={ArrowRightLeft}
           iconClassName="bg-chart-1/20 text-chart-1"
           value={round(metrics?.pendingPickupRequestCount)}
-          label="Demandes de prise en attente"
+          label={t('collectorDashboard.metrics.pendingPickupRequests')}
         />
         <DashboardMetric
           icon={CheckCircle2}
           iconClassName="bg-success/20 text-success"
           value={round(metrics?.arrivedAtPointCount)}
-          label="Colis arrives au point"
+          label={t('collectorDashboard.metrics.arrivedAtPoint')}
         />
       </div>
 
@@ -171,9 +171,9 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Coins className="h-5 w-5 text-primary" />
-              Mes commissions
+              {t('collectorDashboard.commissions.title')}
             </CardTitle>
-            <CardDescription>Montants generes par les operations associees a votre point.</CardDescription>
+            <CardDescription>{t('collectorDashboard.commissions.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <CommissionGrid commissions={commissions} />
@@ -209,8 +209,8 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Priorites immediates</CardTitle>
-            <CardDescription>Elements renvoyes par le backend pour guider le traitement.</CardDescription>
+            <CardTitle className="text-foreground">{t('collectorDashboard.priorities.title')}</CardTitle>
+            <CardDescription>{t('collectorDashboard.priorities.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {(dashboard?.priorities ?? []).map((priority) => (
@@ -233,8 +233,8 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Dernieres operations</CardTitle>
-            <CardDescription>Operations recentes confirmees par l'API.</CardDescription>
+            <CardTitle className="text-foreground">{t('collectorDashboard.recentOperations.title')}</CardTitle>
+            <CardDescription>{t('collectorDashboard.recentOperations.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {(dashboard?.recentOperations ?? []).map((operation) => (
@@ -254,15 +254,15 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
                 </div>
               </div>
             ))}
-            {!dashboard?.recentOperations?.length && <EmptyState label="Aucune operation recente." />}
+            {!dashboard?.recentOperations?.length && <EmptyState label={t('collectorDashboard.recentOperations.empty')} />}
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-foreground">Receptions en attente</CardTitle>
-          <CardDescription>Colis clients a verifier en priorite.</CardDescription>
+          <CardTitle className="text-foreground">{t('collectorDashboard.pendingReceptions.title')}</CardTitle>
+          <CardDescription>{t('collectorDashboard.pendingReceptions.description')}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="space-y-3 p-4 md:hidden">
@@ -280,13 +280,13 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
                   </span>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-                  <span>{shipment.senderKycDocumentsAvailable ? 'Documents disponibles' : 'KYC a verifier'}</span>
+                  <span>{shipment.senderKycDocumentsAvailable ? t('collectorDashboard.pendingReceptions.documentsAvailable') : t('collectorDashboard.pendingReceptions.kycToCheck')}</span>
                   <span className="truncate">{shipment.destinationCollectionPointName ?? '-'}</span>
                 </div>
               </div>
             ))}
             {!dashboard?.pendingReceptions?.length && (
-              <EmptyState label="Aucun colis client en attente de validation." />
+              <EmptyState label={t('collectorDashboard.pendingReceptions.empty')} />
             )}
           </div>
 
@@ -294,11 +294,11 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">Reference</TableHead>
-                  <TableHead className="text-muted-foreground">Expediteur</TableHead>
-                  <TableHead className="text-muted-foreground">KYC</TableHead>
-                  <TableHead className="text-muted-foreground">Destination</TableHead>
-                  <TableHead className="text-muted-foreground">Poids</TableHead>
+                  <TableHead className="text-muted-foreground">{t('collectorDashboard.table.reference')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('collectorDashboard.table.sender')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('collectorDashboard.table.kyc')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('collectorDashboard.table.destination')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('collectorDashboard.table.weight')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -309,7 +309,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
                     </TableCell>
                     <TableCell className="text-foreground">{shipment.senderFullName ?? '-'}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {shipment.senderKycDocumentsAvailable ? 'Documents disponibles' : 'A verifier'}
+                      {shipment.senderKycDocumentsAvailable ? t('collectorDashboard.pendingReceptions.documentsAvailable') : t('collectorDashboard.pendingReceptions.toCheck')}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {shipment.destinationCollectionPointName ?? '-'}
@@ -320,7 +320,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
                 {!dashboard?.pendingReceptions?.length && (
                   <TableRow>
                     <TableCell colSpan={5} className="h-20 text-center text-muted-foreground">
-                      Aucun colis client en attente de validation.
+                      {t('collectorDashboard.pendingReceptions.empty')}
                     </TableCell>
                   </TableRow>
                 )}
