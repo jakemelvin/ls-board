@@ -36,12 +36,15 @@ import { useTranslation } from '@/lib/i18n';
 import {
   confirmShipmentPayment,
   getPaymentAttempt,
+  getPaymentCountries,
   getPaymentConfiguration,
+  getPaymentProviderCountries,
   getShipmentPaymentAttempts,
   initiateShipmentPayment,
 } from '@/lib/payments/api';
 import type {
   OnlinePaymentProvider,
+  PaymentCountryResponse,
   PaymentAttemptResponse,
   PaymentPublicConfigResponse,
 } from '@/lib/payments/types';
@@ -49,16 +52,17 @@ import { payShipmentWithPromoCode } from '@/lib/shipments/api';
 import type { Shipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
 
-const ONLINE_PROVIDERS: OnlinePaymentProvider[] = ['MTN', 'ORANGE', 'PAYPAL', 'STRIPE'];
 const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED']);
 const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
 
-const PROVIDER_ICONS = {
-  MTN: Smartphone,
-  ORANGE: Smartphone,
+const PROVIDER_ICONS: Partial<Record<OnlinePaymentProvider, typeof Smartphone>> = {
+  MTN: Smartphone, ORANGE: Smartphone, MOOV: Smartphone, WAVE: WalletCards,
+  EXPRESSO: Smartphone, FREE: Smartphone, WLIGDICASH: Smartphone, CELTIIS: Smartphone,
+  CORIS: Smartphone, TMONEY: Smartphone, AIRTEL: Smartphone, TELECEL: Smartphone,
+  MPESA: Smartphone, AFRIMONEY: Smartphone,
   PAYPAL: WalletCards,
   STRIPE: CreditCard,
-} satisfies Record<OnlinePaymentProvider, typeof Smartphone>;
+};
 
 interface ShipmentPaymentDialogProps {
   open: boolean;
@@ -84,9 +88,11 @@ export function ShipmentPaymentDialog({
   const { t } = useTranslation('dashboard');
   const { formatMoney } = useCurrency();
   const [config, setConfig] = useState<PaymentPublicConfigResponse | null>(null);
+  const [countries, setCountries] = useState<PaymentCountryResponse[]>([]);
   const [provider, setProvider] = useState<OnlinePaymentProvider | null>(null);
   const [country, setCountry] = useState('');
   const [payerMsisdn, setPayerMsisdn] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoShipment, setPromoShipment] = useState<Shipment | null>(null);
   const [applyingPromo, setApplyingPromo] = useState(false);
@@ -102,12 +108,26 @@ export function ShipmentPaymentDialog({
   const idempotencyKeyRef = useRef<string | null>(null);
   const stripeFinalizationPollRef = useRef(0);
 
+  const selectedCountry = useMemo(
+    () => countries.find((item) => item.code === country),
+    [countries, country],
+  );
+  const mobileMethods = useMemo(
+    () => (selectedCountry?.localOperators ?? []).filter((item) => item.enabled !== false),
+    [selectedCountry],
+  );
+  const selectedMethod = useMemo(
+    () => mobileMethods.find((item) => item.provider === provider),
+    [mobileMethods, provider],
+  );
   const providers = useMemo(() => {
     const configured = new Set(config?.providers ?? []);
-    return ONLINE_PROVIDERS.filter(
+    const countryProviders = selectedCountry?.availableProviders
+      ?? [...mobileMethods.map((item) => item.provider), ...(selectedCountry?.globalProviders ?? [])];
+    return countryProviders.filter(
       (item) => configured.has(item) && (item !== 'STRIPE' || config?.stripePublishableKey),
     );
-  }, [config]);
+  }, [config, mobileMethods, selectedCountry]);
 
   const stripePublishableKey = config?.stripePublishableKey;
   const stripePromise = useMemo(
@@ -140,10 +160,12 @@ export function ShipmentPaymentDialog({
     let cancelled = false;
     setLoadingConfig(true);
     setConfig(null);
+    setCountries([]);
     setProvider(null);
     setCountry('');
     setAttempt(null);
     setPayerMsisdn('');
+    setOtpCode('');
     setPromoCode('');
     setPromoShipment(null);
     setApplyingPromo(false);
@@ -155,19 +177,40 @@ export function ShipmentPaymentDialog({
     stripeFinalizationPollRef.current = 0;
     setIsStripeFinalizing(false);
 
-    Promise.all([getPaymentConfiguration(token), getShipmentPaymentAttempts(token, shipment.id)])
-      .then(([response, attempts]) => {
+    Promise.all([getPaymentConfiguration(token), getPaymentCountries(token), getShipmentPaymentAttempts(token, shipment.id)])
+      .then(async ([response, paymentCountries, attempts]) => {
         if (cancelled) return;
         setConfig(response);
+        let resolvedCountries = paymentCountries;
+        // Legacy servers only expose the provider-centric endpoint. Keep that
+        // contract usable while preferring the country-first catalogue.
+        if (resolvedCountries.length === 0 && (response.providers ?? []).includes('MTN')) {
+          const legacy = await getPaymentProviderCountries(token, 'MTN');
+          resolvedCountries = legacy.map((item) => ({
+            ...item,
+            localOperators: item.provider ? [{
+              provider: item.provider,
+              name: item.operatorName,
+              enabled: item.enabled,
+              confirmationMode: item.confirmationMode,
+              otpRequired: item.otpRequired,
+            }] : [],
+            availableProviders: item.provider ? [item.provider] : [],
+          }));
+        }
+        if (cancelled) return;
+        setCountries(resolvedCountries);
+        const defaultCountry = resolvedCountries.find((item) => item.code === 'CM') ?? resolvedCountries[0];
+        setCountry(defaultCountry?.code ?? '');
         const latestAttempt = attempts[0] ?? null;
         setAttempt(latestAttempt);
         const configured = new Set(response.providers ?? []);
         const latestProvider = latestAttempt?.provider;
-        const firstProvider = ONLINE_PROVIDERS.find(
+        const firstProvider = defaultCountry?.availableProviders?.find(
           (item) => configured.has(item) && (item !== 'STRIPE' || response.stripePublishableKey),
-        );
+        ) ?? defaultCountry?.localOperators?.find((item) => item.enabled !== false && configured.has(item.provider))?.provider;
         setProvider(
-          latestProvider && ONLINE_PROVIDERS.includes(latestProvider as OnlinePaymentProvider)
+          latestProvider && !['PROMO_CODE', 'COLLECTION_POINT'].includes(latestProvider)
             ? latestProvider as OnlinePaymentProvider
             : firstProvider ?? null,
         );
@@ -276,7 +319,8 @@ export function ShipmentPaymentDialog({
   async function initiatePayment() {
     if (!token || !provider) return;
 
-    if (provider === 'MTN' || provider === 'ORANGE') {
+    const isMobileMoney = provider !== 'PAYPAL' && provider !== 'STRIPE';
+    if (isMobileMoney) {
       if (!country) {
         setError(t('shipmentPayment.errors.countryRequired'));
         return;
@@ -291,13 +335,14 @@ export function ShipmentPaymentDialog({
     setError(null);
     try {
       const payment = await initiateShipmentPayment(token, provider, shipment.id, {
-        country: provider === 'MTN' || provider === 'ORANGE' ? country : undefined,
-        payerMsisdn:
-          provider === 'MTN' || provider === 'ORANGE' ? payerMsisdn.trim() : undefined,
+        country: isMobileMoney ? country : undefined,
+        payerMsisdn: isMobileMoney ? payerMsisdn.trim() : undefined,
         idempotencyKey: idempotencyKeyRef.current ??= createIdempotencyKey(shipment.id),
+        otpCode: otpCode || undefined,
         description: `Platform fee for shipment ${shipment.reference ?? `#${shipment.id}`}`,
       });
       setAttempt(payment);
+      if (payment.status !== 'REQUIRES_ACTION') setOtpCode('');
       if (TERMINAL_STATUSES.has(payment.status)) idempotencyKeyRef.current = null;
       if (needsStripeClientSecret(payment)) {
         setError(t('shipmentPayment.errors.cardSetup'));
@@ -382,6 +427,9 @@ export function ShipmentPaymentDialog({
   const canRetry = attempt ? ['FAILED', 'CANCELLED', 'EXPIRED'].includes(attempt.status) : false;
   const hasActiveAttempt = Boolean(attempt && !TERMINAL_STATUSES.has(attempt.status));
   const stripeClientSecret = attempt?.provider === 'STRIPE' ? attempt.clientSecret : undefined;
+  const requiresOtp = attempt?.status === 'REQUIRES_ACTION'
+    && (attempt.providerDetails?.confirmationMode === 'OTP_CODE' || attempt.providerDetails?.otpRequired);
+  const providerLink = attempt?.providerDetails?.providerLink ?? attempt?.approvalUrl;
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !submitting && !applyingPromo && onOpenChange(nextOpen)}>
@@ -509,8 +557,8 @@ export function ShipmentPaymentDialog({
                       <div>
                         <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.chooseProvider')}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('shipmentPayment.chooseProvider')}>
-                          {providers.map((item) => {
-                            const Icon = PROVIDER_ICONS[item];
+                           {providers.map((item) => {
+                             const Icon = PROVIDER_ICONS[item] ?? Smartphone;
                             const selected = provider === item;
                             return (
                               <button
@@ -534,30 +582,37 @@ export function ShipmentPaymentDialog({
                                 <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', selected ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
                                   <Icon className="h-4 w-4" />
                                 </span>
-                                <span className="text-sm font-semibold">{t(`shipmentPayment.providers.${item}`)}</span>
+                                 <span className="text-sm font-semibold">{providerLabel(item, selectedCountry, t)}</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
 
-                      {(provider === 'MTN' || provider === 'ORANGE') && (
-                        <MobileMoneyFields
-                          token={token}
-                          provider={provider}
-                          country={country}
-                          payerMsisdn={payerMsisdn}
-                          onCountryChange={setCountry}
-                          onPayerMsisdnChange={setPayerMsisdn}
-                          labels={{
+                       {provider && provider !== 'PAYPAL' && provider !== 'STRIPE' && (
+                         <MobileMoneyFields
+                           countries={countries}
+                           country={country}
+                           payerMsisdn={payerMsisdn}
+                           method={selectedMethod}
+                           onCountryChange={(nextCountry) => {
+                             setCountry(nextCountry);
+                             const next = countries.find((item) => item.code === nextCountry);
+                             const nextProvider = next?.localOperators?.find((item) => item.enabled !== false)?.provider
+                               ?? next?.availableProviders?.find((item) => item !== 'PAYPAL' && item !== 'STRIPE')
+                               ?? next?.globalProviders?.[0]
+                               ?? null;
+                             setProvider(nextProvider);
+                             setPayerMsisdn('');
+                           }}
+                           onPayerMsisdnChange={setPayerMsisdn}
+                           labels={{
                             countryLabel: t('shipmentPayment.countryLabel'),
                             countryPlaceholder: t('shipmentPayment.countryPlaceholder'),
                             phoneLabel: t('shipmentPayment.phoneLabel'),
                             phonePlaceholder: t('shipmentPayment.phonePlaceholder'),
                             phoneHint: t('shipmentPayment.phoneHint'),
-                            loadingCountries: t('shipmentPayment.loadingCountries'),
-                            countriesError: t('shipmentPayment.countriesError'),
-                            otpRequired: t('shipmentPayment.otpRequired'),
+                             otpRequired: t('shipmentPayment.otpRequired'),
                           }}
                         />
                       )}
@@ -568,9 +623,19 @@ export function ShipmentPaymentDialog({
                     <PaymentAttemptState attempt={attempt} />
                   )}
 
-                  {attempt?.approvalUrl && attempt.status !== 'SUCCEEDED' && (
-                    <Button asChild className="w-full gap-2">
-                      <a href={attempt.approvalUrl} target="_blank" rel="noreferrer">
+                   {requiresOtp && (
+                     <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                       <label className="block space-y-1.5">
+                         <span className="text-sm font-semibold text-foreground">{t('shipmentPayment.otpLabel')}</span>
+                         <Input value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, attempt!.providerDetails?.otpLength ?? 6))} inputMode="numeric" autoComplete="one-time-code" placeholder={t('shipmentPayment.otpPlaceholder')} />
+                       </label>
+                       {(attempt.providerDetails?.customerInstruction ?? attempt.providerDetails?.pendingAction ?? attempt.providerDetails?.ussdCode) && <p className="text-sm text-muted-foreground">{attempt.providerDetails?.customerInstruction ?? attempt.providerDetails?.pendingAction ?? attempt.providerDetails?.ussdCode}</p>}
+                     </div>
+                   )}
+
+                   {providerLink && attempt?.status !== 'SUCCEEDED' && (
+                     <Button asChild className="w-full gap-2">
+                       <a href={providerLink} target="_blank" rel="noreferrer">
                         {t('shipmentPayment.continueProvider')}
                         <ExternalLink className="h-4 w-4" />
                       </a>
@@ -604,10 +669,10 @@ export function ShipmentPaymentDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting || applyingPromo}>
             {isSuccessful ? t('shipmentPayment.close') : t('shipmentPayment.payLater')}
           </Button>
-          {!promoCompleted && (!hasActiveAttempt || canRetry) ? (
-            <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0 || ((provider === 'MTN' || provider === 'ORANGE') && !country)} className="gap-2">
+          {!promoCompleted && (!hasActiveAttempt || canRetry || requiresOtp) ? (
+            <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0 || (provider !== 'PAYPAL' && provider !== 'STRIPE' && (!country || (requiresOtp && otpCode.length !== (attempt?.providerDetails?.otpLength ?? 6))))} className="gap-2">
               {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
-              {canRetry ? t('shipmentPayment.retry') : t('shipmentPayment.pay')}
+              {requiresOtp ? t('shipmentPayment.submitOtp') : canRetry ? t('shipmentPayment.retry') : t('shipmentPayment.pay')}
             </Button>
           ) : !isSuccessful && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret ? (
             <Button type="button" onClick={() => void checkPayment()} disabled={checking} className="gap-2">
@@ -711,6 +776,17 @@ function formatPaymentAmount(amount: number, currency: string) {
   } catch {
     return `${amount} ${currency}`;
   }
+}
+
+function providerLabel(
+  provider: OnlinePaymentProvider,
+  country: PaymentCountryResponse | undefined,
+  t: (key: string) => string,
+) {
+  const method = country?.localOperators?.find((item) => item.provider === provider);
+  if (method?.name) return method.name;
+  const translated = t(`shipmentPayment.providers.${provider}`);
+  return translated === `shipmentPayment.providers.${provider}` ? provider : translated;
 }
 
 function needsStripeClientSecret(attempt: PaymentAttemptResponse) {

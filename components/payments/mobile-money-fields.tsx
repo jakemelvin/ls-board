@@ -1,18 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { LoaderCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { getPaymentProviderCountries } from '@/lib/payments/api';
-import type { OnlinePaymentProvider, PaymentCountryResponse } from '@/lib/payments/types';
-
-type MobileMoneyProvider = Extract<OnlinePaymentProvider, 'MTN' | 'ORANGE'>;
+import type { PaymentCountryResponse, PaymentMethodResponse } from '@/lib/payments/types';
 
 interface MobileMoneyFieldsProps {
-  token: string | null;
-  provider: MobileMoneyProvider;
+  countries: PaymentCountryResponse[];
   country: string;
   payerMsisdn: string;
+  method?: PaymentMethodResponse;
   onCountryChange: (country: string) => void;
   onPayerMsisdnChange: (payerMsisdn: string) => void;
   labels: {
@@ -21,52 +16,19 @@ interface MobileMoneyFieldsProps {
     phoneLabel: string;
     phonePlaceholder: string;
     phoneHint: string;
-    loadingCountries: string;
-    countriesError: string;
     otpRequired: string;
   };
 }
 
 export function MobileMoneyFields({
-  token,
-  provider,
+  countries,
   country,
   payerMsisdn,
+  method,
   onCountryChange,
   onPayerMsisdnChange,
   labels,
 }: MobileMoneyFieldsProps) {
-  const [countries, setCountries] = useState<PaymentCountryResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
-
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    setLoading(true);
-    setLoadFailed(false);
-    setCountries([]);
-    onCountryChange('');
-
-    getPaymentProviderCountries(token, provider)
-      .then((response) => {
-        if (cancelled) return;
-        setCountries(response);
-        const defaultCountry = response.find((item) => item.code === 'CM') ?? response[0];
-        onCountryChange(defaultCountry?.code ?? '');
-      })
-      .catch(() => {
-        if (!cancelled) setLoadFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [onCountryChange, provider, token]);
-
   const selectedCountry = countries.find((item) => item.code === country);
 
   return (
@@ -76,10 +38,10 @@ export function MobileMoneyFields({
         <select
           value={country}
           onChange={(event) => onCountryChange(event.target.value)}
-          disabled={loading || countries.length === 0}
+          disabled={countries.length === 0}
           className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex h-10 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <option value="">{loading ? labels.loadingCountries : labels.countryPlaceholder}</option>
+          <option value="">{labels.countryPlaceholder}</option>
           {countries.map((item) => (
             <option key={item.code} value={item.code}>
               {item.name} ({item.callingCode} · {item.currency})
@@ -87,8 +49,6 @@ export function MobileMoneyFields({
           ))}
         </select>
       </label>
-
-      {loadFailed && <p className="text-sm text-destructive">{labels.countriesError}</p>}
 
       <label className="block space-y-1.5">
         <span className="text-sm font-medium text-foreground">{labels.phoneLabel}</span>
@@ -106,11 +66,10 @@ export function MobileMoneyFields({
           />
         </div>
         <span className="block text-xs leading-5 text-muted-foreground">{labels.phoneHint}</span>
-        {selectedCountry?.otpRequired && (
+        {method?.otpRequired && (
           <span className="block text-xs font-medium text-primary">{labels.otpRequired}</span>
         )}
       </label>
-      {loading && <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" aria-label={labels.loadingCountries} />}
     </div>
   );
 }

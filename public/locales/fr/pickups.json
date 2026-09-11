@@ -95,6 +95,10 @@
     "noMessage": "Sans message",
     "offers": "Historique des offres"
   },
+  "time": {
+    "hour": "Heure",
+    "minute": "Minute"
+  },
   "dialogs": {
     "createTitle": "Publier une opportunité",
     "createDescription": "La capacité disponible sera contrôlée et réservée par le serveur.",

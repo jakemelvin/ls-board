@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client';
 import type {
   OnlinePaymentProvider,
+  MobileMoneyProvider,
   PaymentAttemptResponse,
   PaymentCountryResponse,
   PaymentInitiationRequest,
@@ -13,7 +14,7 @@ export function getPaymentConfiguration(token: string): Promise<PaymentPublicCon
 
 export function getPaymentProviderCountries(
   token: string,
-  provider: Extract<OnlinePaymentProvider, 'MTN' | 'ORANGE'>,
+  provider: MobileMoneyProvider,
 ): Promise<PaymentCountryResponse[]> {
   return apiClient
     .get<PaymentCountriesPayload>(
@@ -29,7 +30,7 @@ type PaymentCountriesPayload =
 
 function normalizePaymentProviderCountries(
   payload: PaymentCountriesPayload,
-  provider: Extract<OnlinePaymentProvider, 'MTN' | 'ORANGE'>,
+  provider: MobileMoneyProvider,
 ): PaymentCountryResponse[] {
   const countries = Array.isArray(payload)
     ? payload
@@ -45,6 +46,11 @@ function normalizePaymentProviderCountries(
       typeof country.currency === 'string' &&
       typeof country.callingCode === 'string',
   );
+}
+
+export function getPaymentCountries(token: string): Promise<PaymentCountryResponse[]> {
+  return apiClient.get<PaymentCountryResponse[]>('/api/delivery/payments/countries', token)
+    .then((payload) => Array.isArray(payload) ? payload : []);
 }
 
 export function initiateShipmentPayment(

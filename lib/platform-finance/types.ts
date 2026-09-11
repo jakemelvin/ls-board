@@ -71,6 +71,18 @@ export interface PaymentModeResponse {
 export type PaymentProvider =
   | 'MTN'
   | 'ORANGE'
+  | 'MOOV'
+  | 'WAVE'
+  | 'EXPRESSO'
+  | 'FREE'
+  | 'WLIGDICASH'
+  | 'CELTIIS'
+  | 'CORIS'
+  | 'TMONEY'
+  | 'AIRTEL'
+  | 'TELECEL'
+  | 'MPESA'
+  | 'AFRIMONEY'
   | 'PAYPAL'
   | 'STRIPE'
   | 'PROMO_CODE'
@@ -154,6 +166,13 @@ export interface PaymentProviderDetailsResponse {
   message?: string;
   pendingAction?: string;
   otpRequired?: boolean;
+  otpSubmitted?: boolean;
+  otpLength?: number;
+  ussdCode?: string;
+  customerInstruction?: string;
+  confirmationMode?: 'MOBILE_PROMPT' | 'OTP_CODE' | 'PROVIDER_LINK';
+  frontendActionRequired?: boolean;
+  providerLink?: string;
   fee?: number;
   feePercent?: number;
   netAmount?: number;

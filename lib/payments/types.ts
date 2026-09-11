@@ -3,16 +3,27 @@ import type {
   PaymentProvider,
 } from '@/lib/platform-finance/types';
 
-export type OnlinePaymentProvider = Extract<
-  PaymentProvider,
-  'MTN' | 'ORANGE' | 'PAYPAL' | 'STRIPE'
->;
+export type OnlinePaymentProvider = Exclude<PaymentProvider, 'PROMO_CODE' | 'COLLECTION_POINT'>;
+export type MobileMoneyProvider = Exclude<OnlinePaymentProvider, 'PAYPAL' | 'STRIPE'>;
 
 export interface PaymentInitiationRequest {
   country?: string;
   payerMsisdn?: string;
   idempotencyKey?: string;
   description?: string;
+  otpCode?: string;
+}
+
+export interface PaymentMethodResponse {
+  provider: MobileMoneyProvider;
+  operatorCode?: string;
+  name?: string;
+  enabled?: boolean;
+  confirmationMode?: 'MOBILE_PROMPT' | 'OTP_CODE' | 'PROVIDER_LINK';
+  otpRequired?: boolean;
+  otpLength?: number;
+  ussdCode?: string;
+  customerInstruction?: string;
 }
 
 export interface PaymentCountryResponse {
@@ -20,8 +31,19 @@ export interface PaymentCountryResponse {
   name: string;
   currency: string;
   callingCode: string;
-  provider: OnlinePaymentProvider;
+  localOperatorCount?: number;
+  localOperators?: PaymentMethodResponse[];
+  globalProviders?: Extract<OnlinePaymentProvider, 'PAYPAL' | 'STRIPE'>[];
+  availableProviders?: OnlinePaymentProvider[];
+  provider?: MobileMoneyProvider;
+  operatorCode?: string;
+  operatorName?: string;
+  enabled?: boolean;
+  confirmationMode?: PaymentMethodResponse['confirmationMode'];
   otpRequired?: boolean;
+  otpLength?: number;
+  ussdCode?: string;
+  customerInstruction?: string;
 }
 
 export interface PaymentPublicConfigResponse {

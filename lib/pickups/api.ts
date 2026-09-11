@@ -81,6 +81,25 @@ export function getCompanyPickupOpportunities(
   );
 }
 
+/**
+ * Client-facing catalogue. Without filters the API deliberately returns every
+ * eligible opportunity, ordered with the client's country first.
+ */
+export function getPickupOpportunities(
+  token: string,
+  params: OpportunityListParams & { originCityId?: number; destinationCityId?: number } = {},
+): Promise<ParcelPickupOpportunityPage> {
+  return apiClient.get<ParcelPickupOpportunityPage>(
+    withQuery('/api/delivery/pickups/opportunities', {
+      page: 0,
+      size: 20,
+      sort: 'travelDate,asc',
+      ...params,
+    }),
+    token,
+  );
+}
+
 export function createCompanyPickupOpportunity(
   token: string,
   companyId: number,
@@ -236,4 +255,3 @@ export function updatePickupTracking(
     token,
   );
 }
-

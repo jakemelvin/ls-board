@@ -44,11 +44,13 @@ import {
   confirmPaymentAttempt,
   getPaymentAttempt,
   getPaymentConfiguration,
+  getPaymentProviderCountries,
 } from '@/lib/payments/api';
 import type {
   OnlinePaymentProvider,
   PaymentAttemptResponse,
   PaymentPublicConfigResponse,
+  PaymentCountryResponse,
 } from '@/lib/payments/types';
 import { cn } from '@/lib/utils';
 
@@ -57,12 +59,12 @@ const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED'
 const FAILED_STATUSES = new Set(['FAILED', 'CANCELLED', 'EXPIRED']);
 const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
 
-const PROVIDER_ICONS = {
+const PROVIDER_ICONS: Partial<Record<OnlinePaymentProvider, typeof Smartphone>> = {
   MTN: Smartphone,
   ORANGE: Smartphone,
   PAYPAL: WalletCards,
   STRIPE: CreditCard,
-} satisfies Record<OnlinePaymentProvider, typeof Smartphone>;
+};
 
 interface SubscriptionPaymentDialogProps {
   open: boolean;
@@ -84,6 +86,7 @@ export function SubscriptionPaymentDialog({
   const [config, setConfig] = useState<PaymentPublicConfigResponse | null>(null);
   const [provider, setProvider] = useState<OnlinePaymentProvider | null>(null);
   const [country, setCountry] = useState('');
+  const [paymentCountries, setPaymentCountries] = useState<PaymentCountryResponse[]>([]);
   const [attempt, setAttempt] = useState<PaymentAttemptResponse | null>(null);
   const [payerMsisdn, setPayerMsisdn] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -92,6 +95,17 @@ export function SubscriptionPaymentDialog({
   const [checking, setChecking] = useState(false);
   const [isStripeFinalizing, setIsStripeFinalizing] = useState(false);
   const [applyingPromo, setApplyingPromo] = useState(false);
+
+  useEffect(() => {
+    if (!token || (provider !== 'MTN' && provider !== 'ORANGE')) return;
+    let cancelled = false;
+    getPaymentProviderCountries(token, provider).then((items) => {
+      if (cancelled) return;
+      setPaymentCountries(items);
+      setCountry((current) => current || items.find((item) => item.code === 'CM')?.code || items[0]?.code || '');
+    }).catch(() => { if (!cancelled) setPaymentCountries([]); });
+    return () => { cancelled = true; };
+  }, [provider, token]);
   const [error, setError] = useState<string | null>(null);
   const reportedSuccess = useRef(false);
   const stripeFinalizationPollRef = useRef(0);
@@ -380,7 +394,7 @@ export function SubscriptionPaymentDialog({
                 <p className="text-sm font-medium">{t('payment.chooseProvider')}</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {providers.map((item) => {
-                    const Icon = PROVIDER_ICONS[item];
+                    const Icon = PROVIDER_ICONS[item] ?? Smartphone;
                     return (
                       <button
                         key={item}
@@ -406,8 +420,7 @@ export function SubscriptionPaymentDialog({
 
                 {(provider === 'MTN' || provider === 'ORANGE') && (
                   <MobileMoneyFields
-                    token={token}
-                    provider={provider}
+                    countries={paymentCountries}
                     country={country}
                     payerMsisdn={payerMsisdn}
                     onCountryChange={setCountry}
@@ -418,8 +431,6 @@ export function SubscriptionPaymentDialog({
                       phoneLabel: t('payment.phoneLabel'),
                       phonePlaceholder: t('payment.phonePlaceholder'),
                       phoneHint: t('payment.phoneHint'),
-                      loadingCountries: t('payment.loadingCountries'),
-                      countriesError: t('payment.countriesError'),
                       otpRequired: t('payment.otpRequired'),
                     }}
                   />

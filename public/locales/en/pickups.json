@@ -95,6 +95,10 @@
     "noMessage": "No message",
     "offers": "Offer history"
   },
+  "time": {
+    "hour": "Hour",
+    "minute": "Minute"
+  },
   "dialogs": {
     "createTitle": "Publish an opportunity",
     "createDescription": "Available capacity is controlled and reserved by the server.",
