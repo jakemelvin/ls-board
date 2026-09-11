@@ -40,6 +40,11 @@ import type {
   ShipmentTransportGroupSummaryPage,
   TransporterReadyShipmentPage,
 } from './types';
+import type {
+  OnlinePaymentProvider,
+  PaymentInitiationRequest,
+  ShipmentPaymentInitiationResponse,
+} from '@/lib/payments/types';
 
 function buildShipmentQuery(params: GetShipmentsParams = {}) {
   const search = new URLSearchParams();
@@ -122,6 +127,28 @@ export function createShipment(token: string, input: CreateShipmentInput): Promi
   });
 
   return apiClient.postForm<Shipment>('/api/delivery/shipments', formData, token);
+}
+
+/** Creates the shipment and its payment attempt atomically, per the multipart API contract. */
+export function createShipmentWithPayment(
+  token: string,
+  provider: OnlinePaymentProvider,
+  input: CreateShipmentInput,
+  payment: PaymentInitiationRequest,
+): Promise<ShipmentPaymentInitiationResponse> {
+  const formData = new FormData();
+  formData.append('data', new Blob([JSON.stringify(input.data)], { type: 'application/json' }));
+  formData.append('payment', new Blob([JSON.stringify(payment)], { type: 'application/json' }));
+
+  if (input.senderFrontIdCard) formData.append('senderFrontIdCard', input.senderFrontIdCard);
+  if (input.senderBackIdCard) formData.append('senderBackIdCard', input.senderBackIdCard);
+  input.parcelPhotos?.forEach((file) => formData.append('parcelPhotos', file));
+
+  return apiClient.postForm<ShipmentPaymentInitiationResponse>(
+    `/api/delivery/payments/${provider}/shipments`,
+    formData,
+    token,
+  );
 }
 
 export function simulateShipmentPrice(

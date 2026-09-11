@@ -8,6 +8,8 @@ interface MobileMoneyFieldsProps {
   country: string;
   payerMsisdn: string;
   method?: PaymentMethodResponse;
+  showCountry?: boolean;
+  showPhone?: boolean;
   onCountryChange: (country: string) => void;
   onPayerMsisdnChange: (payerMsisdn: string) => void;
   labels: {
@@ -25,6 +27,8 @@ export function MobileMoneyFields({
   country,
   payerMsisdn,
   method,
+  showCountry = true,
+  showPhone = true,
   onCountryChange,
   onPayerMsisdnChange,
   labels,
@@ -33,7 +37,7 @@ export function MobileMoneyFields({
 
   return (
     <div className="space-y-3">
-      <label className="block space-y-1.5">
+      {showCountry && <label className="block space-y-1.5">
         <span className="text-sm font-medium text-foreground">{labels.countryLabel}</span>
         <select
           value={country}
@@ -48,9 +52,9 @@ export function MobileMoneyFields({
             </option>
           ))}
         </select>
-      </label>
+      </label>}
 
-      <label className="block space-y-1.5">
+      {showPhone && <label className="block space-y-1.5">
         <span className="text-sm font-medium text-foreground">{labels.phoneLabel}</span>
         <div className="flex overflow-hidden rounded-md border border-input bg-background shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
           <span className="flex shrink-0 items-center border-r border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
@@ -69,7 +73,7 @@ export function MobileMoneyFields({
         {method?.otpRequired && (
           <span className="block text-xs font-medium text-primary">{labels.otpRequired}</span>
         )}
-      </label>
+      </label>}
     </div>
   );
 }

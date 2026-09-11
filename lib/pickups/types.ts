@@ -1,7 +1,7 @@
 import type { Page } from '@/lib/admin/types';
 
 export type ParcelPickupOpportunityStatus = 'ACTIVE' | 'CLOSED' | 'CANCELLED';
-export type ParcelPickupProposalType = 'ACCEPT_LISTED_PRICE' | 'PROPOSE_PRICE' | 'COUNTER_OFFER';
+export type ParcelPickupProposalType = 'ACCEPT_LISTED_PRICE' | 'PROPOSE_PRICE' | 'COUNTER_OFFER' | 'REJECT_LISTED_PRICE';
 export type PickupNegotiationParty = 'CLIENT' | 'COMPANY';
 export type PickupMessageLanguage = 'FR' | 'EN';
 export type ParcelPickupNegotiationStatus =
@@ -210,6 +210,9 @@ export interface ParcelPickupNegotiationResponse {
 
 export interface OpportunityListParams {
   status?: ParcelPickupOpportunityStatus;
+  originCityId?: number;
+  destinationCityId?: number;
+  maxPrice?: number;
   page?: number;
   size?: number;
   sort?: string;
@@ -224,4 +227,3 @@ export interface NegotiationListParams {
 
 export type ParcelPickupOpportunityPage = Page<ParcelPickupOpportunityResponse>;
 export type ParcelPickupNegotiationPage = Page<ParcelPickupNegotiationResponse>;
-

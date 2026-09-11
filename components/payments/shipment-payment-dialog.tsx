@@ -200,19 +200,16 @@ export function ShipmentPaymentDialog({
         }
         if (cancelled) return;
         setCountries(resolvedCountries);
-        const defaultCountry = resolvedCountries.find((item) => item.code === 'CM') ?? resolvedCountries[0];
-        setCountry(defaultCountry?.code ?? '');
+        // The user must choose the wallet country before seeing a provider.
+        setCountry('');
         const latestAttempt = attempts[0] ?? null;
         setAttempt(latestAttempt);
         const configured = new Set(response.providers ?? []);
         const latestProvider = latestAttempt?.provider;
-        const firstProvider = defaultCountry?.availableProviders?.find(
-          (item) => configured.has(item) && (item !== 'STRIPE' || response.stripePublishableKey),
-        ) ?? defaultCountry?.localOperators?.find((item) => item.enabled !== false && configured.has(item.provider))?.provider;
         setProvider(
           latestProvider && !['PROMO_CODE', 'COLLECTION_POINT'].includes(latestProvider)
             ? latestProvider as OnlinePaymentProvider
-            : firstProvider ?? null,
+            : null,
         );
         if (latestAttempt && needsStripeClientSecret(latestAttempt)) {
           setError(t('shipmentPayment.errors.cardSetup'));
@@ -334,11 +331,19 @@ export function ShipmentPaymentDialog({
     setSubmitting(true);
     setError(null);
     try {
+      // A terminal attempt represents a new payment intent. The backend rejects
+      // reuse of its idempotency key, while an OTP continuation deliberately
+      // keeps the existing key because it resumes the same attempt.
+      const isNewAttempt = Boolean(attempt && TERMINAL_STATUSES.has(attempt.status));
+      if (isNewAttempt) {
+        idempotencyKeyRef.current = null;
+        setOtpCode('');
+      }
       const payment = await initiateShipmentPayment(token, provider, shipment.id, {
         country: isMobileMoney ? country : undefined,
         payerMsisdn: isMobileMoney ? payerMsisdn.trim() : undefined,
         idempotencyKey: idempotencyKeyRef.current ??= createIdempotencyKey(shipment.id),
-        otpCode: otpCode || undefined,
+        otpCode: isNewAttempt ? undefined : otpCode || undefined,
         description: `Platform fee for shipment ${shipment.reference ?? `#${shipment.id}`}`,
       });
       setAttempt(payment);
@@ -544,7 +549,7 @@ export function ShipmentPaymentDialog({
                 <div className="flex min-h-36 items-center justify-center">
                   <LoaderCircle className="h-7 w-7 animate-spin text-primary" aria-label={t('shipmentPayment.loading')} />
                 </div>
-              ) : !config || providers.length === 0 ? (
+              ) : !config || countries.length === 0 ? (
                 <Alert variant="destructive">
                   <CircleAlert />
                   <AlertTitle>{t('shipmentPayment.unavailableTitle')}</AlertTitle>
@@ -552,9 +557,32 @@ export function ShipmentPaymentDialog({
                 </Alert>
               ) : (
                 <>
-                  {!hasActiveAttempt && (
-                    <div className="space-y-4">
-                      <div>
+                   {!hasActiveAttempt && (
+                     <div className="space-y-4">
+                       <MobileMoneyFields
+                         countries={countries}
+                         country={country}
+                         payerMsisdn=""
+                         showPhone={false}
+                         onCountryChange={(nextCountry) => {
+                           setCountry(nextCountry);
+                           setProvider(null);
+                           setPayerMsisdn('');
+                           setError(null);
+                         }}
+                         onPayerMsisdnChange={() => undefined}
+                         labels={{
+                           countryLabel: t('shipmentPayment.countryLabel'),
+                           countryPlaceholder: t('shipmentPayment.countryPlaceholder'),
+                           phoneLabel: t('shipmentPayment.phoneLabel'),
+                           phonePlaceholder: t('shipmentPayment.phonePlaceholder'),
+                           phoneHint: t('shipmentPayment.phoneHint'),
+                           otpRequired: t('shipmentPayment.otpRequired'),
+                         }}
+                       />
+
+                       {country && (
+                       <div>
                         <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.chooseProvider')}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('shipmentPayment.chooseProvider')}>
                            {providers.map((item) => {
@@ -566,10 +594,9 @@ export function ShipmentPaymentDialog({
                                 type="button"
                                 role="radio"
                                 aria-checked={selected}
-                                onClick={() => {
-                                  setProvider(item);
-                                  setCountry('');
-                                  setPayerMsisdn('');
+                                 onClick={() => {
+                                   setProvider(item);
+                                   setPayerMsisdn('');
                                   setError(null);
                                 }}
                                 className={cn(
@@ -587,24 +614,17 @@ export function ShipmentPaymentDialog({
                             );
                           })}
                         </div>
-                      </div>
+                       </div>
+                       )}
 
-                       {provider && provider !== 'PAYPAL' && provider !== 'STRIPE' && (
-                         <MobileMoneyFields
-                           countries={countries}
-                           country={country}
-                           payerMsisdn={payerMsisdn}
-                           method={selectedMethod}
-                           onCountryChange={(nextCountry) => {
-                             setCountry(nextCountry);
-                             const next = countries.find((item) => item.code === nextCountry);
-                             const nextProvider = next?.localOperators?.find((item) => item.enabled !== false)?.provider
-                               ?? next?.availableProviders?.find((item) => item !== 'PAYPAL' && item !== 'STRIPE')
-                               ?? next?.globalProviders?.[0]
-                               ?? null;
-                             setProvider(nextProvider);
-                             setPayerMsisdn('');
-                           }}
+                        {provider && provider !== 'PAYPAL' && provider !== 'STRIPE' && (
+                          <MobileMoneyFields
+                            countries={countries}
+                            country={country}
+                            payerMsisdn={payerMsisdn}
+                            method={selectedMethod}
+                            showCountry={false}
+                            onCountryChange={() => undefined}
                            onPayerMsisdnChange={setPayerMsisdn}
                            labels={{
                             countryLabel: t('shipmentPayment.countryLabel'),

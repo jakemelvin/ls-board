@@ -33,7 +33,7 @@ export interface PaymentCountryResponse {
   callingCode: string;
   localOperatorCount?: number;
   localOperators?: PaymentMethodResponse[];
-  globalProviders?: Extract<OnlinePaymentProvider, 'PAYPAL' | 'STRIPE'>[];
+  globalProviders?: OnlinePaymentProvider[];
   availableProviders?: OnlinePaymentProvider[];
   provider?: MobileMoneyProvider;
   operatorCode?: string;

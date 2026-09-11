@@ -87,7 +87,7 @@ export function getCompanyPickupOpportunities(
  */
 export function getPickupOpportunities(
   token: string,
-  params: OpportunityListParams & { originCityId?: number; destinationCityId?: number } = {},
+  params: OpportunityListParams = {},
 ): Promise<ParcelPickupOpportunityPage> {
   return apiClient.get<ParcelPickupOpportunityPage>(
     withQuery('/api/delivery/pickups/opportunities', {
