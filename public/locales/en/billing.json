@@ -63,7 +63,7 @@
     "retry": "New attempt", "check": "Check payment", "confirmCard": "Confirm card payment", "description": "{{plan}} subscription",
     "errorTitle": "Payment was not completed", "success": "Payment is confirmed. The dashboard will refresh.",
     "failed": "This attempt is final. You can create a new one.", "pending": "The provider is still processing this attempt. Do not start another payment.",
-    "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Credit card" },
+    "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Stripe" },
     "statuses": { "CREATED": "Attempt created", "PENDING": "Payment pending", "REQUIRES_ACTION": "Action required", "PROCESSING": "Payment processing", "SUCCEEDED": "Payment confirmed", "FAILED": "Payment failed", "CANCELLED": "Payment cancelled", "EXPIRED": "Payment expired" },
     "errors": {
       "load": "Unable to load payment methods and attempts.", "phoneRequired": "A payer number is required for MTN or Orange Money.", "countryRequired": "Choose a country supported by this operator.",

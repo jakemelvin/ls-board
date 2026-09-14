@@ -7,13 +7,10 @@ import {
   BadgePercent,
   CheckCircle2,
   CircleAlert,
-  CreditCard,
   ExternalLink,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
-  Smartphone,
-  WalletCards,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { MobileMoneyFields } from '@/components/payments/mobile-money-fields';
+import { ProviderBrandIcon } from '@/components/payments/provider-brand-icon';
 import { toast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
@@ -55,14 +53,7 @@ import { cn } from '@/lib/utils';
 const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED']);
 const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
 
-const PROVIDER_ICONS: Partial<Record<OnlinePaymentProvider, typeof Smartphone>> = {
-  MTN: Smartphone, ORANGE: Smartphone, MOOV: Smartphone, WAVE: WalletCards,
-  EXPRESSO: Smartphone, FREE: Smartphone, WLIGDICASH: Smartphone, CELTIIS: Smartphone,
-  CORIS: Smartphone, TMONEY: Smartphone, AIRTEL: Smartphone, TELECEL: Smartphone,
-  MPESA: Smartphone, AFRIMONEY: Smartphone,
-  PAYPAL: WalletCards,
-  STRIPE: CreditCard,
-};
+const UNIVERSAL_PROVIDERS: OnlinePaymentProvider[] = ['PAYPAL', 'STRIPE'];
 
 interface ShipmentPaymentDialogProps {
   open: boolean;
@@ -120,14 +111,24 @@ export function ShipmentPaymentDialog({
     () => mobileMethods.find((item) => item.provider === provider),
     [mobileMethods, provider],
   );
-  const providers = useMemo(() => {
+  const universalProviders = useMemo(() => {
+    const configured = new Set(config?.providers ?? []);
+    return UNIVERSAL_PROVIDERS.filter(
+      (item) => configured.has(item) && (item !== 'STRIPE' || config?.stripePublishableKey),
+    );
+  }, [config]);
+  const localProviders = useMemo(() => {
     const configured = new Set(config?.providers ?? []);
     const countryProviders = selectedCountry?.availableProviders
       ?? [...mobileMethods.map((item) => item.provider), ...(selectedCountry?.globalProviders ?? [])];
     return countryProviders.filter(
-      (item) => configured.has(item) && (item !== 'STRIPE' || config?.stripePublishableKey),
+      (item) => !UNIVERSAL_PROVIDERS.includes(item) && configured.has(item),
     );
   }, [config, mobileMethods, selectedCountry]);
+  const providers = useMemo(
+    () => [...universalProviders, ...localProviders],
+    [localProviders, universalProviders],
+  );
 
   const stripePublishableKey = config?.stripePublishableKey;
   const stripePromise = useMemo(
@@ -200,7 +201,8 @@ export function ShipmentPaymentDialog({
         }
         if (cancelled) return;
         setCountries(resolvedCountries);
-        // The user must choose the wallet country before seeing a provider.
+        // Universal providers are immediately available; country selection only
+        // determines which local Mobile Money operators are available.
         setCountry('');
         const latestAttempt = attempts[0] ?? null;
         setAttempt(latestAttempt);
@@ -549,7 +551,7 @@ export function ShipmentPaymentDialog({
                 <div className="flex min-h-36 items-center justify-center">
                   <LoaderCircle className="h-7 w-7 animate-spin text-primary" aria-label={t('shipmentPayment.loading')} />
                 </div>
-              ) : !config || countries.length === 0 ? (
+              ) : !config || (countries.length === 0 && universalProviders.length === 0) ? (
                 <Alert variant="destructive">
                   <CircleAlert />
                   <AlertTitle>{t('shipmentPayment.unavailableTitle')}</AlertTitle>
@@ -557,17 +559,35 @@ export function ShipmentPaymentDialog({
                 </Alert>
               ) : (
                 <>
-                   {!hasActiveAttempt && (
-                     <div className="space-y-4">
-                       <MobileMoneyFields
+                    {!hasActiveAttempt && (
+                      <div className="space-y-5">
+                        {universalProviders.length > 0 && (
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.chooseProvider')}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{t('shipmentPayment.universalProvidersHint')}</p>
+                            <ProviderChoices
+                              providers={universalProviders}
+                              provider={provider}
+                              onSelect={(nextProvider) => {
+                                setProvider(nextProvider);
+                                setPayerMsisdn('');
+                                setError(null);
+                              }}
+                              selectedCountry={selectedCountry}
+                              t={t}
+                            />
+                          </div>
+                        )}
+
+                        <MobileMoneyFields
                          countries={countries}
                          country={country}
                          payerMsisdn=""
                          showPhone={false}
-                         onCountryChange={(nextCountry) => {
-                           setCountry(nextCountry);
-                           setProvider(null);
-                           setPayerMsisdn('');
+                          onCountryChange={(nextCountry) => {
+                            setCountry(nextCountry);
+                            if (!provider || !UNIVERSAL_PROVIDERS.includes(provider)) setProvider(null);
+                            setPayerMsisdn('');
                            setError(null);
                          }}
                          onPayerMsisdnChange={() => undefined}
@@ -581,41 +601,22 @@ export function ShipmentPaymentDialog({
                          }}
                        />
 
-                       {country && (
-                       <div>
-                        <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.chooseProvider')}</p>
-                        <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('shipmentPayment.chooseProvider')}>
-                           {providers.map((item) => {
-                             const Icon = PROVIDER_ICONS[item] ?? Smartphone;
-                            const selected = provider === item;
-                            return (
-                              <button
-                                key={item}
-                                type="button"
-                                role="radio"
-                                aria-checked={selected}
-                                 onClick={() => {
-                                   setProvider(item);
-                                   setPayerMsisdn('');
-                                  setError(null);
-                                }}
-                                className={cn(
-                                  'flex min-h-20 items-center gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                  selected
-                                    ? 'border-primary bg-primary/10 text-foreground'
-                                    : 'border-border bg-background text-muted-foreground hover:border-primary/40',
-                                )}
-                              >
-                                <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', selected ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                                  <Icon className="h-4 w-4" />
-                                </span>
-                                 <span className="text-sm font-semibold">{providerLabel(item, selectedCountry, t)}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                       </div>
-                       )}
+                        {country && localProviders.length > 0 && (
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{t('shipmentPayment.localProvidersTitle')}</p>
+                            <ProviderChoices
+                              providers={localProviders}
+                              provider={provider}
+                              onSelect={(nextProvider) => {
+                                setProvider(nextProvider);
+                                setPayerMsisdn('');
+                                setError(null);
+                              }}
+                              selectedCountry={selectedCountry}
+                              t={t}
+                            />
+                          </div>
+                        )}
 
                         {provider && provider !== 'PAYPAL' && provider !== 'STRIPE' && (
                           <MobileMoneyFields
@@ -703,6 +704,46 @@ export function ShipmentPaymentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProviderChoices({
+  providers,
+  provider,
+  onSelect,
+  selectedCountry,
+  t,
+}: {
+  providers: OnlinePaymentProvider[];
+  provider: OnlinePaymentProvider | null;
+  onSelect: (provider: OnlinePaymentProvider) => void;
+  selectedCountry?: PaymentCountryResponse;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('shipmentPayment.chooseProvider')}>
+      {providers.map((item) => {
+        const selected = provider === item;
+        return (
+          <button
+            key={item}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onSelect(item)}
+            className={cn(
+              'flex min-h-20 items-center gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              selected
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border bg-background text-muted-foreground hover:border-primary/40',
+            )}
+          >
+            <ProviderBrandIcon provider={item} />
+            <span className="text-sm font-semibold">{providerLabel(item, selectedCountry, t)}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

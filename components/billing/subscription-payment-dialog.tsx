@@ -7,12 +7,9 @@ import {
   BadgePercent,
   CheckCircle2,
   CircleAlert,
-  CreditCard,
   ExternalLink,
   LoaderCircle,
   RefreshCw,
-  Smartphone,
-  WalletCards,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -26,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { MobileMoneyFields } from '@/components/payments/mobile-money-fields';
+import { ProviderBrandIcon } from '@/components/payments/provider-brand-icon';
 import {
   getBillingInvoicePayments,
   initiateBillingPayment,
@@ -58,13 +56,6 @@ const ONLINE_PROVIDERS: OnlinePaymentProvider[] = ['MTN', 'ORANGE', 'PAYPAL', 'S
 const TERMINAL_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED']);
 const FAILED_STATUSES = new Set(['FAILED', 'CANCELLED', 'EXPIRED']);
 const STRIPE_FINALIZATION_DELAYS = [1_000, 2_000, 4_000, 8_000];
-
-const PROVIDER_ICONS: Partial<Record<OnlinePaymentProvider, typeof Smartphone>> = {
-  MTN: Smartphone,
-  ORANGE: Smartphone,
-  PAYPAL: WalletCards,
-  STRIPE: CreditCard,
-};
 
 interface SubscriptionPaymentDialogProps {
   open: boolean;
@@ -394,7 +385,6 @@ export function SubscriptionPaymentDialog({
                 <p className="text-sm font-medium">{t('payment.chooseProvider')}</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {providers.map((item) => {
-                    const Icon = PROVIDER_ICONS[item] ?? Smartphone;
                     return (
                       <button
                         key={item}
@@ -411,7 +401,7 @@ export function SubscriptionPaymentDialog({
                             : 'border-border hover:bg-muted',
                         )}
                       >
-                        <Icon className="h-5 w-5" />
+                        <ProviderBrandIcon provider={item} />
                         {t(`payment.providers.${item}`)}
                       </button>
                     );

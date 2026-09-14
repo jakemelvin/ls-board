@@ -981,6 +981,8 @@
     "platformFee": "Estimated platform fee",
     "loading": "Loading payment methods",
     "chooseProvider": "Payment method",
+    "universalProvidersHint": "Available in every country.",
+    "localProvidersTitle": "Local payment methods",
     "promoTitle": "Pay with a promo code",
     "promoDescription": "Apply a promo code to cover all or part of the platform fee.",
     "promoLabel": "Promo code",
@@ -1037,7 +1039,7 @@
         "MPESA": "M-Pesa",
         "AFRIMONEY": "AfriMoney",
         "PAYPAL": "PayPal",
-      "STRIPE": "Bank card"
+      "STRIPE": "Stripe"
     },
     "statuses": {
       "CREATED": "Attempt created",

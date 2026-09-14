@@ -108,7 +108,11 @@ test('collector can pay any shipment visible in their collection scope', async (
     }
 
     if (url.pathname === '/api/delivery/payments/config') {
-      await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
+      await json({
+        localCurrency: 'XAF',
+        providers: ['MTN', 'ORANGE', 'PAYPAL', 'STRIPE'],
+        stripePublishableKey: 'pk_test_51_payment_method_catalogue',
+      });
       return;
     }
 
@@ -201,6 +205,12 @@ test('collector can pay any shipment visible in their collection scope', async (
 
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText(/Régler les frais plateforme|Pay the platform fee/)).toBeVisible();
+  await expect(dialog.getByRole('radio', { name: 'PayPal' })).toBeVisible();
+  await expect(dialog.getByRole('radio', { name: 'Stripe' })).toBeVisible();
+  await expect(dialog.getByRole('radio', { name: /MTN Mobile Money/ })).toHaveCount(0);
+  await dialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
+  await expect(dialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
+  await dialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
   await dialog.getByPlaceholder(/237690000000/).fill('237690123456');
   await dialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
 
