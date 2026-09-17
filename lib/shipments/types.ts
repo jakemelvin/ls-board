@@ -220,6 +220,7 @@ export interface CollectorIncomingShipment {
   status?: ShipmentStatus;
   paymentStatus?: ShipmentPaymentStatus;
   transactionStatus?: ShipmentTransactionStatus;
+  paymentCollectionMode?: ShipmentPaymentCollectionMode;
   senderFullName?: string;
   receiverFullName?: string;
   originCollectionPointName?: string;

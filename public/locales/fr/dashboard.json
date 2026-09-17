@@ -776,7 +776,8 @@
           "title": "Points de collecte"
         },
         "errors": {
-          "load": "Impossible de charger les details de cette entreprise."
+          "load": "Impossible de charger les details de cette entreprise.",
+          "websiteUnavailable": "Le lien du site internet est indisponible."
         },
         "eyebrow": "Detail entreprise",
         "identity": {
@@ -977,6 +978,10 @@
   "shipmentPayment": {
     "title": "Régler les frais plateforme",
     "description": "Initiez le paiement sécurisé du shipment #{{id}}.",
+    "fullShipmentTitle": "Régler la totalité du colis",
+    "fullShipmentDescription": "Initiez le paiement sécurisé de la totalité du shipment #{{id}}.",
+    "fullShipmentAmount": "Total du colis à payer",
+    "fullShipmentBreakdown": "{{companyPrice}} prix entreprise + {{feeAmount}} frais plateforme",
     "shipment": "Shipment",
     "platformFee": "Frais plateforme estimés",
     "loading": "Chargement des moyens de paiement",
@@ -1005,6 +1010,7 @@
       "submitOtp": "Envoyer le code OTP",
     "walletDebit": "Montant demandé au portefeuille : {{amount}}",
     "pay": "Initier le paiement",
+    "payFullShipment": "Payer la totalité du colis",
     "retry": "Réessayer le paiement",
     "check": "Vérifier maintenant",
     "confirmCard": "Confirmer le paiement par carte",
@@ -1014,6 +1020,8 @@
     "payPlatformFee": "Payer les frais plateforme",
     "ownerDueTitle": "Frais plateforme en attente",
     "ownerDueDescription": "Ce shipment est rattaché à votre périmètre de collecte. Vous pouvez régler ses frais plateforme afin de le rendre éligible à la prise en charge.",
+    "fullShipmentDueTitle": "Paiement total du colis en attente",
+    "fullShipmentDueDescription": "Ce shipment doit être réglé intégralement via la plateforme avant sa prise en charge.",
     "notOwnerTitle": "Paiement disponible au point de collecte",
     "notOwnerDescription": "Tout collecteur affecté au point de collecte du shipment peut régler ses frais plateforme.",
     "unavailableTitle": "Paiement indisponible",
@@ -1022,6 +1030,8 @@
     "successTitle": "Paiement confirmé",
     "pendingDescription": "Validez la demande chez le fournisseur. Le statut est vérifié automatiquement.",
     "successDescription": "Les frais plateforme ont été réglés. Le shipment peut poursuivre sa prise en charge.",
+    "fullShipmentSuccessTitle": "Paiement du colis confirmé",
+    "fullShipmentSuccessDescription": "La totalité du colis a été réglée. Le shipment peut poursuivre sa prise en charge.",
     "failedDescription": "Cette tentative n’a pas abouti. Vous pouvez en lancer une nouvelle.",
       "providers": {
         "MTN": "MTN Mobile Money",

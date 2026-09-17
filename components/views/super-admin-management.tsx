@@ -59,6 +59,7 @@ import {
 import { getCompanyDashboard } from '@/lib/dashboard/api';
 import { getCountries, registerCompany } from '@/lib/auth/api';
 import { resolveRemoteAssetUrl } from '@/lib/asset-url';
+import { getSafeExternalUrl } from '@/lib/external-url';
 import { useCurrency } from '@/lib/currency';
 import {
   formatDashboardDateParam,
@@ -859,6 +860,35 @@ interface CompanyDetailSnapshot {
   partialErrors: string[];
 }
 
+function CompanyWebsiteLink({
+  companyUrl,
+  className,
+  children,
+}: {
+  companyUrl?: string | null;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation('dashboard');
+  const href = getSafeExternalUrl(companyUrl);
+
+  if (!companyUrl) return null;
+
+  if (!href) {
+    return (
+      <span role="status" className="text-xs text-destructive" data-testid="company-website-unavailable">
+        {t('superAdmin.companies.detail.errors.websiteUnavailable')}
+      </span>
+    );
+  }
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {children}
+    </a>
+  );
+}
+
 function numberValue(value?: number | string | null) {
   const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN;
   return Number.isFinite(numeric) ? numeric : 0;
@@ -1199,9 +1229,9 @@ function CompanyDetailsView({
                 label={t('superAdmin.companies.detail.identity.website')}
                 value={
                   company.companyUrl ? (
-                    <a href={company.companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    <CompanyWebsiteLink companyUrl={company.companyUrl} className="text-primary hover:underline">
                       {company.companyUrl.replace(/^https?:\/\//, '')}
-                    </a>
+                    </CompanyWebsiteLink>
                   ) : null
                 }
               />
@@ -1536,15 +1566,13 @@ function CompaniesTab({ token }: { token: string }) {
               <div className="min-w-0 space-y-1">
                 <p className="break-words font-semibold text-foreground">{company.name}</p>
                 {company.companyUrl && (
-                  <a
-                    href={company.companyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <CompanyWebsiteLink
+                    companyUrl={company.companyUrl}
                     className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                   >
                     <ExternalLink className="h-3 w-3 shrink-0" />
                     <span className="truncate">{company.companyUrl.replace(/^https?:\/\//, '')}</span>
-                  </a>
+                  </CompanyWebsiteLink>
                 )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
@@ -1673,15 +1701,13 @@ function CompaniesTab({ token }: { token: string }) {
                   <div>
                     <p className="font-medium text-foreground">{company.name}</p>
                     {company.companyUrl && (
-                      <a
-                        href={company.companyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <CompanyWebsiteLink
+                        companyUrl={company.companyUrl}
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                       >
                         <ExternalLink className="h-3 w-3" />
                         {company.companyUrl.replace(/^https?:\/\//, '')}
-                      </a>
+                      </CompanyWebsiteLink>
                     )}
                   </div>
                 </td>

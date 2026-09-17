@@ -124,8 +124,34 @@ export function CollectorReception() {
         sort: `createdAt,${sortDirection}`,
       });
 
+      // The reception endpoint currently omits paymentCollectionMode. Load the
+      // shipment details when needed so PLATFORM shipments collect the full
+      // shipment amount while COLLECTION_POINT shipments retain their local
+      // collection flow.
+      const incomingShipments = response.content ?? [];
+      const detailResults = await Promise.allSettled(
+        incomingShipments
+          .filter((shipment) => !shipment.paymentCollectionMode)
+          .map(async (shipment) => ({
+            shipmentId: shipment.shipmentId,
+            paymentCollectionMode: (await getShipment(token, shipment.shipmentId)).paymentCollectionMode,
+          })),
+      );
+      const paymentCollectionModes = new Map(
+        detailResults.flatMap((result) =>
+          result.status === 'fulfilled' && result.value.paymentCollectionMode
+            ? [[result.value.shipmentId, result.value.paymentCollectionMode] as const]
+            : [],
+        ),
+      );
+      const resolvedShipments = incomingShipments.map((shipment) => ({
+        ...shipment,
+        paymentCollectionMode:
+          shipment.paymentCollectionMode ?? paymentCollectionModes.get(shipment.shipmentId),
+      }));
+
       if (isLatestRequest(requestId)) {
-        setShipments(response.content ?? []);
+        setShipments(resolvedShipments);
         setTotalPages(response.totalPages ?? 0);
         setTotalElements(response.totalElements ?? 0);
       }
@@ -739,18 +765,18 @@ export function CollectorReception() {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 min-[420px]:flex-row">
+                <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap">
                   <Input
                     value={referenceInput}
                     onChange={(event) => setReferenceInput(event.target.value)}
                     placeholder="Reference presente sur le colis ou le bordereau"
-                    className="bg-secondary"
+                    className="w-full min-w-0 flex-1 bg-secondary"
                     disabled={actionLoading}
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0 gap-2 md:hidden"
+                    className="w-full shrink-0 gap-2 min-[420px]:w-auto"
                     onClick={() => setScannerMode('reference')}
                     disabled={actionLoading}
                   >
@@ -898,6 +924,8 @@ export function CollectorReception() {
           shipment={{
             id: paymentTarget.shipmentId,
             reference: `#${paymentTarget.shipmentId}`,
+            paymentCollectionMode: paymentTarget.paymentCollectionMode,
+            companyPrice: paymentTarget.companyPrice,
             feeAmount: paymentTarget.feeAmount,
             discountAmount: paymentTarget.discountAmount,
           }}
@@ -1016,7 +1044,7 @@ function ReceptionActions({
           onClick={() => onPay(shipment)}
         >
           <CreditCard className="h-4 w-4" />
-          {t('collectorReception.payments.payPlatformFee')}
+          {t(shipment.paymentCollectionMode === 'PLATFORM' ? 'shipmentPayment.payFullShipment' : 'collectorReception.payments.payPlatformFee')}
         </Button>
       ) : (
         <Button

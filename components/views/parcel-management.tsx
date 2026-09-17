@@ -764,16 +764,16 @@ function ShipmentDetailView({
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">
-                      {t('shipmentPayment.ownerDueTitle')}
+                      {t(shipment.paymentCollectionMode === 'PLATFORM' ? 'shipmentPayment.fullShipmentDueTitle' : 'shipmentPayment.ownerDueTitle')}
                     </p>
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                      {t('shipmentPayment.ownerDueDescription')}
+                      {t(shipment.paymentCollectionMode === 'PLATFORM' ? 'shipmentPayment.fullShipmentDueDescription' : 'shipmentPayment.ownerDueDescription')}
                     </p>
                   </div>
                 </div>
                 <Button className="shrink-0 gap-2" onClick={() => onPaymentDialogOpenChange(true)}>
                   <CreditCard className="h-4 w-4" />
-                  {t('shipmentPayment.payPlatformFee')}
+                  {t(shipment.paymentCollectionMode === 'PLATFORM' ? 'shipmentPayment.payFullShipment' : 'shipmentPayment.payPlatformFee')}
                 </Button>
               </CardContent>
             </Card>

@@ -53,6 +53,7 @@
     "PENDING_CLIENT_REVIEW": "En attente du client"
   },
   "trackingActions": {
+    "UNKNOWN": "Action de suivi inconnue",
     "PROPOSAL_CREATED": "Proposition créée",
     "COMPANY_ACCEPTED": "Proposition acceptée",
     "COMPANY_REJECTED": "Proposition refusée",

@@ -65,6 +65,8 @@ interface ShipmentPaymentDialogProps {
 export interface PayableShipment {
   id: number;
   reference?: string;
+  paymentCollectionMode?: 'PLATFORM' | 'COLLECTION_POINT';
+  companyPrice?: number;
   feeAmount?: number;
   discountAmount?: number;
 }
@@ -98,6 +100,7 @@ export function ShipmentPaymentDialog({
   const reportedSuccessReference = useRef<string | null>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
   const stripeFinalizationPollRef = useRef(0);
+  const isPlatformPayment = shipment.paymentCollectionMode === 'PLATFORM';
 
   const selectedCountry = useMemo(
     () => countries.find((item) => item.code === country),
@@ -146,13 +149,13 @@ export function ShipmentPaymentDialog({
       }
       reportedSuccessReference.current = payment.reference;
       toast({
-        title: t('shipmentPayment.successTitle'),
-        description: t('shipmentPayment.successDescription'),
+        title: t(isPlatformPayment ? 'shipmentPayment.fullShipmentSuccessTitle' : 'shipmentPayment.successTitle'),
+        description: t(isPlatformPayment ? 'shipmentPayment.fullShipmentSuccessDescription' : 'shipmentPayment.successDescription'),
       });
       await onPaymentSucceeded(payment);
       onOpenChange(false);
     },
-    [onOpenChange, onPaymentSucceeded, t],
+    [isPlatformPayment, onOpenChange, onPaymentSucceeded, t],
   );
 
   useEffect(() => {
@@ -204,8 +207,16 @@ export function ShipmentPaymentDialog({
         // Universal providers are immediately available; country selection only
         // determines which local Mobile Money operators are available.
         setCountry('');
-        const latestAttempt = attempts[0] ?? null;
-        setAttempt(latestAttempt);
+        const latestAttempt = getMostRecentPaymentAttempt(attempts);
+        // A terminal failure belongs to a previous visit. Keep its provider
+        // preselected, but start this visit with a fresh payment intent.
+        // A saved Stripe action without a client secret cannot be resumed: the
+        // browser has no card form to submit. Treat it as a new payment so the
+        // collector can create a fresh card session after choosing “Pay later”.
+        const mustRestartStripePayment = latestAttempt && needsStripeClientSecret(latestAttempt);
+        setAttempt(latestAttempt && (
+          ['FAILED', 'CANCELLED', 'EXPIRED'].includes(latestAttempt.status) || mustRestartStripePayment
+        ) ? null : latestAttempt);
         const configured = new Set(response.providers ?? []);
         const latestProvider = latestAttempt?.provider;
         setProvider(
@@ -213,8 +224,15 @@ export function ShipmentPaymentDialog({
             ? latestProvider as OnlinePaymentProvider
             : null,
         );
-        if (latestAttempt && needsStripeClientSecret(latestAttempt)) {
+        if (mustRestartStripePayment) {
           setError(t('shipmentPayment.errors.cardSetup'));
+        }
+        // A payment may have completed while this dashboard was signed out. Do
+        // not leave a stale failed attempt visible in the new session: refresh
+        // the shipment and close the dialog as soon as its newest attempt is
+        // known to be successful.
+        if (latestAttempt?.status === 'SUCCEEDED') {
+          void reportSuccess(latestAttempt);
         }
       })
       .catch((paymentError) => {
@@ -227,7 +245,7 @@ export function ShipmentPaymentDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, shipment.id, t, token]);
+  }, [open, reportSuccess, shipment.id, t, token]);
 
   useEffect(() => {
     if (
@@ -346,7 +364,7 @@ export function ShipmentPaymentDialog({
         payerMsisdn: isMobileMoney ? payerMsisdn.trim() : undefined,
         idempotencyKey: idempotencyKeyRef.current ??= createIdempotencyKey(shipment.id),
         otpCode: isNewAttempt ? undefined : otpCode || undefined,
-        description: `Platform fee for shipment ${shipment.reference ?? `#${shipment.id}`}`,
+        description: `${isPlatformPayment ? 'Full shipment payment' : 'Platform fee'} for shipment ${shipment.reference ?? `#${shipment.id}`}`,
       });
       setAttempt(payment);
       if (payment.status !== 'REQUIRES_ACTION') setOtpCode('');
@@ -393,10 +411,17 @@ export function ShipmentPaymentDialog({
       const updatedShipment = await payShipmentWithPromoCode(token, shipment.id, {
         promoCode: code,
       });
-      const remainingAmount = getRemainingPlatformFee(updatedShipment);
+      const remainingAmount = getRemainingOnlineAmount({
+        ...updatedShipment,
+        paymentCollectionMode: shipment.paymentCollectionMode,
+      });
       const completed =
-        updatedShipment.transactionStatus === 'PLATFORM_FEE_PAID' ||
-        (typeof updatedShipment.feeAmount === 'number' && remainingAmount === 0);
+        isPlatformPayment
+          ? updatedShipment.paymentStatus === 'PAID' ||
+            updatedShipment.transactionStatus === 'COMPLETED' ||
+            (typeof updatedShipment.companyPrice === 'number' && remainingAmount === 0)
+          : updatedShipment.transactionStatus === 'PLATFORM_FEE_PAID' ||
+            (typeof updatedShipment.feeAmount === 'number' && remainingAmount === 0);
 
       setPromoShipment(updatedShipment);
       setPromoCompleted(completed);
@@ -428,8 +453,11 @@ export function ShipmentPaymentDialog({
   }
 
   const amount = promoShipment
-    ? getRemainingPlatformFee(promoShipment)
-    : Math.max((shipment.feeAmount ?? 0) - (shipment.discountAmount ?? 0), 0);
+    ? getRemainingOnlineAmount({
+        ...promoShipment,
+        paymentCollectionMode: shipment.paymentCollectionMode,
+      })
+    : getRemainingOnlineAmount(shipment);
   const isSuccessful = attempt?.status === 'SUCCEEDED' || promoCompleted;
   const canRetry = attempt ? ['FAILED', 'CANCELLED', 'EXPIRED'].includes(attempt.status) : false;
   const hasActiveAttempt = Boolean(attempt && !TERMINAL_STATUSES.has(attempt.status));
@@ -446,9 +474,9 @@ export function ShipmentPaymentDialog({
             <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <DialogTitle>{t('shipmentPayment.title')}</DialogTitle>
+            <DialogTitle>{t(isPlatformPayment ? 'shipmentPayment.fullShipmentTitle' : 'shipmentPayment.title')}</DialogTitle>
             <DialogDescription>
-              {t('shipmentPayment.description', { values: { id: shipment.id } })}
+              {t(isPlatformPayment ? 'shipmentPayment.fullShipmentDescription' : 'shipmentPayment.description', { values: { id: shipment.id } })}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -457,9 +485,19 @@ export function ShipmentPaymentDialog({
           <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-muted/20 p-4">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {t('shipmentPayment.platformFee')}
+                {t(isPlatformPayment ? 'shipmentPayment.fullShipmentAmount' : 'shipmentPayment.platformFee')}
               </p>
               <p className="mt-1 text-xl font-bold text-foreground">{formatMoney(amount)}</p>
+              {isPlatformPayment && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('shipmentPayment.fullShipmentBreakdown', {
+                    values: {
+                      companyPrice: formatMoney(shipment.companyPrice ?? 0),
+                      feeAmount: formatMoney(shipment.feeAmount ?? 0),
+                    },
+                  })}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -693,7 +731,7 @@ export function ShipmentPaymentDialog({
           {!promoCompleted && (!hasActiveAttempt || canRetry || requiresOtp) ? (
             <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0 || (provider !== 'PAYPAL' && provider !== 'STRIPE' && (!country || (requiresOtp && otpCode.length !== (attempt?.providerDetails?.otpLength ?? 6))))} className="gap-2">
               {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
-              {requiresOtp ? t('shipmentPayment.submitOtp') : canRetry ? t('shipmentPayment.retry') : t('shipmentPayment.pay')}
+              {requiresOtp ? t('shipmentPayment.submitOtp') : canRetry ? t('shipmentPayment.retry') : t(isPlatformPayment ? 'shipmentPayment.payFullShipment' : 'shipmentPayment.pay')}
             </Button>
           ) : !isSuccessful && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret ? (
             <Button type="button" onClick={() => void checkPayment()} disabled={checking} className="gap-2">
@@ -768,6 +806,35 @@ function PaymentAttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
       </AlertDescription>
     </Alert>
   );
+}
+
+function getMostRecentPaymentAttempt(
+  attempts: PaymentAttemptResponse[],
+): PaymentAttemptResponse | null {
+  if (attempts.length === 0) return null;
+
+  return attempts.reduce((mostRecent, candidate) => {
+    const mostRecentTime = paymentAttemptTime(mostRecent);
+    const candidateTime = paymentAttemptTime(candidate);
+
+    if (candidateTime !== mostRecentTime) {
+      return candidateTime > mostRecentTime ? candidate : mostRecent;
+    }
+
+    // Keep the API order when dates are unavailable (the endpoint is normally
+    // newest-first), but use the monotonic database id when it is available.
+    return candidate.id > mostRecent.id ? candidate : mostRecent;
+  });
+}
+
+function paymentAttemptTime(attempt: PaymentAttemptResponse) {
+  for (const value of [attempt.completedAt, attempt.updatedAt, attempt.createdAt]) {
+    if (!value) continue;
+    const time = Date.parse(value);
+    if (!Number.isNaN(time)) return time;
+  }
+
+  return Number.NEGATIVE_INFINITY;
 }
 
 function StripePaymentForm({
@@ -859,8 +926,13 @@ function needsStripeClientSecret(attempt: PaymentAttemptResponse) {
   );
 }
 
-function getRemainingPlatformFee(shipment: Pick<Shipment, 'feeAmount' | 'discountAmount'>) {
-  return Math.max((shipment.feeAmount ?? 0) - (shipment.discountAmount ?? 0), 0);
+function getRemainingOnlineAmount(
+  shipment: Pick<Shipment, 'paymentCollectionMode' | 'companyPrice' | 'feeAmount' | 'discountAmount'>,
+) {
+  const amountBeforeDiscount = shipment.paymentCollectionMode === 'PLATFORM'
+    ? (shipment.companyPrice ?? 0) + (shipment.feeAmount ?? 0)
+    : shipment.feeAmount ?? 0;
+  return Math.max(amountBeforeDiscount - (shipment.discountAmount ?? 0), 0);
 }
 
 function apiMessage(error: unknown, fallback: string) {

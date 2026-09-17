@@ -53,6 +53,7 @@
     "CANCELLED": "Cancelled"
   },
   "trackingActions": {
+    "UNKNOWN": "Unknown tracking action",
     "PROPOSAL_CREATED": "Proposal created",
     "COMPANY_ACCEPTED": "Proposal accepted",
     "COMPANY_REJECTED": "Proposal rejected",

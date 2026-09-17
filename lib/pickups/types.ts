@@ -176,7 +176,9 @@ export interface ParcelPickupNegotiationResponse {
   activityType: 'PARCEL_PICKUP' | string;
   id: number;
   reference: string;
-  opportunity: ParcelPickupOpportunityResponse;
+  // The negotiations list endpoint embeds an opportunity summary. Fetch the
+  // negotiation detail before relying on fields outside that summary.
+  opportunity?: Partial<ParcelPickupOpportunityResponse> | null;
   clientId: number;
   clientName: string;
   parcelTypeId: number;

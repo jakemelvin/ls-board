@@ -9,6 +9,9 @@ test('collector can pay any shipment visible in their collection scope', async (
   let ownShipmentPaid = false;
   let ownPaymentRequestCount = 0;
   let otherShipmentPaid = false;
+  let afterRelogin = false;
+  let reconciledReloginPayment = false;
+  let includeCompletedAttempt = false;
 
   const ownShipment = () => ({
     id: 701,
@@ -65,6 +68,11 @@ test('collector can pay any shipment visible in their collection scope', async (
         lastName: 'Collecteur',
         username: 'marc.collecteur',
       });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/auth/logout') {
+      await json({ message: 'OK' });
       return;
     }
 
@@ -134,6 +142,57 @@ test('collector can pay any shipment visible in their collection scope', async (
       /^\/api\/delivery\/payments\/shipments\/(701|702)\/attempts$/.test(url.pathname) &&
       request.method() === 'GET'
     ) {
+      if (url.pathname.endsWith('/701/attempts') && afterRelogin) {
+        reconciledReloginPayment = true;
+        const failedAttempt = {
+            id: 1,
+            reference: 'PAY-701-MTN-FAILED',
+            provider: 'MTN',
+            purpose: 'SHIPMENT',
+            status: 'FAILED',
+            shipmentId: 701,
+            amount: 500,
+            currency: 'XAF',
+            failureReason: 'Solde insuffisant',
+            completedAt: '2026-09-15T08:00:00.000Z',
+          };
+        if (!includeCompletedAttempt) {
+          await json([failedAttempt]);
+          return;
+        }
+        // The projection is stale on the first read after sign-in, then the
+        // payment reconciliation makes the next shipment refresh authoritative.
+        ownShipmentPaid = true;
+        await json([failedAttempt, {
+            id: 2,
+            reference: 'PAY-701-MTN-SUCCEEDED',
+            provider: 'MTN',
+            purpose: 'SHIPMENT',
+            status: 'SUCCEEDED',
+            shipmentId: 701,
+            amount: 500,
+            currency: 'XAF',
+            completedAt: '2026-09-15T09:00:00.000Z',
+          }]);
+        return;
+      }
+      if (url.pathname.endsWith('/701/attempts')) {
+        // This reproduces a card payment started before “Pay later”. The API
+        // retained its pending state but did not return the client secret needed
+        // to render Stripe's card form on the next visit.
+        await json([{
+          id: 10,
+          reference: 'PAY-701-STRIPE-INCOMPLETE',
+          provider: 'STRIPE',
+          purpose: 'SHIPMENT',
+          status: 'REQUIRES_ACTION',
+          shipmentId: 701,
+          amount: 500,
+          currency: 'XAF',
+          createdAt: '2026-09-15T07:00:00.000Z',
+        }]);
+        return;
+      }
       await json([]);
       return;
     }
@@ -207,12 +266,19 @@ test('collector can pay any shipment visible in their collection scope', async (
   await expect(dialog.getByText(/Régler les frais plateforme|Pay the platform fee/)).toBeVisible();
   await expect(dialog.getByRole('radio', { name: 'PayPal' })).toBeVisible();
   await expect(dialog.getByRole('radio', { name: 'Stripe' })).toBeVisible();
-  await expect(dialog.getByRole('radio', { name: /MTN Mobile Money/ })).toHaveCount(0);
-  await dialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
-  await expect(dialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
-  await dialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
-  await dialog.getByPlaceholder(/237690000000/).fill('237690123456');
-  await dialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
+  await expect(dialog.getByText(/serveur de paiement.*formulaire de carte|payment server.*card form/i)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Initier le paiement|Start payment/ })).toBeEnabled();
+  await dialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();
+
+  await page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
+  const resumedDialog = page.getByRole('dialog');
+  await expect(resumedDialog.getByRole('button', { name: /Initier le paiement|Start payment/ })).toBeEnabled();
+  await expect(resumedDialog.getByRole('radio', { name: /MTN Mobile Money/ })).toHaveCount(0);
+  await resumedDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
+  await expect(resumedDialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
+  await resumedDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
+  await resumedDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await resumedDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
 
   await expect.poll(() => paymentBody).toContain('237690123456');
   expect(JSON.parse(paymentBody)).toMatchObject({ country: 'CM' });
@@ -221,6 +287,44 @@ test('collector can pay any shipment visible in their collection scope', async (
   await expect(dialog.getByRole('button', { name: /Réessayer le paiement|Retry payment/ })).toBeEnabled();
   await dialog.getByRole('button', { name: /Réessayer le paiement|Retry payment/ }).click();
   await expect.poll(() => ownPaymentRequestCount).toBe(2);
+  await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toHaveCount(0);
+
+  // The next session initially receives a stale shipment projection. Its
+  // payment history contains the old failure followed by a newer success;
+  // opening the dialog must reconcile that state rather than showing a red
+  // failure alert from the previous session.
+  await page.getByRole('button', { name: /Compte|Account/ }).click();
+  await page.getByRole('menuitem', { name: /Se dÃ©connecter|Log out/ }).click();
+  await expect(page).toHaveURL('/login');
+  afterRelogin = true;
+  ownShipmentPaid = false;
+
+  await page.getByLabel(/Identifiant|Username/).fill('marc.collecteur');
+  await page.getByLabel(/Mot de passe|Password/).fill('1234');
+  await page.getByRole('button', { name: /Se connecter|Sign in/ }).click();
+  await expect(page).toHaveURL('/');
+
+  if (isMobile) {
+    await page.getByRole('button', { name: /Menu/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Colis|Parcel management/ }).click();
+    await page.getByRole('button', { name: /Voir details|View details/i }).first().click();
+  } else {
+    await page.locator('aside').getByRole('button', { name: /Colis|Parcel management/ }).click();
+    await page.getByRole('button', { name: /#701 detail|detail.*#701/i }).click();
+  }
+  await page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
+  await expect.poll(() => reconciledReloginPayment).toBe(true);
+  const reopenedDialog = page.getByRole('dialog');
+  await expect(reopenedDialog).toBeVisible();
+  await expect(reopenedDialog.getByText(/Paiement échoué|Payment failed/)).toHaveCount(0);
+  await reopenedDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
+  await reopenedDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
+  await reopenedDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await expect(reopenedDialog.getByRole('button', { name: /Initier le paiement|Start payment/ })).toBeEnabled();
+  await reopenedDialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();
+  includeCompletedAttempt = true;
+  await page.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText(/Frais plateforme en attente|Platform fee pending/)).toHaveCount(0);
 
   await page.getByRole('button', { name: /Retour a la liste|Back to.*list/i }).click();

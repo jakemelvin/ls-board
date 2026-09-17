@@ -93,9 +93,24 @@ test('collector receives an unpaid collection-point shipment only after physical
             price: 8500,
             createdAt: new Date().toISOString(),
           },
+          {
+            // The reception endpoint does not return paymentCollectionMode.
+            // It is resolved from the detail endpoint below.
+            shipmentId: 703,
+            companyName: 'Platform Company',
+            senderFullName: 'Platform Sender',
+            receiverFullName: 'Platform Receiver',
+            status: 'CREATED',
+            paymentStatus: 'UNPAID',
+            transactionStatus: 'FAILED',
+            companyPrice: 2500,
+            feeAmount: 350,
+            price: 2850,
+            createdAt: new Date().toISOString(),
+          },
         ],
         totalPages: 1,
-        totalElements: 2,
+        totalElements: 3,
         number: 0,
         size: 20,
         first: true,
@@ -106,12 +121,31 @@ test('collector receives an unpaid collection-point shipment only after physical
     }
 
     if (url.pathname === '/api/delivery/shipments/701' && request.method() === 'GET') {
-      await json({ id: 701, reference: 'SHP-701-SECURE', code: 'SHP-701-SECURE' });
+      await json({
+        id: 701,
+        reference: 'SHP-701-SECURE',
+        code: 'SHP-701-SECURE',
+        paymentCollectionMode: 'COLLECTION_POINT',
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/shipments/703' && request.method() === 'GET') {
+      await json({
+        id: 703,
+        reference: 'SHP-703-PLATFORM',
+        paymentCollectionMode: 'PLATFORM',
+      });
       return;
     }
 
     if (url.pathname === '/api/delivery/payments/config') {
       await json({ localCurrency: 'XAF', providers: ['MTN', 'ORANGE'] });
+      return;
+    }
+
+    if (url.pathname === '/api/delivery/payments/countries') {
+      await json([]);
       return;
     }
 
@@ -181,9 +215,17 @@ test('collector receives an unpaid collection-point shipment only after physical
   const collectionSurface = isMobile ? page.getByRole('article') : page.getByRole('row');
   const cashShipmentSurface = collectionSurface.filter({ hasText: 'Alice Client' });
   const feePendingSurface = collectionSurface.filter({ hasText: 'Fee Pending' });
+  const platformShipmentSurface = collectionSurface.filter({ hasText: 'Platform Sender' });
 
   await expect(cashShipmentSurface.getByText(/A encaisser sur place|Collect on site/)).toBeVisible();
   await expect(feePendingSurface.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ })).toBeVisible();
+  await expect(platformShipmentSurface.getByRole('button', { name: /Payer la totalitÃ© du colis|Pay full shipment/ })).toBeVisible();
+
+  await platformShipmentSurface.getByRole('button', { name: /Payer la totalitÃ© du colis|Pay full shipment/ }).click();
+  const platformPaymentDialog = page.getByRole('dialog');
+  await expect(platformPaymentDialog.getByText(/2.?850/).first()).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(platformPaymentDialog).toBeHidden();
 
   if (isMobile) {
     await expect(page.locator('table:visible')).toHaveCount(0);
@@ -218,6 +260,8 @@ test('collector receives an unpaid collection-point shipment only after physical
 
   await feePendingSurface.getByRole('button', { name: /Payer les frais plateforme|Pay platform fee/ }).click();
   const paymentDialog = page.getByRole('dialog');
+  await paymentDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
+  await paymentDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
   await paymentDialog.getByPlaceholder(/237690000000/).fill('237690123456');
   await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
   await expect.poll(() => platformPaymentBody).toContain('237690123456');
@@ -227,10 +271,33 @@ test('collector receives an unpaid collection-point shipment only after physical
   await cashShipmentSurface.getByRole('button', { name: /Encaisser et receptionner|Collect and receive/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText(/10.?000/).first()).toBeVisible();
-  if (isMobile) {
-    await expect(dialog.getByRole('button', { name: /Scanner|Scan/, exact: true })).toBeVisible();
-  }
-  await dialog.getByPlaceholder(/Reference presente|Reference present/).fill('SHP-701-SECURE');
+  const referenceInput = dialog.getByPlaceholder(/Reference presente|Reference present/);
+  await expect(dialog.getByRole('button', { name: /Scanner|Scan/, exact: true })).toBeVisible();
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await dialog.getByRole('button', { name: /Scanner|Scan/, exact: true }).click();
+  const referenceScanner = page.getByRole('dialog', { name: /Scanner le QR code|Scan QR code/ });
+  const startCameraButton = referenceScanner.getByRole('button', { name: /Activer la caméra|Enable camera/ });
+  const choosePhotoButton = referenceScanner.getByRole('button', { name: /Prendre ou choisir une photo|Take or choose a photo/ });
+  await expect(startCameraButton).toBeVisible();
+  await expect(choosePhotoButton).toBeVisible();
+  expect(await referenceScanner.getByRole('button').evaluateAll((buttons) => buttons.every((button) => {
+    const buttonBox = button.getBoundingClientRect();
+    const dialogBox = button.closest('[role="dialog"]')!.getBoundingClientRect();
+    return buttonBox.left >= dialogBox.left && buttonBox.right <= dialogBox.right;
+  }))).toBe(true);
+  expect(await referenceScanner.locator('video').evaluate((video) => {
+    const previewBox = video.parentElement!.getBoundingClientRect();
+    const dialogBox = video.closest('[role="dialog"]')!.getBoundingClientRect();
+    return Math.abs(
+      previewBox.left + previewBox.width / 2 - (dialogBox.left + dialogBox.width / 2),
+    ) <= 1;
+  })).toBe(true);
+  await referenceScanner.locator('input[type="file"]').setInputFiles({
+    name: 'shipment-701-qr.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(createQrSvg()),
+  });
+  await expect(referenceInput).toHaveValue('SHP-701-SECURE');
   await dialog.getByRole('checkbox', { name: /deposant|depositor/i }).check();
   await dialog.getByRole('checkbox', { name: /physique du colis|physical.*parcel/i }).check();
 
