@@ -4,6 +4,7 @@ import { ProductionMonitoring } from '@/components/production-monitoring'
 import { Toaster } from '@/components/ui/toaster'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import { I18nProvider } from '@/components/i18n-provider'
+import { ThemeProvider } from '@/components/theme-provider'
 import { CurrencyProvider } from '@/lib/currency'
 import './globals.css'
 
@@ -51,9 +52,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="fr" className="bg-background">
-      <body className="font-sans antialiased">
-        <I18nProvider><CurrencyProvider>{children}</CurrencyProvider></I18nProvider>
+      <html lang="fr" suppressHydrationWarning>
+        <body className="font-sans antialiased">
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+            <I18nProvider><CurrencyProvider>{children}</CurrencyProvider></I18nProvider>
+          </ThemeProvider>
         <Toaster />
         <PwaServiceWorkerRegister />
         {process.env.NODE_ENV === 'production' && <>

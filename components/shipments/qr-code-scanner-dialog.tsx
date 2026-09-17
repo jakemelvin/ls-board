@@ -309,7 +309,7 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto p-4 sm:max-w-lg sm:p-6">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-h-[92dvh] sm:max-w-lg sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
@@ -318,7 +318,7 @@ export function QrCodeScannerDialog({ open, onOpenChange, onScan }: QrCodeScanne
           <DialogDescription>{t('collectorReception.scanner.description')}</DialogDescription>
         </DialogHeader>
 
-        <div className="relative mx-auto aspect-[3/4] max-h-[58dvh] overflow-hidden rounded-xl bg-black sm:aspect-square">
+        <div className="relative mx-auto aspect-[3/4] max-h-[46dvh] shrink-0 overflow-hidden rounded-xl bg-black sm:max-h-[58dvh] sm:aspect-square">
           <video
             ref={videoRef}
             className="h-full w-full object-cover"

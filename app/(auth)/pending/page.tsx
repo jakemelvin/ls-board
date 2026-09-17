@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Clock, CheckCircle2, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,23 @@ import { useTranslation } from '@/lib/i18n';
 export default function PendingPage() {
   const router = useRouter();
   const { t } = useTranslation('pending');
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [statusChecked, setStatusChecked] = useState(false);
   const steps = [
     { icon: CheckCircle2, label: t('steps.requestReceived.label'), description: t('steps.requestReceived.description'), done: true },
     { icon: Clock, label: t('steps.reviewInProgress.label'), description: t('steps.reviewInProgress.description'), done: false },
     { icon: Mail, label: t('steps.emailNotification.label'), description: t('steps.emailNotification.description'), done: false },
   ];
+
+  const handleStatusCheck = () => {
+    setIsCheckingStatus(true);
+    setStatusChecked(false);
+
+    window.setTimeout(() => {
+      setIsCheckingStatus(false);
+      setStatusChecked(true);
+    }, 350);
+  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-6 py-12">
@@ -89,12 +102,18 @@ export default function PendingPage() {
           </Button>
           <button
             type="button"
-            onClick={() => router.refresh()}
-            className="flex items-center justify-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            onClick={handleStatusCheck}
+            disabled={isCheckingStatus}
+            className="flex items-center justify-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-wait disabled:opacity-70"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            {t('actions.checkStatus')}
+            <RefreshCw className={`h-3.5 w-3.5 ${isCheckingStatus ? 'animate-spin' : ''}`} />
+            {isCheckingStatus ? t('actions.checkingStatus') : t('actions.checkStatus')}
           </button>
+          {statusChecked && (
+            <p role="status" className="rounded-lg bg-primary/10 px-3 py-2 text-center text-xs text-primary">
+              {t('actions.statusStillPending')}
+            </p>
+          )}
         </div>
       </div>
     </div>

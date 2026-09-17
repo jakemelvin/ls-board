@@ -200,6 +200,14 @@ test('collector receives an unpaid collection-point shipment only after physical
   await page.getByRole('button', { name: /Se connecter|Sign in/ }).click();
   await expect(page).toHaveURL('/');
 
+  const themeToggle = page.getByRole('button', { name: /Activer le mode sombre|Switch to dark mode/ });
+  await expect(themeToggle).toBeVisible();
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.getByRole('button', { name: /Activer le mode clair|Switch to light mode/ })).toBeVisible();
+  await page.getByRole('button', { name: /Activer le mode clair|Switch to light mode/ }).click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page.getByRole('button', { name: /Menu/ }).click();
     await page.getByRole('dialog').getByRole('button', { name: /ception/i }).click();
@@ -280,10 +288,24 @@ test('collector receives an unpaid collection-point shipment only after physical
   const choosePhotoButton = referenceScanner.getByRole('button', { name: /Prendre ou choisir une photo|Take or choose a photo/ });
   await expect(startCameraButton).toBeVisible();
   await expect(choosePhotoButton).toBeVisible();
+  const scannerHint = referenceScanner.getByText(
+    /reception devra toujours etre confirmee manuellement|reception must still be confirmed manually/i,
+  );
+  await expect(scannerHint).toBeVisible();
+  expect(await scannerHint.evaluate((hint) => {
+    const hintBox = hint.getBoundingClientRect();
+    const dialogBox = hint.closest('[role="dialog"]')!.getBoundingClientRect();
+    return hintBox.top >= dialogBox.top && hintBox.bottom <= dialogBox.bottom;
+  })).toBe(true);
   expect(await referenceScanner.getByRole('button').evaluateAll((buttons) => buttons.every((button) => {
     const buttonBox = button.getBoundingClientRect();
     const dialogBox = button.closest('[role="dialog"]')!.getBoundingClientRect();
-    return buttonBox.left >= dialogBox.left && buttonBox.right <= dialogBox.right;
+    return (
+      buttonBox.left >= dialogBox.left &&
+      buttonBox.right <= dialogBox.right &&
+      buttonBox.top >= dialogBox.top &&
+      buttonBox.bottom <= dialogBox.bottom
+    );
   }))).toBe(true);
   expect(await referenceScanner.locator('video').evaluate((video) => {
     const previewBox = video.parentElement!.getBoundingClientRect();

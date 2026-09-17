@@ -1,14 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 import { CompanyBrand } from '@/components/company-brand';
+import { Button } from '@/components/ui/button';
 import { SubscriptionStatusBadge } from '@/components/billing/subscription-status-indicator';
 import { DashboardProfileMenu } from '@/components/dashboard-profile-menu';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { SendamLogo } from '@/components/sendam-logo';
 import { logout } from '@/lib/auth/api';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
 import type { CompanyResponse } from '@/lib/auth/types';
 import type { CompanyBillingDashboardResponse } from '@/lib/billing/types';
 import type { User } from '@/lib/mock-data';
@@ -31,6 +35,8 @@ export function DashboardHeader({
   billingDashboard,
 }: DashboardHeaderProps) {
   const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useTranslation('dashboard');
   const { token, clearAuth } = useAuthStore();
   const shouldShowMobileAppLogo =
     !company && MOBILE_APP_LOGO_ROLES.has(currentUser.role);
@@ -62,6 +68,18 @@ export function DashboardHeader({
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <SubscriptionStatusBadge dashboard={billingDashboard ?? null} />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-9"
+          aria-label={resolvedTheme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
+          title={resolvedTheme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+        >
+          {resolvedTheme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        </Button>
 
         {token && <NotificationBell token={token} />}
 

@@ -31,6 +31,10 @@
     "sortOrder": "Ordre d'affichage",
     "tryAnotherSearch": "Essayez un autre terme de recherche."
   },
+  "theme": {
+    "switchToDark": "Activer le mode sombre",
+    "switchToLight": "Activer le mode clair"
+  },
   "roles": {
     "adminCompany": "Admin Entreprise",
     "collector": "Collecteur",

@@ -9,5 +9,10 @@
     "emailNotification": { "label": "Notification par e-mail", "description": "Vous recevrez un e-mail dès que votre compte sera approuvé." }
   },
   "estimatedTime": { "label": "Délai estimé :", "description": "24 à 48 heures ouvrées. En cas de besoin, contactez {{email}}." },
-  "actions": { "backToLogin": "Retour à la connexion", "checkStatus": "Vérifier le statut" }
+  "actions": {
+    "backToLogin": "Retour à la connexion",
+    "checkStatus": "Vérifier le statut",
+    "checkingStatus": "Vérification du statut...",
+    "statusStillPending": "Votre demande est toujours en cours d'examen. Connectez-vous à nouveau dès que vous recevez l'e-mail d'approbation."
+  }
 }
