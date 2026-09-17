@@ -8,11 +8,8 @@
     "reviewInProgress": { "label": "Examen en cours", "description": "Notre équipe vérifie les informations de votre entreprise." },
     "emailNotification": { "label": "Notification par e-mail", "description": "Vous recevrez un e-mail dès que votre compte sera approuvé." }
   },
-  "estimatedTime": { "label": "Délai estimé :", "description": "24 à 48 heures ouvrées. En cas de besoin, contactez {{email}}." },
+  "estimatedTime": { "label": "Délai estimé :", "description": "24 à 48 heures ouvrées. En cas de besoin, contactez {{email}}.", "loading": "Chargement du contact support…", "unavailable": "Le contact du support est momentanément indisponible." },
   "actions": {
-    "backToLogin": "Retour à la connexion",
-    "checkStatus": "Vérifier le statut",
-    "checkingStatus": "Vérification du statut...",
-    "statusStillPending": "Votre demande est toujours en cours d'examen. Connectez-vous à nouveau dès que vous recevez l'e-mail d'approbation."
+    "backToLogin": "Retour à la connexion"
   }
 }

@@ -8,11 +8,8 @@
     "reviewInProgress": { "label": "Review in progress", "description": "Our team is reviewing your company information." },
     "emailNotification": { "label": "Email notification", "description": "You will receive an email as soon as your account is approved." }
   },
-  "estimatedTime": { "label": "Estimated time:", "description": "24 to 48 business hours. If you need help, contact {{email}}." },
+  "estimatedTime": { "label": "Estimated time:", "description": "24 to 48 business hours. If you need help, contact {{email}}.", "loading": "Loading the support contact…", "unavailable": "The support contact is temporarily unavailable." },
   "actions": {
-    "backToLogin": "Back to sign in",
-    "checkStatus": "Check status",
-    "checkingStatus": "Checking status...",
-    "statusStillPending": "Your request is still under review. Sign in again once you receive the approval email."
+    "backToLogin": "Back to sign in"
   }
 }

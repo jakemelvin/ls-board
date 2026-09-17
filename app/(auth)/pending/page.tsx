@@ -1,31 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, CheckCircle2, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Clock, CheckCircle2, Mail, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
+import { useAuthStore } from '@/lib/auth/store';
+import { getActiveSupportContacts } from '@/lib/support/api';
+import type { SupportContactResponse } from '@/lib/support/types';
+
+function getSupportEmail(contacts: SupportContactResponse[]) {
+  return (
+    contacts
+      .filter((contact) => contact.type === 'EMAIL' && contact.active !== false)
+      .sort(
+        (left, right) =>
+          (left.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+          (right.displayOrder ?? Number.MAX_SAFE_INTEGER),
+      )
+      .map((contact) => contact.value.trim())
+      .find(Boolean) ?? null
+  );
+}
 
 export default function PendingPage() {
   const router = useRouter();
   const { t } = useTranslation('pending');
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
-  const [statusChecked, setStatusChecked] = useState(false);
+  const token = useAuthStore((state) => state.token);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+  const [supportEmail, setSupportEmail] = useState<string | null>(null);
+  const [isLoadingSupportEmail, setIsLoadingSupportEmail] = useState(true);
   const steps = [
     { icon: CheckCircle2, label: t('steps.requestReceived.label'), description: t('steps.requestReceived.description'), done: true },
     { icon: Clock, label: t('steps.reviewInProgress.label'), description: t('steps.reviewInProgress.description'), done: false },
     { icon: Mail, label: t('steps.emailNotification.label'), description: t('steps.emailNotification.description'), done: false },
   ];
 
-  const handleStatusCheck = () => {
-    setIsCheckingStatus(true);
-    setStatusChecked(false);
+  useEffect(() => {
+    if (!isHydrated) return;
 
-    window.setTimeout(() => {
-      setIsCheckingStatus(false);
-      setStatusChecked(true);
-    }, 350);
-  };
+    let cancelled = false;
+    setIsLoadingSupportEmail(true);
+
+    getActiveSupportContacts(token)
+      .then((contacts) => {
+        if (!cancelled) setSupportEmail(getSupportEmail(contacts));
+      })
+      .catch(() => {
+        if (!cancelled) setSupportEmail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSupportEmail(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated, token]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-6 py-12">
@@ -86,7 +117,11 @@ export default function PendingPage() {
         <div className="rounded-xl border border-border bg-muted/50 px-5 py-4 text-sm text-muted-foreground">
           <p>
             <span className="font-medium text-foreground">{t('estimatedTime.label')}</span>{' '}
-            {t('estimatedTime.description', { values: { email: 'support@sendam.fr' } })}
+            {isLoadingSupportEmail
+              ? t('estimatedTime.loading')
+              : supportEmail
+                ? t('estimatedTime.description', { values: { email: supportEmail } })
+                : t('estimatedTime.unavailable')}
           </p>
         </div>
 
@@ -100,20 +135,6 @@ export default function PendingPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('actions.backToLogin')}
           </Button>
-          <button
-            type="button"
-            onClick={handleStatusCheck}
-            disabled={isCheckingStatus}
-            className="flex items-center justify-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-wait disabled:opacity-70"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isCheckingStatus ? 'animate-spin' : ''}`} />
-            {isCheckingStatus ? t('actions.checkingStatus') : t('actions.checkStatus')}
-          </button>
-          {statusChecked && (
-            <p role="status" className="rounded-lg bg-primary/10 px-3 py-2 text-center text-xs text-primary">
-              {t('actions.statusStillPending')}
-            </p>
-          )}
         </div>
       </div>
     </div>
