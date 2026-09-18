@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Eye,
   EyeOff,
@@ -50,6 +51,7 @@ import {
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
 import { useCollectionPointsManager } from '@/lib/company/use-collection-points';
+import { useTranslation } from '@/lib/i18n';
 import type { UserResponse } from '@/lib/auth/types';
 import type {
   CityResponse,
@@ -61,17 +63,31 @@ import type {
   ZoneResponse,
 } from '@/lib/company/types';
 
-const WEEKDAY_LABELS: Record<CollectionPointDayOfWeek, string> = {
-  MONDAY: 'Lun',
-  TUESDAY: 'Mar',
-  WEDNESDAY: 'Mer',
-  THURSDAY: 'Jeu',
-  FRIDAY: 'Ven',
-  SATURDAY: 'Sam',
-  SUNDAY: 'Dim',
-};
+const CollectionPointLocationPicker = dynamic(
+  () => import('@/components/company/collection-point-location-picker'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-56 animate-pulse rounded-xl border border-border bg-secondary sm:h-64" />
+    ),
+  },
+);
 
-const WEEKDAYS = Object.keys(WEEKDAY_LABELS) as CollectionPointDayOfWeek[];
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+const WEEKDAYS: CollectionPointDayOfWeek[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+];
+
+function translateWeekday(day: CollectionPointDayOfWeek, t: Translate) {
+  return t(`collectionPointsManagement.weekdays.${day}`);
+}
 
 type ZoneFormState = {
   name: string;
@@ -112,8 +128,6 @@ type PointFormErrors = Partial<
     | 'maxCapacity'
     | 'commission'
     | 'commissionPercentage'
-    | 'latitude'
-    | 'longitude'
     | 'openingHours',
     string
   >
@@ -239,21 +253,21 @@ function createPointFormFromResponse(
   };
 }
 
-function formatHours(point: CollectionPointResponse) {
+function formatHours(point: CollectionPointResponse, t: Translate) {
   const openDays = point.openingHours.filter((item) => !item.closed);
   if (openDays.length === 0) {
-    return 'Horaires non definis';
+    return t('collectionPointsManagement.points.hoursUndefined');
   }
 
   return openDays
     .map(
       (item) =>
-        `${WEEKDAY_LABELS[item.dayOfWeek]} ${item.openingTime ?? '--'}-${item.closingTime ?? '--'}`,
+        `${translateWeekday(item.dayOfWeek, t)} ${item.openingTime ?? '--'}-${item.closingTime ?? '--'}`,
     )
     .join(' • ');
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, t: Translate) {
   if (error instanceof Error) {
     return error.message;
   }
@@ -267,7 +281,7 @@ function getErrorMessage(error: unknown) {
     return (error as { message: string }).message;
   }
 
-  return 'Operation impossible';
+  return t('collectionPointsManagement.errors.generic');
 }
 
 function getAvailabilityStatus(point: CollectionPointResponse): CollectionPointAvailabilityStatus {
@@ -301,18 +315,18 @@ function getAvailabilityBadgeClass(status: CollectionPointAvailabilityStatus) {
   }
 }
 
-function getAvailabilityLabel(status: CollectionPointAvailabilityStatus) {
+function getAvailabilityLabel(status: CollectionPointAvailabilityStatus, t: Translate) {
   switch (status) {
     case 'OPEN':
-      return 'Ouvert';
+      return t('collectionPointsManagement.status.open');
     case 'CLOSED':
-      return 'Ferme';
+      return t('collectionPointsManagement.status.closed');
     case 'MANUALLY_CLOSED':
-      return 'Ferme manuellement';
+      return t('collectionPointsManagement.status.manuallyClosed');
     case 'DEACTIVATED':
-      return 'Desactive';
+      return t('collectionPointsManagement.status.deactivated');
     default:
-      return 'Inconnu';
+      return t('collectionPointsManagement.status.unknown');
   }
 }
 
@@ -342,70 +356,56 @@ function PointMetaCard({
   );
 }
 
-function validateZoneForm(value: ZoneFormState): ZoneFormErrors {
+function validateZoneForm(value: ZoneFormState, t: Translate): ZoneFormErrors {
   const errors: ZoneFormErrors = {};
 
   if (!value.cityId) {
-    errors.cityId = 'Selectionnez une ville.';
+    errors.cityId = t('collectionPointsManagement.validation.selectCity');
   }
 
   if (!value.name.trim()) {
-    errors.name = 'Le nom de la zone est requis.';
+    errors.name = t('collectionPointsManagement.validation.zoneNameRequired');
   }
 
   return errors;
 }
 
-function validatePointForm(value: PointFormState): PointFormErrors {
+function validatePointForm(value: PointFormState, t: Translate): PointFormErrors {
   const errors: PointFormErrors = {};
 
   if (!value.name.trim()) {
-    errors.name = 'Le nom du point est requis.';
+    errors.name = t('collectionPointsManagement.validation.pointNameRequired');
   }
 
   if (!value.zoneId) {
-    errors.zoneId = 'Selectionnez une zone.';
+    errors.zoneId = t('collectionPointsManagement.validation.selectZone');
   }
 
   if (!value.address.trim()) {
-    errors.address = "L'adresse est requise.";
+    errors.address = t('collectionPointsManagement.validation.addressRequired');
   }
 
   if (!value.phone.trim()) {
-    errors.phone = 'Le telephone est requis.';
+    errors.phone = t('collectionPointsManagement.validation.phoneRequired');
   }
 
   if (value.maxCapacity.trim() === '') {
-    errors.maxCapacity = 'La capacite max est requise.';
+    errors.maxCapacity = t('collectionPointsManagement.validation.maxCapacityRequired');
   } else if (Number.isNaN(Number(value.maxCapacity)) || Number(value.maxCapacity) < 0) {
-    errors.maxCapacity = 'La capacite max doit etre positive.';
+    errors.maxCapacity = t('collectionPointsManagement.validation.maxCapacityPositive');
   }
 
   if (value.commission.trim() !== '') {
     const commission = Number(value.commission);
     if (Number.isNaN(commission) || commission < 0) {
-      errors.commission = 'La commission fixe doit etre positive.';
+      errors.commission = t('collectionPointsManagement.validation.commissionPositive');
     }
   }
 
   if (value.commissionPercentage.trim() !== '') {
     const percentage = Number(value.commissionPercentage);
     if (Number.isNaN(percentage) || percentage < 0 || percentage > 100) {
-      errors.commissionPercentage = 'Le pourcentage doit etre compris entre 0 et 100.';
-    }
-  }
-
-  if (value.latitude.trim() !== '') {
-    const latitude = Number(value.latitude);
-    if (Number.isNaN(latitude) || latitude < -90 || latitude > 90) {
-      errors.latitude = 'La latitude doit etre comprise entre -90 et 90.';
-    }
-  }
-
-  if (value.longitude.trim() !== '') {
-    const longitude = Number(value.longitude);
-    if (Number.isNaN(longitude) || longitude < -180 || longitude > 180) {
-      errors.longitude = 'La longitude doit etre comprise entre -180 et 180.';
+      errors.commissionPercentage = t('collectionPointsManagement.validation.percentageRange');
     }
   }
 
@@ -423,8 +423,7 @@ function validatePointForm(value: PointFormState): PointFormErrors {
   });
 
   if (invalidHours) {
-    errors.openingHours =
-      "Chaque jour ouvert doit avoir une heure d'ouverture strictement avant l'heure de fermeture.";
+    errors.openingHours = t('collectionPointsManagement.validation.openingHours');
   }
 
   return errors;
@@ -434,12 +433,13 @@ function buildPointPayload(
   form: PointFormState,
   zones: ZoneResponse[],
   cities: CityResponse[],
+  t: Translate,
 ): CollectionPointRequest {
   const zoneId = Number(form.zoneId);
   const zone = zones.find((item) => item.id === zoneId);
 
   if (!zone) {
-    throw new Error('Zone introuvable');
+    throw new Error(t('collectionPointsManagement.errors.zoneNotFound'));
   }
 
   const cityId =
@@ -499,21 +499,27 @@ function ZoneDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg border-border bg-card p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Modifier la zone' : 'Ajouter une zone'}</DialogTitle>
+          <DialogTitle>
+            {editing
+              ? t('collectionPointsManagement.zoneDialog.editTitle')
+              : t('collectionPointsManagement.zoneDialog.createTitle')}
+          </DialogTitle>
           <DialogDescription>
-            Chaque zone est rattachee a une ville existante.
+            {t('collectionPointsManagement.zoneDialog.description')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Ville</Label>
+            <Label>{t('collectionPointsManagement.zoneDialog.city')}</Label>
             <Select value={value.cityId} onValueChange={(cityId) => onChange({ ...value, cityId })}>
               <SelectTrigger className="bg-secondary">
-                <SelectValue placeholder="Selectionnez une ville" />
+                <SelectValue placeholder={t('collectionPointsManagement.pointDialog.selectCity')} />
               </SelectTrigger>
               <SelectContent>
                 {cities.map((city) => (
@@ -526,11 +532,11 @@ function ZoneDialog({
             {errors.cityId && <p className="text-xs text-destructive">{errors.cityId}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Nom de la zone</Label>
+            <Label>{t('collectionPointsManagement.zoneDialog.name')}</Label>
             <Input
               value={value.name}
               onChange={(event) => onChange({ ...value, name: event.target.value })}
-              placeholder="Centre-ville"
+              placeholder={t('collectionPointsManagement.zoneDialog.namePlaceholder')}
               className="bg-secondary"
             />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -543,10 +549,12 @@ function ZoneDialog({
             disabled={loading}
             className="w-full sm:w-auto"
           >
-            Annuler
+            {t('collectionPointsManagement.actions.cancel')}
           </Button>
           <Button onClick={onSubmit} disabled={loading} className="w-full sm:w-auto">
-            {loading ? 'Enregistrement...' : 'Enregistrer'}
+            {loading
+              ? t('collectionPointsManagement.actions.saving')
+              : t('collectionPointsManagement.actions.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -579,6 +587,7 @@ function PointDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
   const fileRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -620,10 +629,12 @@ function PointDialog({
       <DialogContent className="h-[100dvh] max-h-[100dvh] w-screen max-w-none overflow-y-auto border-0 bg-card p-4 sm:h-auto sm:max-h-[90vh] sm:w-[calc(100vw-2rem)] sm:max-w-5xl sm:rounded-2xl sm:border sm:border-border sm:p-6">
         <DialogHeader>
           <DialogTitle>
-            {editing ? 'Modifier le point de collecte' : 'Creer un point de collecte'}
+            {editing
+              ? t('collectionPointsManagement.pointDialog.editTitle')
+              : t('collectionPointsManagement.pointDialog.createTitle')}
           </DialogTitle>
           <DialogDescription>
-            Le point reste aligne sur les endpoints de gestion: photo, disponibilite, commissions et responsable.
+            {t('collectionPointsManagement.pointDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -632,18 +643,18 @@ function PointDialog({
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Nom</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.name')}</Label>
                   <Input
                     value={value.name}
                     onChange={(event) => onChange({ ...value, name: event.target.value })}
                     className="bg-secondary"
-                    placeholder="Agence Bonamoussadi"
+                    placeholder={t('collectionPointsManagement.pointDialog.namePlaceholder')}
                   />
                   {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Zone</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.zone')}</Label>
                   <Select
                     value={value.zoneId}
                     onValueChange={(zoneId) => {
@@ -657,7 +668,7 @@ function PointDialog({
                     }}
                   >
                     <SelectTrigger className="w-full bg-secondary">
-                      <SelectValue placeholder="Selectionnez une zone" />
+                      <SelectValue placeholder={t('collectionPointsManagement.pointDialog.selectZone')} />
                     </SelectTrigger>
                     <SelectContent>
                       {zones.map((zone) => (
@@ -672,7 +683,7 @@ function PointDialog({
               </div>
 
               <div className={selectedZone && !needsManualCitySelection ? 'hidden' : 'space-y-2'}>
-                <Label>Ville de rattachement</Label>
+                <Label>{t('collectionPointsManagement.pointDialog.city')}</Label>
                 <Select
                   value={value.cityId || 'none'}
                   onValueChange={(cityId) =>
@@ -680,10 +691,14 @@ function PointDialog({
                   }
                 >
                   <SelectTrigger className="w-full bg-secondary">
-                    <SelectValue placeholder="Selectionnez une ville" />
+                    <SelectValue
+                      placeholder={t('collectionPointsManagement.pointDialog.selectCity')}
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Laisser l'API deduire depuis la zone</SelectItem>
+                    <SelectItem value="none">
+                      {t('collectionPointsManagement.pointDialog.cityFromZone')}
+                    </SelectItem>
                     {cityCandidates.map((city) => (
                       <SelectItem key={city.cityId} value={String(city.cityId)}>
                         {city.cityName}, {city.countryName}
@@ -693,14 +708,14 @@ function PointDialog({
                 </Select>
                 {selectedZone && (
                   <p className="text-xs text-muted-foreground">
-                    Si la zone ne permet pas de retrouver automatiquement la ville, vous pouvez la preciser ici.
+                    {t('collectionPointsManagement.pointDialog.cityHint')}
                   </p>
                 )}
               </div>
 
               {selectedZone && !needsManualCitySelection && (
                 <div className="space-y-2">
-                  <Label>Ville deduite</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.resolvedCity')}</Label>
                   <div className="rounded-xl border border-border bg-secondary px-3 py-2 text-sm text-foreground">
                     {resolvedCity
                       ? `${resolvedCity.cityName}, ${resolvedCity.countryName}`
@@ -710,30 +725,30 @@ function PointDialog({
               )}
 
               <div className="space-y-2">
-                <Label>Adresse</Label>
+                <Label>{t('collectionPointsManagement.pointDialog.address')}</Label>
                 <Textarea
                   value={value.address}
                   onChange={(event) => onChange({ ...value, address: event.target.value })}
                   className="min-h-24 bg-secondary"
-                  placeholder="Rue, quartier, repere..."
+                  placeholder={t('collectionPointsManagement.pointDialog.addressPlaceholder')}
                 />
                 {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Telephone</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.phone')}</Label>
                   <Input
                     value={value.phone}
                     onChange={(event) => onChange({ ...value, phone: event.target.value })}
                     className="bg-secondary"
-                    placeholder="+237 6 90 00 00 00"
+                    placeholder={t('collectionPointsManagement.pointDialog.phonePlaceholder')}
                   />
                   {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Responsable</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.responsible')}</Label>
                   <Select
                     value={value.responsibleId || 'none'}
                     onValueChange={(responsibleId) =>
@@ -744,10 +759,14 @@ function PointDialog({
                     }
                   >
                     <SelectTrigger className="w-full bg-secondary">
-                      <SelectValue placeholder="Aucun responsable" />
+                      <SelectValue
+                        placeholder={t('collectionPointsManagement.pointDialog.noResponsible')}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun responsable</SelectItem>
+                      <SelectItem value="none">
+                        {t('collectionPointsManagement.pointDialog.noResponsible')}
+                      </SelectItem>
                       {responsibles.map((user) => (
                         <SelectItem key={user.id} value={String(user.id)}>
                           {user.firstName} {user.lastName} (@{user.username})
@@ -760,7 +779,7 @@ function PointDialog({
 
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="space-y-2">
-                  <Label>Capacite max</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.maxCapacity')}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -775,7 +794,7 @@ function PointDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Unite</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.unit')}</Label>
                   <Select
                     value={value.capacityUnit}
                     onValueChange={(capacityUnit: CollectionPointCapacityUnit) =>
@@ -793,7 +812,7 @@ function PointDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Commission fixe</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.fixedCommission')}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -801,7 +820,7 @@ function PointDialog({
                     value={value.commission}
                     onChange={(event) => onChange({ ...value, commission: event.target.value })}
                     className="bg-secondary"
-                    placeholder="Optionnel"
+                    placeholder={t('collectionPointsManagement.pointDialog.optional')}
                   />
                   {errors.commission && (
                     <p className="text-xs text-destructive">{errors.commission}</p>
@@ -809,7 +828,7 @@ function PointDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Commission (%)</Label>
+                  <Label>{t('collectionPointsManagement.pointDialog.percentageCommission')}</Label>
                   <Input
                     type="number"
                     min="0"
@@ -820,7 +839,7 @@ function PointDialog({
                       onChange({ ...value, commissionPercentage: event.target.value })
                     }
                     className="bg-secondary"
-                    placeholder="Optionnel"
+                    placeholder={t('collectionPointsManagement.pointDialog.optional')}
                   />
                   {errors.commissionPercentage && (
                     <p className="text-xs text-destructive">{errors.commissionPercentage}</p>
@@ -828,39 +847,24 @@ function PointDialog({
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Latitude</Label>
-                  <Input
-                    value={value.latitude}
-                    onChange={(event) => onChange({ ...value, latitude: event.target.value })}
-                    className="bg-secondary"
-                    placeholder="4.0511"
-                  />
-                  {errors.latitude && <p className="text-xs text-destructive">{errors.latitude}</p>}
-                </div>
+              <CollectionPointLocationPicker
+                latitude={value.latitude}
+                longitude={value.longitude}
+                onChange={({ latitude, longitude }) =>
+                  onChange({ ...value, latitude: String(latitude), longitude: String(longitude) })
+                }
+              />
 
-                <div className="space-y-2">
-                  <Label>Longitude</Label>
-                  <Input
-                    value={value.longitude}
-                    onChange={(event) => onChange({ ...value, longitude: event.target.value })}
-                    className="bg-secondary"
-                    placeholder="9.7679"
-                  />
-                  {errors.longitude && (
-                    <p className="text-xs text-destructive">{errors.longitude}</p>
-                  )}
-                </div>
-              </div>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-3 rounded-2xl border border-border p-4">
                 <div>
-                  <p className="font-medium text-foreground">Photo du point</p>
+                  <p className="font-medium text-foreground">
+                    {t('collectionPointsManagement.pointDialog.photoTitle')}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Le contrat API accepte une image en multipart.
+                    {t('collectionPointsManagement.pointDialog.photoDescription')}
                   </p>
                 </div>
 
@@ -879,13 +883,13 @@ function PointDialog({
                   <div className="overflow-hidden rounded-2xl border border-border">
                     <img
                       src={currentPhotoUrl}
-                      alt="Photo du point"
+                      alt={t('collectionPointsManagement.pointDialog.photoAlt')}
                       className="h-44 w-full object-cover sm:h-52"
                     />
                   </div>
                 ) : (
                   <div className="flex h-44 items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/50 text-sm text-muted-foreground sm:h-52">
-                    Aucune photo associee
+                    {t('collectionPointsManagement.pointDialog.noPhoto')}
                   </div>
                 )}
 
@@ -897,7 +901,9 @@ function PointDialog({
                     className="gap-2"
                   >
                     <ImagePlus className="h-4 w-4" />
-                    {value.photo || value.existingPhotoUrl ? 'Remplacer la photo' : 'Ajouter une photo'}
+                    {value.photo || value.existingPhotoUrl
+                      ? t('collectionPointsManagement.pointDialog.replacePhoto')
+                      : t('collectionPointsManagement.pointDialog.addPhoto')}
                   </Button>
                   {value.photo && (
                     <Button
@@ -912,7 +918,7 @@ function PointDialog({
                       className="gap-2"
                     >
                       <X className="h-4 w-4" />
-                      Retirer le nouveau fichier
+                      {t('collectionPointsManagement.pointDialog.removePhoto')}
                     </Button>
                   )}
                 </div>
@@ -921,9 +927,11 @@ function PointDialog({
               <div className="space-y-3 rounded-2xl border border-border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-foreground">Visibilite mobile</p>
+                    <p className="font-medium text-foreground">
+                      {t('collectionPointsManagement.pointDialog.mobileVisibilityTitle')}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Controle l'exposition du point sur les parcours mobiles.
+                      {t('collectionPointsManagement.pointDialog.mobileVisibilityDescription')}
                     </p>
                   </div>
                   <Select
@@ -936,8 +944,12 @@ function PointDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="true">Visible</SelectItem>
-                      <SelectItem value="false">Masque</SelectItem>
+                      <SelectItem value="true">
+                        {t('collectionPointsManagement.pointDialog.visible')}
+                      </SelectItem>
+                      <SelectItem value="false">
+                        {t('collectionPointsManagement.pointDialog.hidden')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -946,9 +958,11 @@ function PointDialog({
               <div className="space-y-3 rounded-2xl border border-border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-foreground">Fermeture manuelle</p>
+                    <p className="font-medium text-foreground">
+                      {t('collectionPointsManagement.pointDialog.manualClosureTitle')}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Utile pour garder le point dans le reseau tout en le fermant temporairement.
+                      {t('collectionPointsManagement.pointDialog.manualClosureDescription')}
                     </p>
                   </div>
                   <Select
@@ -961,8 +975,12 @@ function PointDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="false">Ouvert</SelectItem>
-                      <SelectItem value="true">Ferme</SelectItem>
+                      <SelectItem value="false">
+                        {t('collectionPointsManagement.status.open')}
+                      </SelectItem>
+                      <SelectItem value="true">
+                        {t('collectionPointsManagement.status.closed')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -972,9 +990,11 @@ function PointDialog({
 
           <div className="space-y-3 rounded-2xl border border-border p-4">
             <div>
-              <p className="font-medium text-foreground">Horaires d'ouverture</p>
+              <p className="font-medium text-foreground">
+                {t('collectionPointsManagement.pointDialog.openingHoursTitle')}
+              </p>
               <p className="text-sm text-muted-foreground">
-                Les jours ouverts doivent avoir des horaires coherents.
+                {t('collectionPointsManagement.pointDialog.openingHoursDescription')}
               </p>
             </div>
 
@@ -984,7 +1004,7 @@ function PointDialog({
                   key={day}
                   className="grid items-center gap-3 sm:grid-cols-2 lg:grid-cols-[100px_120px_minmax(0,1fr)_minmax(0,1fr)]"
                 >
-                  <div className="font-medium text-foreground">{WEEKDAY_LABELS[day]}</div>
+                  <div className="font-medium text-foreground">{translateWeekday(day, t)}</div>
                   <Button
                     type="button"
                     variant={value.openingHours[day].closed ? 'outline' : 'default'}
@@ -992,7 +1012,9 @@ function PointDialog({
                       onHourChange(day, { closed: !value.openingHours[day].closed })
                     }
                   >
-                    {value.openingHours[day].closed ? 'Ferme' : 'Ouvert'}
+                    {value.openingHours[day].closed
+                      ? t('collectionPointsManagement.status.closed')
+                      : t('collectionPointsManagement.status.open')}
                   </Button>
                   <Input
                     type="time"
@@ -1029,10 +1051,14 @@ function PointDialog({
             disabled={loading}
             className="w-full sm:w-auto"
           >
-            Annuler
+            {t('collectionPointsManagement.actions.cancel')}
           </Button>
           <Button onClick={onSubmit} disabled={loading} className="w-full sm:w-auto">
-            {loading ? 'Enregistrement...' : editing ? 'Mettre a jour' : 'Creer le point'}
+            {loading
+              ? t('collectionPointsManagement.actions.saving')
+              : editing
+                ? t('collectionPointsManagement.actions.update')
+                : t('collectionPointsManagement.actions.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1047,6 +1073,7 @@ function CollectionPointsInner({
   companyId: number;
   companyName: string;
 }) {
+  const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
   const {
@@ -1165,7 +1192,7 @@ function CollectionPointsInner({
   };
 
   const handleSaveZone = async () => {
-    const errors = validateZoneForm(zoneForm);
+    const errors = validateZoneForm(zoneForm, t);
     setZoneErrors(errors);
     if (Object.keys(errors).length > 0) {
       return;
@@ -1179,31 +1206,41 @@ function CollectionPointsInner({
         },
         editingZone?.id,
       );
-      success(editingZone ? 'Zone mise a jour' : 'Zone creee');
+      success(
+        editingZone
+          ? t('collectionPointsManagement.messages.zoneUpdated')
+          : t('collectionPointsManagement.messages.zoneCreated'),
+      );
       setZoneDialogOpen(false);
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Enregistrement impossible');
+      showError(
+        err instanceof Error ? err.message : t('collectionPointsManagement.errors.save'),
+      );
     }
   };
 
   const handleSavePoint = async () => {
-    const errors = validatePointForm(pointForm);
+    const errors = validatePointForm(pointForm, t);
     setPointErrors(errors);
     if (Object.keys(errors).length > 0) {
       return;
     }
 
     try {
-      const payload = buildPointPayload(pointForm, zones, cities);
+      const payload = buildPointPayload(pointForm, zones, cities, t);
       await savePoint({
         pointId: editingPoint?.id,
         payload,
         photo: pointForm.photo ?? undefined,
       });
-      success(editingPoint ? 'Point de collecte mis a jour' : 'Point de collecte cree');
+      success(
+        editingPoint
+          ? t('collectionPointsManagement.messages.pointUpdated')
+          : t('collectionPointsManagement.messages.pointCreated'),
+      );
       setPointDialogOpen(false);
     } catch (err) {
-      showError(getErrorMessage(err));
+      showError(getErrorMessage(err, t));
     }
   };
 
@@ -1214,10 +1251,12 @@ function CollectionPointsInner({
 
     try {
       await removeZone(deleteZoneTarget.id);
-      success('Zone supprimee');
+      success(t('collectionPointsManagement.messages.zoneDeleted'));
       setDeleteZoneTarget(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Suppression impossible');
+      showError(
+        err instanceof ApiError ? err.message : t('collectionPointsManagement.errors.delete'),
+      );
     }
   };
 
@@ -1228,10 +1267,12 @@ function CollectionPointsInner({
 
     try {
       const response = await removePoint(deletePointTarget.id);
-      success(response.message || 'Point de collecte supprime');
+      success(response.message || t('collectionPointsManagement.messages.pointDeleted'));
       setDeletePointTarget(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Suppression impossible');
+      showError(
+        err instanceof ApiError ? err.message : t('collectionPointsManagement.errors.delete'),
+      );
     }
   };
 
@@ -1242,10 +1283,12 @@ function CollectionPointsInner({
 
     try {
       const response = await deactivatePoint(deactivatePointTarget.id);
-      success(response.message || 'Point desactive');
+      success(response.message || t('collectionPointsManagement.messages.pointDeactivated'));
       setDeactivatePointTarget(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Desactivation impossible');
+      showError(
+        err instanceof ApiError ? err.message : t('collectionPointsManagement.errors.deactivate'),
+      );
     }
   };
 
@@ -1256,19 +1299,27 @@ function CollectionPointsInner({
 
     try {
       const response = await activatePoint(activatePointTarget.id);
-      success(response.message || 'Point active');
+      success(response.message || t('collectionPointsManagement.messages.pointActivated'));
       setActivatePointTarget(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Activation impossible');
+      showError(
+        err instanceof ApiError ? err.message : t('collectionPointsManagement.errors.activate'),
+      );
     }
   };
 
   const handleToggleAvailability = async (point: CollectionPointResponse) => {
     try {
       await togglePointAvailability(point);
-      success(point.manuallyClosed ? 'Point rouvert' : 'Point ferme manuellement');
+      success(
+        point.manuallyClosed
+          ? t('collectionPointsManagement.messages.pointReopened')
+          : t('collectionPointsManagement.messages.pointClosed'),
+      );
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Action impossible');
+      showError(
+        err instanceof ApiError ? err.message : t('collectionPointsManagement.errors.action'),
+      );
     }
   };
 
@@ -1285,12 +1336,12 @@ function CollectionPointsInner({
       <StatusState
         icon={MapPin}
         tone="destructive"
-        title="Erreur de chargement"
+        title={t('collectionPointsManagement.errors.loadTitle')}
         description={error}
         action={
           <Button variant="outline" onClick={() => void refresh()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Reessayer
+            {t('collectionPointsManagement.actions.retry')}
           </Button>
         }
       />
@@ -1329,13 +1380,13 @@ function CollectionPointsInner({
 
       <ConfirmDialog
         open={!!deleteZoneTarget}
-        title="Supprimer la zone"
+        title={t('collectionPointsManagement.confirm.deleteZoneTitle')}
         description={
           deleteZoneTarget && (pointCountByZone.get(deleteZoneTarget.id) ?? 0) > 0
-            ? 'Cette zone contient encore des points de collecte. Supprimez-les ou deplacez-les avant.'
-            : 'Cette action supprimera definitivement la zone.'
+            ? t('collectionPointsManagement.confirm.deleteZoneWithPoints')
+            : t('collectionPointsManagement.confirm.deleteZoneDescription')
         }
-        confirmLabel="Supprimer"
+        confirmLabel={t('collectionPointsManagement.actions.delete')}
         destructive
         loading={saving}
         onConfirm={() => void handleDeleteZone()}
@@ -1344,9 +1395,9 @@ function CollectionPointsInner({
 
       <ConfirmDialog
         open={!!deactivatePointTarget}
-        title="Desactiver le point"
-        description="Le point restera historise mais il ne sera plus exploitable par les parcours actifs."
-        confirmLabel="Desactiver"
+        title={t('collectionPointsManagement.confirm.deactivateTitle')}
+        description={t('collectionPointsManagement.confirm.deactivateDescription')}
+        confirmLabel={t('collectionPointsManagement.actions.deactivate')}
         destructive
         loading={actionPointId === deactivatePointTarget?.id}
         onConfirm={() => void handleDeactivatePoint()}
@@ -1355,9 +1406,9 @@ function CollectionPointsInner({
 
       <ConfirmDialog
         open={!!activatePointTarget}
-        title="Activer le point"
-        description="Le point sera de nouveau exploitable par les parcours actifs selon sa configuration."
-        confirmLabel="Activer"
+        title={t('collectionPointsManagement.confirm.activateTitle')}
+        description={t('collectionPointsManagement.confirm.activateDescription')}
+        confirmLabel={t('collectionPointsManagement.actions.activate')}
         loading={actionPointId === activatePointTarget?.id}
         onConfirm={() => void handleActivatePoint()}
         onCancel={() => setActivatePointTarget(null)}
@@ -1365,9 +1416,9 @@ function CollectionPointsInner({
 
       <ConfirmDialog
         open={!!deletePointTarget}
-        title="Supprimer le point"
-        description="Cette action supprimera definitivement le point de collecte."
-        confirmLabel="Supprimer"
+        title={t('collectionPointsManagement.confirm.deletePointTitle')}
+        description={t('collectionPointsManagement.confirm.deletePointDescription')}
+        confirmLabel={t('collectionPointsManagement.actions.delete')}
         destructive
         loading={saving}
         onConfirm={() => void handleDeletePoint()}
@@ -1375,8 +1426,8 @@ function CollectionPointsInner({
       />
 
       <SectionHeader
-        title="Zones et points de collecte"
-        subtitle={`Administration du maillage logistique de ${companyName}.`}
+        title={t('collectionPointsManagement.title')}
+        subtitle={t('collectionPointsManagement.subtitle', { values: { companyName } })}
         action={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <Button
@@ -1385,11 +1436,11 @@ function CollectionPointsInner({
               className="w-full gap-2 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
-              Nouvelle zone
+              {t('collectionPointsManagement.actions.newZone')}
             </Button>
             <Button onClick={openPointCreate} className="w-full gap-2 sm:w-auto">
               <Plus className="h-4 w-4" />
-              Nouveau point
+              {t('collectionPointsManagement.actions.newPoint')}
             </Button>
           </div>
         }
@@ -1403,7 +1454,9 @@ function CollectionPointsInner({
             </div>
             <div className="min-w-0">
               <p className="text-xl font-bold text-foreground sm:text-2xl">{zones.length}</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Zones actives</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                {t('collectionPointsManagement.stats.zones')}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1415,7 +1468,9 @@ function CollectionPointsInner({
             </div>
             <div className="min-w-0">
               <p className="text-xl font-bold text-foreground sm:text-2xl">{stats.active}</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Points actifs</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                {t('collectionPointsManagement.stats.activePoints')}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1427,7 +1482,9 @@ function CollectionPointsInner({
             </div>
             <div className="min-w-0">
               <p className="text-xl font-bold text-foreground sm:text-2xl">{stats.mobileVisible}</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Visibles mobile</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                {t('collectionPointsManagement.stats.mobileVisible')}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1439,7 +1496,9 @@ function CollectionPointsInner({
             </div>
             <div className="min-w-0">
               <p className="text-xl font-bold text-foreground sm:text-2xl">{stats.deactivated}</p>
-              <p className="text-xs text-muted-foreground sm:text-sm">Desactives</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                {t('collectionPointsManagement.stats.deactivated')}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1449,7 +1508,9 @@ function CollectionPointsInner({
         <Card className="border-border bg-card">
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Zones geographiques</h3>
+              <h3 className="font-semibold text-foreground">
+                {t('collectionPointsManagement.zones.listTitle')}
+              </h3>
               <Button variant="ghost" size="sm" onClick={openZoneCreate}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -1458,8 +1519,8 @@ function CollectionPointsInner({
             {zones.length === 0 ? (
               <StatusState
                 icon={MapPin}
-                title="Aucune zone"
-                description="Commencez par creer une premiere zone operationnelle."
+                title={t('collectionPointsManagement.zones.emptyTitle')}
+                description={t('collectionPointsManagement.zones.emptyDescription')}
               />
             ) : (
               <div className="space-y-3">
@@ -1472,7 +1533,9 @@ function CollectionPointsInner({
                           {getZoneLocationLabel(zone, cities)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {pointCountByZone.get(zone.id) ?? 0} point(s)
+                          {t('collectionPointsManagement.zones.pointCount', {
+                            values: { count: pointCountByZone.get(zone.id) ?? 0 },
+                          })}
                         </p>
                       </div>
                       <div className="flex gap-1">
@@ -1502,15 +1565,17 @@ function CollectionPointsInner({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Rechercher un point, une reference, un responsable..."
+                placeholder={t('collectionPointsManagement.points.searchPlaceholder')}
                 className="bg-secondary"
               />
               <Select value={zoneFilter} onValueChange={(value) => setZoneFilter(value)}>
                 <SelectTrigger className="w-full bg-secondary md:w-72">
-                  <SelectValue placeholder="Toutes les zones" />
+                  <SelectValue placeholder={t('collectionPointsManagement.points.allZones')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes les zones</SelectItem>
+                  <SelectItem value="all">
+                    {t('collectionPointsManagement.points.allZones')}
+                  </SelectItem>
                   {zones.map((zone) => (
                     <SelectItem key={zone.id} value={String(zone.id)}>
                       {zone.name}
@@ -1523,17 +1588,21 @@ function CollectionPointsInner({
             {filteredPoints.length === 0 ? (
               <StatusState
                 icon={Warehouse}
-                title={points.length === 0 ? 'Aucun point de collecte' : 'Aucun resultat'}
+                title={
+                  points.length === 0
+                    ? t('collectionPointsManagement.points.emptyTitle')
+                    : t('collectionPointsManagement.points.noResultTitle')
+                }
                 description={
                   points.length === 0
-                    ? 'Ajoutez votre premier point de collecte pour commencer.'
-                    : 'Aucun point ne correspond a votre recherche.'
+                    ? t('collectionPointsManagement.points.emptyDescription')
+                    : t('collectionPointsManagement.points.noResultDescription')
                 }
                 action={
                   points.length === 0 ? (
                     <Button onClick={openPointCreate} className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Ajouter un point
+                      {t('collectionPointsManagement.actions.addPoint')}
                     </Button>
                   ) : undefined
                 }
@@ -1590,17 +1659,21 @@ function CollectionPointsInner({
                                 </p>
                                 {point.reference && (
                                   <Badge className="bg-secondary/80 text-muted-foreground">
-                                    Ref {point.reference}
+                                    {t('collectionPointsManagement.points.reference', {
+                                      values: { reference: point.reference },
+                                    })}
                                   </Badge>
                                 )}
                                 <Badge className={getAvailabilityBadgeClass(availabilityStatus)}>
-                                  {getAvailabilityLabel(availabilityStatus)}
+                                  {getAvailabilityLabel(availabilityStatus, t)}
                                 </Badge>
                                 <Badge className="bg-primary/10 text-primary">
                                   {point.zone.name}
                                 </Badge>
                                 <Badge className="bg-secondary text-muted-foreground">
-                                  {point.mobileAvailability ? 'Visible mobile' : 'Masque mobile'}
+                                  {point.mobileAvailability
+                                    ? t('collectionPointsManagement.points.mobileVisibleBadge')
+                                    : t('collectionPointsManagement.points.mobileHiddenBadge')}
                                 </Badge>
                               </div>
 
@@ -1610,13 +1683,13 @@ function CollectionPointsInner({
                             </div>
 
                             <div className="grid w-full gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-                              <PointMetaCard label="Ville">
+                              <PointMetaCard label={t('collectionPointsManagement.cards.city')}>
                                 <p className="min-w-0 leading-6 [overflow-wrap:anywhere]">
                                   {getPointCityLabel(point, cities)}
                                 </p>
                               </PointMetaCard>
 
-                              <PointMetaCard label="Contact">
+                              <PointMetaCard label={t('collectionPointsManagement.cards.contact')}>
                                 <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2">
                                   <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                   <span className="min-w-0 tabular-nums leading-6 [overflow-wrap:anywhere]">
@@ -1625,46 +1698,45 @@ function CollectionPointsInner({
                                 </div>
                               </PointMetaCard>
 
-                              <PointMetaCard label="Capacite">
+                              <PointMetaCard label={t('collectionPointsManagement.cards.capacity')}>
                                 <p className="min-w-0 leading-6 [overflow-wrap:anywhere]">
                                   {point.maxCapacity} {point.capacityUnit}
                                 </p>
                               </PointMetaCard>
 
                               {(point.commission != null || point.commissionPercentage != null) && (
-                                <PointMetaCard label="Commission">
+                                <PointMetaCard label={t('collectionPointsManagement.cards.commission')}>
                                   <p className="min-w-0 leading-6 [overflow-wrap:anywhere]">
-                                    {point.commission != null ? `Fixe ${point.commission}` : 'Fixe --'}
+                                    {point.commission != null
+                                      ? t('collectionPointsManagement.points.fixedCommission', {
+                                          values: { amount: point.commission },
+                                        })
+                                      : t('collectionPointsManagement.points.noFixedCommission')}
                                     {point.commissionPercentage != null
-                                      ? ` • ${point.commissionPercentage}%`
+                                      ? ` • ${t('collectionPointsManagement.points.percentage', {
+                                          values: { value: point.commissionPercentage },
+                                        })}`
                                       : ''}
                                   </p>
                                 </PointMetaCard>
                               )}
 
                               {point.responsible && (
-                                <PointMetaCard label="Responsable">
+                                <PointMetaCard label={t('collectionPointsManagement.cards.responsible')}>
                                   <p className="min-w-0 leading-6 [overflow-wrap:anywhere]">
                                     {point.responsible.firstName} {point.responsible.lastName}
                                   </p>
                                 </PointMetaCard>
                               )}
 
-                              {(point.latitude != null || point.longitude != null) && (
-                                <PointMetaCard label="GPS">
-                                  <p className="min-w-0 font-mono text-[13px] leading-6 [overflow-wrap:anywhere]">
-                                    {point.latitude ?? '--'}, {point.longitude ?? '--'}
-                                  </p>
-                                </PointMetaCard>
-                              )}
                             </div>
 
                             <div className="rounded-2xl border border-border/70 bg-secondary/20 px-3.5 py-3">
                               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">
-                                Horaires
+                                {t('collectionPointsManagement.points.hoursLabel')}
                               </p>
                               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                {formatHours(point)}
+                                {formatHours(point, t)}
                               </p>
                             </div>
 
@@ -1683,7 +1755,7 @@ function CollectionPointsInner({
                             className="w-full gap-2 sm:w-auto xl:w-full xl:justify-start"
                           >
                             <Pencil className="h-4 w-4" />
-                            Modifier
+                            {t('collectionPointsManagement.actions.edit')}
                           </Button>
 
                           <Button
@@ -1698,10 +1770,10 @@ function CollectionPointsInner({
                               <EyeOff className="h-4 w-4" />
                             )}
                             {isBusy
-                              ? 'Traitement...'
+                              ? t('collectionPointsManagement.actions.processing')
                               : point.manuallyClosed
-                                ? 'Rouvrir'
-                                : 'Fermer'}
+                                ? t('collectionPointsManagement.actions.reopen')
+                                : t('collectionPointsManagement.actions.close')}
                           </Button>
 
                           {point.active && (
@@ -1712,7 +1784,7 @@ function CollectionPointsInner({
                               disabled={isBusy}
                             >
                               <PowerOff className="h-4 w-4" />
-                              Desactiver
+                              {t('collectionPointsManagement.actions.deactivate')}
                             </Button>
                           )}
 
@@ -1724,7 +1796,9 @@ function CollectionPointsInner({
                               disabled={isBusy}
                             >
                               <Power className="h-4 w-4" />
-                              {isBusy ? 'Traitement...' : 'Activer'}
+                              {isBusy
+                                ? t('collectionPointsManagement.actions.processing')
+                                : t('collectionPointsManagement.actions.activate')}
                             </Button>
                           )}
 
@@ -1734,7 +1808,7 @@ function CollectionPointsInner({
                             className="w-full gap-2 sm:w-auto xl:w-full xl:justify-start"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Supprimer
+                            {t('collectionPointsManagement.actions.delete')}
                           </Button>
                         </div>
                       </div>
@@ -1746,7 +1820,9 @@ function CollectionPointsInner({
 
             {points.length > 0 && (
               <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground">
-                {stats.openNow} point(s) actuellement ouverts selon les horaires et {stats.deactivated} desactives.
+                {t('collectionPointsManagement.points.summary', {
+                  values: { open: stats.openNow, deactivated: stats.deactivated },
+                })}
               </div>
             )}
           </CardContent>
