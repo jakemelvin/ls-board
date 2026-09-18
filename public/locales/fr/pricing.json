@@ -1,0 +1,116 @@
+{
+  "title": "Moteur de tarification",
+  "subtitle": "Grilles opérationnelles de {{company}} par mode, route et type de colis.",
+  "actions": {
+    "refresh": "Actualiser",
+    "newGrid": "Nouvelle grille",
+    "duplicate": "Dupliquer",
+    "verify": "Vérifier",
+    "verifying": "Vérification...",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "retry": "Réessayer",
+    "addRange": "Tranche"
+  },
+  "metrics": {
+    "grids": "Grilles",
+    "gridsHelper": "Configurations enregistrées",
+    "modes": "Modes couverts",
+    "noMode": "Aucun mode",
+    "types": "Types actifs",
+    "pointsCount": "{{count}} points de collecte",
+    "insurance": "Assurance",
+    "insuranceHelper": "Montant de référence"
+  },
+  "modeCard": {
+    "title": "Mode de transport",
+    "placeholder": "Sélectionnez un mode",
+    "loadingRequirements": "Chargement de la configuration..."
+  },
+  "coverage": {
+    "title": "Couverture du mode",
+    "noRequirements": "Sélectionnez un mode pour charger les routes et types disponibles.",
+    "noCombos": "Aucune route exploitable ou aucun type de colis actif pour ce mode.",
+    "allComplete": "Toutes les combinaisons route/type de colis disposent d'une grille.",
+    "missingCount": "{{count}} combinaison(s) à compléter."
+  },
+  "list": {
+    "title": "Grilles existantes",
+    "searchPlaceholder": "Rechercher route, colis, critère",
+    "empty": "Aucune grille ne correspond à ce filtre.",
+    "never": "Jamais"
+  },
+  "form": {
+    "editTitle": "Modifier la grille",
+    "newTitle": "Nouvelle grille",
+    "description": "Une grille couvre une route, un type de colis et un mode de transport.",
+    "route": "Route",
+    "routePlaceholder": "Origine -> destination",
+    "parcelType": "Type de colis",
+    "parcelPlaceholder": "Sélectionnez un type",
+    "expressSurcharge": "Surcharge express",
+    "criteria": "Critères de calcul",
+    "envelopeBadge": "Enveloppe : prix fixe uniquement",
+    "requirementsTitle": "Configuration requise",
+    "required": "requis",
+    "optional": "optionnel",
+    "notRequired": "non requis",
+    "selectionTitle": "Sélection",
+    "selectionModeFallback": "Mode",
+    "selectionParcelFallback": "Type",
+    "insuranceWord": "Assurance",
+    "fixedPrice": "Prix fixe",
+    "weightApplication": "Application du poids",
+    "volumeApplication": "Application du volume",
+    "weightRanges": "Tranches de poids",
+    "volumeRanges": "Tranches de volume"
+  },
+  "criteria": {
+    "FIXED": { "label": "Prix fixe", "hint": "Base obligatoire pour les enveloppes." },
+    "WEIGHT": { "label": "Poids", "hint": "Prix unitaire par tranches de kg." },
+    "VOLUME": { "label": "Volume", "hint": "Prix unitaire par tranches de m3." }
+  },
+  "applicationModes": {
+    "PROPORTIONAL": { "label": "Proportionnel", "hint": "Calculé au prorata de la valeur saisie." },
+    "ROUND_UP_UNIT": { "label": "Arrondi à l'unité", "hint": "Arrondit au kg ou m3 supérieur." }
+  },
+  "ranges": {
+    "hint": "Tranches contiguës à partir de 0. Le dernier maximum peut rester vide.",
+    "add": "Tranche",
+    "min": "Min {{unit}}",
+    "max": "Max {{unit}}",
+    "amount": "Montant",
+    "remove": "Retirer la tranche"
+  },
+  "validation": {
+    "selectMode": "Sélectionnez un mode de transport.",
+    "selectRoute": "Sélectionnez une route origine -> destination.",
+    "selectParcel": "Sélectionnez un type de colis.",
+    "selectCriteria": "Sélectionnez au moins un critère tarifaire.",
+    "envelopeFixedOnly": "Les enveloppes sont limitées au critère Prix fixe.",
+    "fieldRequired": "{{field}} est requis.",
+    "fieldPositive": "{{field}} doit être un nombre positif.",
+    "rangeRequired": "Ajoutez au moins une tranche pour {{label}}.",
+    "rangeMinInvalid": "Tranche {{index}} ({{label}}) : le minimum en {{unit}} est invalide.",
+    "rangeMaxInvalid": "Tranche {{index}} ({{label}}) : le maximum en {{unit}} doit être supérieur au minimum.",
+    "rangeAmountInvalid": "Tranche {{index}} ({{label}}) : le montant est invalide.",
+    "rangeStartZero": "Les tranches {{label}} doivent commencer à 0 {{unit}}.",
+    "rangeLastMaxEmpty": "Seule la dernière tranche peut avoir un maximum vide.",
+    "rangeContiguous": "Les tranches doivent être contiguës, sans trou ni chevauchement."
+  },
+  "errors": {
+    "loadTitle": "Erreur de chargement",
+    "noActiveModes": "Aucun mode de transport actif",
+    "noActiveModesDescription": "Activez au moins un mode de transport avant de définir les tarifs."
+  },
+  "messages": {
+    "loadError": "Erreur lors du chargement",
+    "requirementsError": "Impossible de charger la configuration requise",
+    "duplicateSuccess": "Grille dupliquée en brouillon",
+    "selectBeforeVerify": "Sélectionnez un mode, une route et un type de colis avant vérification.",
+    "checkSuccess": "Grille existante chargée",
+    "checkError": "Aucune grille pour cette sélection",
+    "saveSuccess": "Tarification enregistrée",
+    "saveError": "Enregistrement impossible"
+  }
+}

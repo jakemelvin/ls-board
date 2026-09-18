@@ -103,7 +103,7 @@
     }
   },
   "profile": {
-    "description": "Consultez les informations renvoyees par l'API et mettez a jour votre profil.",
+    "description": "Consultez vos informations et gardez votre profil a jour.",
     "fields": {
       "address": "Adresse",
       "city": "Ville",
@@ -123,11 +123,11 @@
       "loadFailed": "Impossible de charger le profil.",
       "loading": "Chargement du profil...",
       "saved": "Profil mis a jour",
-      "savedDescription": "Vos informations ont ete synchronisees avec le backend.",
+      "savedDescription": "Vos informations ont bien ete enregistrees.",
       "saveFailed": "Mise a jour impossible",
       "sessionExpired": "Session expiree."
     },
-    "photoHint": "La photo est envoyee via l'endpoint profil du backend.",
+    "photoHint": "Votre photo de profil sera visible par votre equipe et vos clients.",
     "title": "Mon profil"
   },
   "collectorDashboard": {
@@ -151,7 +151,7 @@
     },
     "priorities": {
       "title": "Priorités immédiates",
-      "description": "Éléments renvoyés par le backend pour guider le traitement."
+      "description": "À traiter en priorité pour garder une exploitation fluide."
     },
     "recentOperations": {
       "title": "Dernières opérations",
@@ -517,7 +517,7 @@
         "relatedEntityType": "SHIPMENT",
         "title": "Ex : Colis prêt au retrait"
       },
-      "subtitle": "Créez une notification backend et ciblez des utilisateurs précis ou un segment.",
+      "subtitle": "Créez une annonce et ciblez des utilisateurs précis ou un segment.",
       "target": {
         "allCompanies": "Toutes les entreprises",
         "allCountries": "Tous les pays",
@@ -591,7 +591,7 @@
       "messages": {
         "revoked": "Appareil révoqué"
       },
-      "subtitle": "Appareils enregistrés auprès du backend de notification.",
+      "subtitle": "Appareils qui recevront vos notifications.",
       "title": "Appareils",
       "unknownDevice": "Appareil inconnu"
     },
@@ -609,7 +609,7 @@
       "deleted": "Notification supprimée",
       "readAll": "Notifications marquées comme lues"
     },
-    "pageSubtitle": "Consultez vos notifications, traitez les alertes et pilotez les envois backend.",
+    "pageSubtitle": "Consultez vos notifications, traitez les alertes et pilotez vos envois.",
     "pageTitle": "Notifications",
     "pagination": {
       "current": "{{page}} / {{total}}",
@@ -785,7 +785,7 @@
         },
         "eyebrow": "Detail entreprise",
         "identity": {
-          "description": "Informations d'identite et de contact exposees par l'API entreprise.",
+          "description": "Identité et coordonnées de votre entreprise.",
           "email": "Email",
           "location": "Pays / ville",
           "paymentMode": "Encaissement",
@@ -865,7 +865,7 @@
       "sameCity": "Meme ville"
     },
     "empty": {
-      "initialDescription": "Utilisez votre position pour obtenir les points tries par distance par le backend, ou selectionnez un pays et une ville.",
+      "initialDescription": "Utilisez votre position pour trouver les points les plus proches, ou selectionnez un pays et une ville.",
       "initialTitle": "Recherchez les points autour de vous",
       "noResultsDescription": "Modifiez la recherche, la zone ou le filtre de reseau.",
       "noResultsTitle": "Aucun point de collecte trouve"
@@ -896,7 +896,7 @@
     "messages": {
       "locating": "Recherche de votre position...",
       "locationResults": "{{count}} point(s) disponible(s) dans cette ville.",
-      "nearbyResults": "{{count}} point(s) trie(s) par distance par le backend.",
+      "nearbyResults": "{{count}} point(s), du plus proche au plus éloigné.",
       "noLocationResults": "Aucun point disponible dans cette ville.",
       "noNearbyResults": "Aucun point trouve autour de cette position."
     },
@@ -917,7 +917,7 @@
       "closed": "Ferme",
       "open": "Ouvert"
     },
-    "subtitle": "Points actifs fournis par le backend, par proximite GPS ou par ville.",
+    "subtitle": "Points actifs, par proximité GPS ou par ville.",
     "title": "Carte des points de collecte"
   },
   "collectorReception": {
@@ -951,7 +951,7 @@
       "collectAndReceive": "Encaisser et receptionner",
       "collectCompanyPrice": "A encaisser sur place : {{amount}}",
       "companyPriceDue": "Montant compagnie a encaisser : {{amount}}",
-      "companyPriceDueDescription": "Les frais plateforme sont deja regles. Apres votre confirmation, le backend enregistrera automatiquement le paiement COLLECTION_POINT et finalisera la transaction.",
+      "companyPriceDueDescription": "Les frais plateforme sont deja regles. Apres votre confirmation, le paiement sera enregistre automatiquement et la transaction sera finalisee.",
       "confirmCash": "Je confirme avoir encaisse {{amount}} pour le compte de la compagnie.",
       "confirmCashAria": "Confirmer l'encaissement physique du prix compagnie",
       "payPlatformFee": "Payer les frais plateforme",
@@ -959,6 +959,95 @@
       "platformFeeRequiredDescription": "Les frais plateforme doivent etre confirmes avant la reception du colis.",
       "platformFeeRequiredTitle": "Frais plateforme requis",
       "receive": "Réceptionner"
+    },
+    "title": "Flux de réception",
+    "subtitle": "Réceptionnez ou rejetez les colis remis par les clients au point de collecte.",
+    "stats": {
+      "toReceive": "À réceptionner",
+      "validated": "Validés (session)",
+      "rejected": "Rejetés (session)"
+    },
+    "list": {
+      "searchPlaceholder": "Rechercher par expéditeur, destinataire, point ou type…",
+      "headers": {
+        "parcel": "Colis",
+        "client": "Client",
+        "route": "Trajet",
+        "paymentStatus": "Statut paiement",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "fallbacks": {
+        "parcelType": "Type non renseigné",
+        "sender": "Expéditeur non renseigné",
+        "to": "Vers {{name}}",
+        "receiverShort": "destinataire non renseigné",
+        "origin": "Origine non renseignée",
+        "destination": "Destination non renseignée",
+        "unspecified": "Non renseigné",
+        "payment": "Paiement non renseigné"
+      }
+    },
+    "toasts": {
+      "receivedTitle": "Colis réceptionné",
+      "receivedDescription": "Le colis #{{id}} a été validé par le collecteur.",
+      "validateFailed": "Impossible de valider la réception du colis.",
+      "validationRefusedTitle": "Validation refusée",
+      "rejectedTitle": "Colis rejeté",
+      "rejectedDescription": "Le colis #{{id}} a été rejeté par le collecteur.",
+      "rejectFailed": "Impossible de rejeter la réception du colis.",
+      "rejectRefusedTitle": "Rejet impossible"
+    },
+    "validateDialog": {
+      "title": "Réception du colis client",
+      "description": "Contrôlez le déposant, le colis et saisissez la référence lue sur le colis.",
+      "clientPanel": "Remise client",
+      "parcelPanel": "Colis",
+      "rows": {
+        "sender": "Expéditeur",
+        "receiver": "Destinataire",
+        "createdAt": "Créé le",
+        "company": "Entreprise",
+        "type": "Type",
+        "transport": "Transport",
+        "priority": "Priorité",
+        "price": "Prix"
+      },
+      "referenceTitle": "Référence du colis",
+      "referenceHint": "Pour éviter toute erreur, la référence n'est pas affichée dans la liste. Nous la vérifierons dès la saisie.",
+      "referencePlaceholder": "Référence présente sur le colis ou le bordereau",
+      "referenceReady": "Référence prête pour vérification.",
+      "referenceMissing": "Saisissez la référence du colis remis par le client.",
+      "checklistTitle": "Checklist obligatoire",
+      "identityAria": "Confirmer la vérification du déposant",
+      "identityCheck": "J'ai vérifié l'identité du déposant et la cohérence avec le colis.",
+      "parcelAria": "Confirmer la vérification physique du colis",
+      "parcelCheck": "J'ai contrôlé physiquement le colis avant la prise en charge.",
+      "validating": "Validation…",
+      "submit": "Valider la réception"
+    },
+    "rejectDialog": {
+      "title": "Rejeter la réception",
+      "description": "Indiquez le motif de rejet du colis #{{id}}.",
+      "reason": "Motif du rejet",
+      "placeholder": "Colis endommagé, référence incohérente, client non conforme…",
+      "rejecting": "Rejet…",
+      "submit": "Confirmer le rejet"
+    },
+    "empty": {
+      "title": "Aucun colis à réceptionner",
+      "description": "Les colis entrants, une fois confirmés, apparaîtront ici."
+    },
+    "mobile": {
+      "route": "Trajet",
+      "sender": "Expéditeur",
+      "receiver": "Destinataire"
+    },
+    "actions": {
+      "reject": "Rejeter"
+    },
+    "errors": {
+      "loadIncoming": "Impossible de charger les colis à réceptionner."
     }
   },
   "parcelManagement": {
@@ -976,7 +1065,116 @@
       "hiddenLabel": "Shipment #{{id}}"
     },
     "search": {
-      "collectorPlaceholder": "Rechercher par expediteur ou destinataire..."
+      "transporterPlaceholder": "Rechercher par référence ou code…",
+      "otherPlaceholder": "Rechercher par référence, expéditeur ou destinataire…"
+    },
+    "statuses": {
+      "CREATED": "Créé",
+      "PAID": "Payé",
+      "AWAITING_DROP_OFF": "En attente de dépôt",
+      "RECEIVED_AT_COLLECTION_POINT": "Reçu au point",
+      "READY_FOR_TRANSPORT": "Prêt au transport",
+      "IN_TRANSIT": "En transit",
+      "ARRIVED_DESTINATION_POINT": "Arrivé au point destination",
+      "READY_FOR_PICKUP": "Prêt au retrait",
+      "DELIVERED": "Livré",
+      "CANCELLED": "Annulé",
+      "RETURNED": "Retourné",
+      "ALL": "Tous"
+    },
+    "title": "Gestion des colis",
+    "create": "Nouveau colis",
+    "roleDescriptions": {
+      "transporter": "Les livraisons qui vous concernent, automatiquement filtrées selon votre rôle.",
+      "collector": "Colis visibles depuis votre périmètre de collecte et de dépôt.",
+      "other": "Liste des colis de l'entreprise, automatiquement filtrée selon votre rôle."
+    },
+    "statusCards": {
+      "inTransit": "En transit",
+      "delivered": "Livrés",
+      "readyPickup": "Prêt retrait",
+      "receivedPoint": "Reçus au point"
+    },
+    "errors": {
+      "sessionExpired": "Session expirée",
+      "load": "Impossible de charger les colis.",
+      "detailLoad": "Impossible de charger le détail du colis."
+    },
+    "count": "{{count}} colis",
+    "empty": "Aucun colis trouvé sur cette page.",
+    "filtersHint": "Les filtres de recherche s'appliquent à la page actuellement chargée.",
+    "columns": {
+      "reference": "Référence",
+      "origin": "Origine",
+      "destination": "Destination",
+      "status": "Statut",
+      "updatedAt": "Màj",
+      "actions": "Actions",
+      "sender": "Expéditeur",
+      "recipient": "Destinataire"
+    },
+    "mobile": {
+      "updatedAt": "Mise à jour {{date}}",
+      "viewDetails": "Voir détails"
+    },
+    "detail": {
+      "back": "Retour à la liste",
+      "label": "Détail du colis",
+      "description": "Vue détaillée du colis, optimisée pour mobile.",
+      "fallbackId": "Colis #{{id}}",
+      "company": "Entreprise",
+      "lastUpdate": "Dernière mise à jour",
+      "origin": "Origine",
+      "destination": "Destination",
+      "createdAt": "Création",
+      "finalPrice": "Tarif final",
+      "collectionModeFallback": "Mode de collecte non renseigné",
+      "characteristics": "Caractéristiques",
+      "pricing": "Tarification",
+      "photos": "Photos du colis",
+      "photosEmpty": "Aucune photo disponible.",
+      "photoNumber": "Photo #{{id}}",
+      "photoAdded": "Ajoutée le {{date}}",
+      "photoAlt": "Photo {{id}} du colis {{reference}}",
+      "history": "Historique des statuts",
+      "historyDescription": "Chronologie détaillée du colis.",
+      "historyEmpty": "Aucun historique de statut disponible.",
+      "qrTitle": "QR code du colis",
+      "qrDescription": "Code à scanner pour identifier ce colis.",
+      "qrAlt": "QR code du colis {{reference}}",
+      "qrEmpty": "Aucun QR code disponible pour ce colis.",
+      "openImage": "Ouvrir l'image",
+      "fields": {
+        "parcelType": "Type de colis",
+        "transportMode": "Mode de transport",
+        "weight": "Poids",
+        "volume": "Volume",
+        "description": "Description",
+        "companyPrice": "Prix entreprise",
+        "fees": "Frais",
+        "discount": "Remise",
+        "finalPrice": "Prix final",
+        "paymentStatus": "Statut paiement",
+        "collectionMode": "Mode de collecte"
+      },
+      "person": {
+        "contactHint": "Informations de contact et d'identification.",
+        "name": "Nom",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "cityCountry": "Ville / pays",
+        "idCard": "Pièce d'identité",
+        "linkedProfile": "Profil rattaché",
+        "yes": "Oui",
+        "no": "Non"
+      }
+    },
+    "timeline": {
+      "modifiedBy": "Modifié par {{name}}"
+    },
+    "noInfo": "Aucune information disponible.",
+    "fallbacks": {
+      "restrictedInfo": "Informations réservées"
     }
   },
   "shipmentPayment": {
@@ -1008,10 +1206,10 @@
     "phoneHint": "Saisissez le numéro local ou international qui recevra la demande de confirmation.",
     "loadingCountries": "Chargement des pays disponibles…",
     "countriesError": "Impossible de charger les pays disponibles pour cet opérateur.",
-      "otpRequired": "Une confirmation OTP peut être demandée par l’opérateur.",
-      "otpLabel": "Code OTP",
-      "otpPlaceholder": "Saisissez les 6 chiffres",
-      "submitOtp": "Envoyer le code OTP",
+    "otpRequired": "Une confirmation OTP peut être demandée par l’opérateur.",
+    "otpLabel": "Code OTP",
+    "otpPlaceholder": "Saisissez les 6 chiffres",
+    "submitOtp": "Envoyer le code OTP",
     "walletDebit": "Montant demandé au portefeuille : {{amount}}",
     "pay": "Initier le paiement",
     "payFullShipment": "Payer la totalité du colis",
@@ -1037,22 +1235,22 @@
     "fullShipmentSuccessTitle": "Paiement du colis confirmé",
     "fullShipmentSuccessDescription": "La totalité du colis a été réglée. Le shipment peut poursuivre sa prise en charge.",
     "failedDescription": "Cette tentative n’a pas abouti. Vous pouvez en lancer une nouvelle.",
-      "providers": {
-        "MTN": "MTN Mobile Money",
-        "ORANGE": "Orange Money",
-        "MOOV": "Moov Money",
-        "WAVE": "Wave Money",
-        "EXPRESSO": "Expresso Money",
-        "FREE": "Free Money",
-        "WLIGDICASH": "LigdiCash",
-        "CELTIIS": "Celtiis Money",
-        "CORIS": "Coris Money",
-        "TMONEY": "TMoney",
-        "AIRTEL": "Airtel Money",
-        "TELECEL": "Telecel Money",
-        "MPESA": "M-Pesa",
-        "AFRIMONEY": "AfriMoney",
-        "PAYPAL": "PayPal",
+    "providers": {
+      "MTN": "MTN Mobile Money",
+      "ORANGE": "Orange Money",
+      "MOOV": "Moov Money",
+      "WAVE": "Wave Money",
+      "EXPRESSO": "Expresso Money",
+      "FREE": "Free Money",
+      "WLIGDICASH": "LigdiCash",
+      "CELTIIS": "Celtiis Money",
+      "CORIS": "Coris Money",
+      "TMONEY": "TMoney",
+      "AIRTEL": "Airtel Money",
+      "TELECEL": "Telecel Money",
+      "MPESA": "M-Pesa",
+      "AFRIMONEY": "AfriMoney",
+      "PAYPAL": "PayPal",
       "STRIPE": "Stripe"
     },
     "statuses": {
@@ -1125,8 +1323,8 @@
     "history": {
       "actor": "Modifie par {{actor}}",
       "empty": "Aucun historique disponible.",
-      "subtitle": "Evenements emis par le backend pour ce shipment.",
-      "title": "Historique backend",
+      "subtitle": "Étapes de traitement de ce colis.",
+      "title": "Historique du colis",
       "transition": "{{from}} -> {{to}}"
     },
     "lifecycle": {
@@ -1207,7 +1405,7 @@
   },
   "platformFinance": {
     "delete": {
-      "description": "Cette action appelle directement le backend et ne peut pas être annulée depuis le tableau de bord.",
+      "description": "Cette action est définitive et ne peut pas être annulée depuis le tableau de bord.",
       "title": "Confirmer la suppression"
     },
     "fees": {
@@ -1365,7 +1563,7 @@
     },
     "brand": {
       "currentLogo": "Logo actuel ou initiales",
-      "description": "Le logo est envoye au backend via le champ multipart logo.",
+      "description": "Formats acceptes : PNG, JPG ou SVG. Votre logo apparaitra dans votre espace.",
       "logoAlt": "Logo de l'entreprise",
       "title": "Marque"
     },
@@ -1390,7 +1588,7 @@
       "saved": "Profil entreprise mis a jour."
     },
     "payment": {
-      "description": "Controlez ou les paiements sont collectes selon les modes exposes par l'API.",
+      "description": "Controlez ou les paiements sont collectes selon les modes de paiement disponibles.",
       "modes": {
         "COLLECTION_POINT": "Paiement au point de collecte",
         "PLATFORM": "Paiement via la plateforme"
@@ -1554,7 +1752,7 @@
       "address": "Adresse",
       "addressPlaceholder": "Rue, quartier, repère...",
       "city": "Ville de rattachement",
-      "cityFromZone": "Laisser l'API déduire depuis la zone",
+      "cityFromZone": "Déduire la ville depuis la zone",
       "cityHint": "Si la zone ne permet pas de retrouver automatiquement la ville, vous pouvez la préciser ici.",
       "createTitle": "Créer un point de collecte",
       "description": "Le point reste aligné sur les endpoints de gestion : photo, disponibilité, commissions et responsable.",
@@ -1657,5 +1855,198 @@
       "listTitle": "Zones géographiques",
       "pointCount": "{{count}} point(s)"
     }
+  },
+  "transporterDashboard": {
+    "noVehicleTitle": "Aucun véhicule assigné",
+    "noVehicleDescription": "Ce transporteur n'a pas encore de véhicule rattaché dans l'équipe.",
+    "title": "Tableau de bord transporteur",
+    "currentLoad": "Charge actuelle",
+    "loading": "Chargement du tableau de bord transporteur…",
+    "metrics": {
+      "acceptedToLoad": "Demandes acceptées à charger",
+      "onboard": "Colis à bord",
+      "completedTrips": "Trajets complétés",
+      "delivered": "Colis déjà livrés"
+    },
+    "commissions": {
+      "title": "Mes commissions",
+      "description": "Montants générés par les livraisons que vous avez traitées."
+    },
+    "vehicle": {
+      "title": "Véhicule et disponibilité",
+      "description": "État de charge du véhicule assigné.",
+      "loadRate": "Taux de charge",
+      "loadRateDetail": "{{weight}} kg transportés actuellement",
+      "statuses": {
+        "DISPONIBLE": "Disponible",
+        "EN_TRANSIT": "En transit",
+        "MAINTENANCE": "Maintenance"
+      }
+    },
+    "requests": {
+      "title": "Demandes à charger",
+      "description": "Demandes acceptées par les collecteurs et prêtes à être chargées.",
+      "collector": "Collecteur : {{name}}",
+      "fallbackPoint": "Point de collecte",
+      "parcels": "{{count}} colis",
+      "pending": "{{count}} en attente",
+      "empty": "Aucune demande acceptée à charger pour le moment."
+    },
+    "onboard": {
+      "title": "Colis actuellement à bord",
+      "description": "Vue rapide sur votre tournée active.",
+      "receiver": "Destinataire : {{name}}",
+      "empty": "Aucun colis actuellement chargé dans ce véhicule."
+    },
+    "columns": {
+      "reference": "Référence",
+      "sender": "Expéditeur",
+      "receiver": "Destinataire",
+      "destination": "Destination",
+      "weight": "Poids",
+      "status": "Statut"
+    }
+  },
+  "transmissionStatuses": {
+    "PENDING_COLLECTOR_APPROVAL": "En attente du collecteur",
+    "COLLECTOR_APPROVED": "Acceptée",
+    "COLLECTOR_REJECTED": "Refusée",
+    "PARTIALLY_DISPATCHED": "Partiellement embarquée",
+    "FULLY_DISPATCHED": "Entièrement embarquée"
+  },
+  "transferRequests": {
+    "title": "Demandes de prise en charge",
+    "subtitleCollector": "Validez les demandes de transmission créées par les transporteurs.",
+    "subtitleTransporter": "Suivez vos demandes et confirmez les colis réellement embarqués.",
+    "restrictedTitle": "Section réservée aux collecteurs et transporteurs.",
+    "restrictedDescription": "Cette section est accessible uniquement aux profils collecteur et transporteur.",
+    "errors": {
+      "load": "Impossible de charger les demandes de prise.",
+      "detailTitle": "Détail indisponible",
+      "detailLoad": "Impossible de charger la demande.",
+      "approve": "Impossible d'approuver la demande.",
+      "reject": "Impossible de rejeter la demande.",
+      "embark": "Impossible d'embarquer les colis.",
+      "note": "Impossible d'ajouter la note."
+    },
+    "toasts": {
+      "approvedTitle": "Demande approuvée",
+      "approvedDescription": "Le transporteur peut embarquer les colis.",
+      "approveFailedTitle": "Approbation impossible",
+      "rejectedTitle": "Demande rejetée",
+      "rejectedDescription": "Le transporteur verra le motif de rejet.",
+      "rejectFailedTitle": "Rejet impossible",
+      "embarkedTitle": "Colis embarqués",
+      "embarkedDescription": "{{count}} colis passent en transit.",
+      "embarkFailedTitle": "Embarquement impossible",
+      "noteAddedTitle": "Note ajoutée",
+      "noteAddedDescription": "La note de transit a été enregistrée.",
+      "noteFailedTitle": "Note impossible"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "embark": "Embarquer",
+      "view": "Voir",
+      "viewRequest": "Voir la demande {{id}}",
+      "close": "Fermer",
+      "selectParcel": "Sélectionner {{id}}",
+      "addTransitNote": "Ajouter une note de transit"
+    },
+    "metrics": {
+      "pending": "En attente",
+      "approved": "Approuvées",
+      "dispatched": "Embarquées",
+      "rejected": "Rejetées"
+    },
+    "empty": {
+      "title": "Aucune demande",
+      "description": "Les demandes acceptées apparaîtront ici."
+    },
+    "columns": {
+      "request": "Demande",
+      "originPoint": "Point origine",
+      "parties": "Intervenants",
+      "parcels": "Colis",
+      "status": "Statut",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "fallbacks": {
+      "noPoint": "Point non renseigné",
+      "noOriginPoint": "Point origine non renseigné",
+      "unspecified": "Non renseigné",
+      "unspecifiedFeminine": "Non renseignée",
+      "sender": "Expéditeur",
+      "receiver": "destinataire",
+      "system": "système"
+    },
+    "fields": {
+      "transporter": "Transporteur : {{name}}",
+      "collector": "Collecteur : {{name}}",
+      "transporterLabel": "Transporteur",
+      "collectorLabel": "Collecteur",
+      "parcelsLabel": "Colis",
+      "embarkedShort": "embarqués",
+      "dateLabel": "Date",
+      "remaining": "restant(s)",
+      "route": "{{sender}} vers {{receiver}}",
+      "destination": "Destination : {{destination}}"
+    },
+    "detail": {
+      "requestTitle": "Demande #{{id}}",
+      "description": "Détail des colis, actions et notes rattachées à la transmission.",
+      "requested": "Demandés",
+      "embarked": "Embarqués",
+      "remaining": "Restants",
+      "history": "Historique"
+    },
+    "badges": {
+      "embarked": "Embarqué",
+      "alreadyEmbarked": "Déjà embarqué"
+    },
+    "form": {
+      "rejectReason": "Motif du rejet",
+      "transitNote": "Note de transit",
+      "note": "Note",
+      "optionalComment": "Commentaire optionnel"
+    },
+    "history": {
+      "actionBy": "{{type}} par {{actor}}",
+      "noNote": "Aucune note"
+    },
+    "dialogTitles": {
+      "approve": "Approuver la demande",
+      "reject": "Rejeter la demande",
+      "embark": "Confirmer l'embarquement",
+      "note": "Ajouter une note de transit",
+      "action": "Action"
+    },
+    "dialogDescriptions": {
+      "approve": "Le transporteur pourra ensuite confirmer les colis embarqués.",
+      "reject": "Le motif sera renvoyé au transporteur.",
+      "embark": "Sélectionnez les colis effectivement pris en charge.",
+      "note": "La note sera rattachée aux colis sélectionnés."
+    }
+  },
+  "shipmentPriority": {
+    "STANDARD": "Standard",
+    "EXPRESS": "Express"
+  },
+  "shipmentPaymentStatuses": {
+    "UNPAID": "Non payé",
+    "PAID": "Payé",
+    "PAYMENT_AT_COLLECTION_POINT": "Paiement au point"
+  },
+  "shipmentTransactionStatuses": {
+    "INITIATED": "Paiement initié",
+    "PLATFORM_FEE_PAID": "Frais plateforme payés",
+    "COMPLETED": "Transaction terminée",
+    "FAILED": "Transaction échouée",
+    "CANCELLED": "Transaction annulée"
+  },
+  "shipmentCollectionModes": {
+    "PLATFORM": "Plateforme",
+    "COLLECTION_POINT": "Point de collecte"
   }
 }

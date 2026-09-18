@@ -1,0 +1,79 @@
+{
+  "title": "Délais de livraison",
+  "subtitle": "Configurez les estimations exploitées par {{company}}.",
+  "actions": {
+    "newEstimate": "Nouvelle estimation",
+    "editTitle": "Modifier une estimation",
+    "newTitle": "Nouvelle estimation",
+    "description": "Chaque estimation correspond à une combinaison mode, route et type de colis.",
+    "delete": "Supprimer",
+    "reset": "Réinitialiser",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement..."
+  },
+  "deleteDialog": {
+    "title": "Supprimer cette estimation ?",
+    "description": "La combinaison route, mode et type de colis n'aura plus de délai configuré.",
+    "confirm": "Supprimer"
+  },
+  "metrics": {
+    "estimates": "Estimations",
+    "estimatesHelper": "Combinaisons configurées",
+    "modes": "Modes couverts",
+    "modesHelper": "Modes actifs de la compagnie",
+    "currentMode": "Mode courant",
+    "selectMode": "Sélectionnez un mode",
+    "noMode": "Aucun"
+  },
+  "errors": {
+    "noActiveModes": "Aucun mode actif",
+    "noActiveModesDescription": "Activez au moins un mode de transport pour configurer les estimations.",
+    "loadTitle": "Chargement impossible"
+  },
+  "messages": {
+    "loadError": "Erreur lors du chargement",
+    "requirementsError": "Impossible de charger les combinaisons disponibles",
+    "saveSuccess": "Estimation de livraison enregistrée",
+    "saveError": "Enregistrement impossible",
+    "deleteSuccess": "Estimation supprimée",
+    "deleteError": "Suppression impossible"
+  },
+  "form": {
+    "mode": "Mode de transport",
+    "route": "Route",
+    "parcelType": "Type de colis",
+    "unit": "Unité",
+    "duration": "Durée",
+    "durationPlaceholder": "Ex : 2",
+    "units": {
+      "HOURS": "Heures",
+      "DAYS": "Jours"
+    },
+    "preview": "Aperçu",
+    "previewFallback": "Le libellé final sera généré automatiquement."
+  },
+  "validation": {
+    "selectMode": "Sélectionnez un mode de transport.",
+    "selectRoute": "Sélectionnez une route origine -> destination.",
+    "selectParcel": "Sélectionnez un type de colis.",
+    "durationInvalid": "La durée doit être un entier supérieur ou égal à 1."
+  },
+  "list": {
+    "title": "Estimations existantes",
+    "searchPlaceholder": "Rechercher route, colis, délai",
+    "empty": "Aucune estimation ne correspond à ce filtre.",
+    "updated": "Maj {{date}}",
+    "never": "Jamais",
+    "hoursShort": "{{count}} h",
+    "days": "{{count}} jour(s)"
+  },
+  "coverage": {
+    "title": "Couverture du mode",
+    "loading": "Chargement des combinaisons...",
+    "noRequirements": "Sélectionnez un mode pour charger les routes et types disponibles.",
+    "noCombos": "Aucune route exploitable ou aucun type de colis actif pour ce mode.",
+    "allComplete": "Toutes les combinaisons route/type de colis disposent d'une estimation.",
+    "missingCount": "{{count}} combinaison(s) à compléter."
+  }
+}

@@ -33,6 +33,8 @@ import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/currency';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
+import { useTranslation } from '@/lib/i18n';
+import type { TranslateOptions } from '@/lib/i18n/client';
 import {
   getCollectionPoints,
   getCompanyParcelTypes,
@@ -63,28 +65,20 @@ import {
   useToastSimple,
 } from '@/components/company/company-shared';
 
+type Translate = (key: string, options?: Omit<TranslateOptions, 'ns'>) => string;
+
 const CRITERIA: {
   id: PricingCriterion;
-  label: string;
-  hint: string;
   icon: ElementType;
 }[] = [
-  { id: 'FIXED', label: 'Prix fixe', hint: 'Base obligatoire pour les enveloppes.', icon: Calculator },
-  { id: 'WEIGHT', label: 'Poids', hint: 'Prix unitaire par tranches de kg.', icon: Weight },
-  { id: 'VOLUME', label: 'Volume', hint: 'Prix unitaire par tranches de m3.', icon: Package },
+  { id: 'FIXED', icon: Calculator },
+  { id: 'WEIGHT', icon: Weight },
+  { id: 'VOLUME', icon: Package },
 ];
 
-const APPLICATION_MODES: { value: PricingApplicationMode; label: string; hint: string }[] = [
-  {
-    value: 'PROPORTIONAL',
-    label: 'Proportionnel',
-    hint: 'Calcule au prorata de la valeur saisie.',
-  },
-  {
-    value: 'ROUND_UP_UNIT',
-    label: "Arrondi a l'unite",
-    hint: 'Arrondit au kg ou m3 superieur.',
-  },
+const APPLICATION_MODES: { value: PricingApplicationMode }[] = [
+  { value: 'PROPORTIONAL' },
+  { value: 'ROUND_UP_UNIT' },
 ];
 
 type RangeRuleDraft = {
@@ -179,8 +173,8 @@ function parseNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function formatDate(value?: string) {
-  if (!value) return 'Jamais';
+function formatDate(value?: string, neverLabel = 'Jamais') {
+  if (!value) return neverLabel;
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
@@ -230,18 +224,21 @@ function isEnvelopeParcel(parcel?: ParcelTypeResponse | null) {
   return normalized.includes('envelope') || normalized.includes('enveloppe');
 }
 
-function validateMoneyField(label: string, value: string, required: boolean) {
+function validateMoneyField(t: Translate, label: string, value: string, required: boolean) {
   const parsed = parseNumber(value);
   if (parsed === null) {
-    return required ? { error: `${label} est requis.` } : { value: undefined };
+    return required
+      ? { error: t('validation.fieldRequired', { values: { field: label } }) }
+      : { value: undefined };
   }
   if (Number.isNaN(parsed) || parsed < 0) {
-    return { error: `${label} doit etre un nombre positif.` };
+    return { error: t('validation.fieldPositive', { values: { field: label } }) };
   }
   return { value: parsed };
 }
 
 function validateRangeRules(
+  t: Translate,
   label: string,
   unit: string,
   drafts: RangeRuleDraft[],
@@ -253,7 +250,7 @@ function validateRangeRules(
 
   if (filled.length === 0) {
     return {
-      errors: [`Ajoutez au moins une tranche ${label}.`],
+      errors: [t('validation.rangeRequired', { values: { label } })],
       rules: [],
     };
   }
@@ -264,13 +261,19 @@ function validateRangeRules(
     const amount = parseNumber(rule.amount);
 
     if (minValue === null || Number.isNaN(minValue) || minValue < 0) {
-      errors.push(`Tranche ${label} ${index + 1}: min ${unit} invalide.`);
+      errors.push(
+        t('validation.rangeMinInvalid', { values: { index: index + 1, label, unit } }),
+      );
     }
     if (maxValue !== null && (Number.isNaN(maxValue) || maxValue <= (minValue ?? 0))) {
-      errors.push(`Tranche ${label} ${index + 1}: max ${unit} doit etre superieur au min.`);
+      errors.push(
+        t('validation.rangeMaxInvalid', { values: { index: index + 1, label, unit } }),
+      );
     }
     if (amount === null || Number.isNaN(amount) || amount < 0) {
-      errors.push(`Tranche ${label} ${index + 1}: montant invalide.`);
+      errors.push(
+        t('validation.rangeAmountInvalid', { values: { index: index + 1, label } }),
+      );
     }
 
     return {
@@ -283,60 +286,66 @@ function validateRangeRules(
   const sorted = [...parsed].sort((left, right) => left.minValue - right.minValue);
 
   if (sorted[0]?.minValue !== 0) {
-    errors.push(`Les tranches ${label} doivent commencer a 0 ${unit}.`);
+    errors.push(t('validation.rangeStartZero', { values: { label, unit } }));
   }
 
   sorted.forEach((rule, index) => {
     const next = sorted[index + 1];
     if (!next) return;
     if (rule.maxValue == null) {
-      errors.push(`Seule la derniere tranche ${label} peut avoir un max vide.`);
+      errors.push(t('validation.rangeLastMaxEmpty'));
       return;
     }
     if (Math.abs(next.minValue - rule.maxValue) > 0.000001) {
-      errors.push(`Les tranches ${label} doivent etre contigues, sans trou ni chevauchement.`);
+      errors.push(t('validation.rangeContiguous'));
     }
   });
 
   return { errors, rules: sorted };
 }
 
-function validateForm(form: PricingFormState, parcel?: ParcelTypeResponse | null): ValidationResult {
+function validateForm(form: PricingFormState, parcel: ParcelTypeResponse | null | undefined, t: Translate): ValidationResult {
   const errors: string[] = [];
   const selectedCriteria = normalizeCriteria(form.selectedCriteria);
   const envelope = isEnvelopeParcel(parcel);
 
-  if (!form.transportModeId) errors.push('Selectionnez un mode de transport.');
+  if (!form.transportModeId) errors.push(t('validation.selectMode'));
   if (!form.originCollectionPointId || !form.destinationCollectionPointId) {
-    errors.push('Selectionnez une route origine -> destination.');
+    errors.push(t('validation.selectRoute'));
   }
-  if (!form.parcelTypeId) errors.push('Selectionnez un type de colis.');
-  if (selectedCriteria.length === 0) errors.push('Selectionnez au moins un critere tarifaire.');
+  if (!form.parcelTypeId) errors.push(t('validation.selectParcel'));
+  if (selectedCriteria.length === 0) errors.push(t('validation.selectCriteria'));
   if (envelope && selectedCriteria.some((criterion) => criterion !== 'FIXED')) {
-    errors.push('Le backend limite les enveloppes au critere Prix fixe.');
+    errors.push(t('validation.envelopeFixedOnly'));
   }
 
   const fixedPrice = validateMoneyField(
-    'Prix fixe',
+    t,
+    t('form.fixedPrice'),
     form.fixedPrice,
     selectedCriteria.includes('FIXED'),
   );
   if (fixedPrice.error) errors.push(fixedPrice.error);
 
-  const expressSurcharge = validateMoneyField('Surcharge express', form.expressSurcharge, true);
+  const expressSurcharge = validateMoneyField(
+    t,
+    t('form.expressSurcharge'),
+    form.expressSurcharge,
+    true,
+  );
   if (expressSurcharge.error) errors.push(expressSurcharge.error);
 
   let weightRules: CompanyPricingRangeRuleRequest[] | undefined;
   let volumeRules: CompanyPricingRangeRuleRequest[] | undefined;
 
   if (selectedCriteria.includes('WEIGHT')) {
-    const result = validateRangeRules('poids', 'kg', form.weightRules);
+    const result = validateRangeRules(t, t('criteria.WEIGHT.label'), 'kg', form.weightRules);
     errors.push(...result.errors);
     weightRules = result.rules;
   }
 
   if (selectedCriteria.includes('VOLUME')) {
-    const result = validateRangeRules('volume', 'm3', form.volumeRules);
+    const result = validateRangeRules(t, t('criteria.VOLUME.label'), 'm3', form.volumeRules);
     errors.push(...result.errors);
     volumeRules = result.rules;
   }
@@ -367,11 +376,13 @@ function validateForm(form: PricingFormState, parcel?: ParcelTypeResponse | null
 }
 
 function CriteriaBadges({ criteria }: { criteria: PricingCriterion[] }) {
+  const { t } = useTranslation('pricing');
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {normalizeCriteria(criteria).map((criterion) => (
         <Badge key={criterion} className="bg-primary/10 text-primary">
-          {CRITERIA.find((item) => item.id === criterion)?.label ?? criterion}
+          {t(`criteria.${criterion}.label`, { defaultValue: criterion })}
         </Badge>
       ))}
     </div>
@@ -418,6 +429,8 @@ function RangeRulesEditor({
   value: RangeRuleDraft[];
   onChange: (value: RangeRuleDraft[]) => void;
 }) {
+  const { t } = useTranslation('pricing');
+
   const updateRule = (id: string, patch: Partial<RangeRuleDraft>) =>
     onChange(value.map((rule) => (rule.id === id ? { ...rule, ...patch } : rule)));
 
@@ -431,9 +444,7 @@ function RangeRulesEditor({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="font-medium text-foreground">{title}</p>
-          <p className="text-sm text-muted-foreground">
-            Tranches contigues a partir de 0. Le dernier max peut rester vide.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('ranges.hint')}</p>
           {instruction && <p className="mt-1 text-xs text-muted-foreground">{instruction}</p>}
         </div>
         <Button
@@ -444,7 +455,7 @@ function RangeRulesEditor({
           className="shrink-0 gap-2"
         >
           <Plus className="h-4 w-4" />
-          Tranche
+          {t('ranges.add')}
         </Button>
       </div>
 
@@ -457,7 +468,7 @@ function RangeRulesEditor({
               step="0.01"
               value={rule.minValue}
               onChange={(event) => updateRule(rule.id, { minValue: event.target.value })}
-              placeholder={`Min ${unit}`}
+              placeholder={t('ranges.min', { values: { unit } })}
               className="bg-secondary"
             />
             <Input
@@ -466,7 +477,7 @@ function RangeRulesEditor({
               step="0.01"
               value={rule.maxValue}
               onChange={(event) => updateRule(rule.id, { maxValue: event.target.value })}
-              placeholder={`Max ${unit}`}
+              placeholder={t('ranges.max', { values: { unit } })}
               className="bg-secondary"
             />
             <Input
@@ -475,7 +486,7 @@ function RangeRulesEditor({
               step="0.01"
               value={rule.amount}
               onChange={(event) => updateRule(rule.id, { amount: event.target.value })}
-              placeholder="Montant"
+              placeholder={t('ranges.amount')}
               className="bg-secondary"
             />
             <Button
@@ -483,7 +494,7 @@ function RangeRulesEditor({
               variant="ghost"
               size="icon"
               onClick={() => removeRule(rule.id)}
-              title="Retirer la tranche"
+              title={t('ranges.remove')}
             >
               <AlertTriangle className="h-4 w-4" />
             </Button>
@@ -508,6 +519,7 @@ function PricingList({
   onSelect: (pricing: CompanyPricingResponse) => void;
 }) {
   const { formatMoney } = useCurrency();
+  const { t } = useTranslation('pricing');
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase();
     if (!normalized) return pricing;
@@ -528,13 +540,13 @@ function PricingList({
   return (
     <Card className="border-border bg-card">
       <CardHeader className="space-y-3">
-        <CardTitle className="text-base">Grilles existantes</CardTitle>
+        <CardTitle className="text-base">{t('list.title')}</CardTitle>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Rechercher route, colis, critere"
+            placeholder={t('list.searchPlaceholder')}
             className="bg-secondary pl-9"
           />
         </div>
@@ -542,7 +554,7 @@ function PricingList({
       <CardContent className="max-h-[520px] space-y-2 overflow-y-auto">
         {filtered.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Aucune grille ne correspond a ce filtre.
+            {t('list.empty')}
           </p>
         ) : (
           filtered.map((item) => (
@@ -565,7 +577,7 @@ function PricingList({
                     {item.destinationCollectionPointName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.parcelTypeName} - {formatDate(item.updatedAt ?? item.createdAt)}
+                    {item.parcelTypeName} - {formatDate(item.updatedAt ?? item.createdAt, t('list.never'))}
                   </p>
                 </div>
                 <Badge className="bg-success/15 text-success">{formatMoney(item.fixedPrice)}</Badge>
@@ -590,6 +602,7 @@ function CoveragePanel({
   configuredKeys: Set<string>;
   onPickMissing: (route: CompanyPricingRouteResponse, parcel: ParcelTypeResponse) => void;
 }) {
+  const { t } = useTranslation('pricing');
   const routes = requirements?.availableRoutes ?? [];
   const parcels = requirements?.availableParcelTypes ?? [];
   const combos = routes.flatMap((route) => parcels.map((parcel) => ({ route, parcel })));
@@ -605,7 +618,7 @@ function CoveragePanel({
     <Card className="border-border bg-card">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">Couverture du mode</CardTitle>
+          <CardTitle className="text-base">{t('coverage.title')}</CardTitle>
           <Badge
             className={cn(
               missing.length === 0 ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning',
@@ -618,21 +631,21 @@ function CoveragePanel({
       <CardContent className="space-y-3">
         {!requirements ? (
           <p className="text-sm text-muted-foreground">
-            Selectionnez un mode pour charger les routes et types disponibles.
+            {t('coverage.noRequirements')}
           </p>
         ) : combos.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Aucune route exploitable ou aucun type de colis actif pour ce mode.
+            {t('coverage.noCombos')}
           </p>
         ) : missing.length === 0 ? (
           <div className="flex items-start gap-2 rounded-lg bg-success/10 p-3 text-sm text-success">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            Toutes les combinaisons route/type de colis disposent d'une grille.
+            {t('coverage.allComplete')}
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              {missing.length} combinaison(s) a completer.
+              {t('coverage.missingCount', { values: { count: missing.length } })}
             </p>
             <div className="max-h-48 space-y-2 overflow-y-auto">
               {missing.slice(0, 8).map(({ route, parcel }) => (
@@ -666,6 +679,7 @@ function CompanyPricingInner({
   companyName: string;
 }) {
   const { formatMoney } = useCurrency();
+  const { t } = useTranslation('pricing');
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
 
@@ -754,11 +768,13 @@ function CompanyPricingInner({
         setForm(createDefaultForm(firstModeId ? String(firstModeId) : ''));
       }
     } catch (cause) {
-      setLoadError(cause instanceof ApiError ? cause.message : 'Erreur lors du chargement');
+      setLoadError(
+        cause instanceof ApiError ? cause.message : t('messages.loadError'),
+      );
     } finally {
       setLoading(false);
     }
-  }, [companyId, token]);
+  }, [companyId, token, t]);
 
   useEffect(() => {
     void load();
@@ -839,7 +855,7 @@ function CompanyPricingInner({
       .catch((cause) => {
         if (!cancelled) {
           setRequirementsError(
-            cause instanceof ApiError ? cause.message : 'Impossible de charger les exigences',
+            cause instanceof ApiError ? cause.message : t('messages.requirementsError'),
           );
         }
       })
@@ -859,6 +875,7 @@ function CompanyPricingInner({
     form.transportModeId,
     selectedCriteriaForRequirements,
     token,
+    t,
   ]);
 
   const selectPricing = (pricing: CompanyPricingResponse) => {
@@ -891,7 +908,7 @@ function CompanyPricingInner({
     setSelectedPricingId(null);
     setValidationErrors([]);
     setForm((current) => ({ ...current }));
-    success('Grille dupliquee en brouillon');
+    success(t('messages.duplicateSuccess'));
   };
 
   const handleModeChange = (transportModeId: string) => {
@@ -987,7 +1004,7 @@ function CompanyPricingInner({
 
   const handleCheckSelection = async () => {
     if (!token || !form.transportModeId || !form.originCollectionPointId || !form.destinationCollectionPointId || !form.parcelTypeId) {
-      setValidationErrors(['Selectionnez un mode, une route et un type de colis avant verification.']);
+      setValidationErrors([t('messages.selectBeforeVerify')]);
       return;
     }
 
@@ -1006,9 +1023,9 @@ function CompanyPricingInner({
         return exists ? current.map((item) => (item.id === pricing.id ? pricing : item)) : [pricing, ...current];
       });
       selectPricing(pricing);
-      success('Grille existante chargee');
+      success(t('messages.checkSuccess'));
     } catch (cause) {
-      showError(cause instanceof ApiError ? cause.message : 'Aucune grille pour cette selection');
+      showError(cause instanceof ApiError ? cause.message : t('messages.checkError'));
     } finally {
       setChecking(false);
     }
@@ -1017,7 +1034,7 @@ function CompanyPricingInner({
   const handleSave = async () => {
     if (!token) return;
 
-    const result = validateForm(form, selectedParcel);
+    const result = validateForm(form, selectedParcel, t);
     setValidationErrors(result.errors);
     if (!result.payload) return;
 
@@ -1039,9 +1056,9 @@ function CompanyPricingInner({
       setSelectedPricingId(saved.id);
       setForm(buildFormFromPricing(saved));
       setValidationErrors([]);
-      success('Tarification enregistree');
+      success(t('messages.saveSuccess'));
     } catch (cause) {
-      showError(cause instanceof ApiError ? cause.message : 'Enregistrement impossible');
+      showError(cause instanceof ApiError ? cause.message : t('messages.saveError'));
     } finally {
       setSaving(false);
     }
@@ -1060,12 +1077,12 @@ function CompanyPricingInner({
       <StatusState
         icon={Calculator}
         tone="destructive"
-        title="Erreur de chargement"
+        title={t('errors.loadTitle')}
         description={loadError}
         action={
           <Button variant="outline" onClick={() => void load()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Reessayer
+            {t('actions.retry')}
           </Button>
         }
       />
@@ -1076,8 +1093,8 @@ function CompanyPricingInner({
     return (
       <StatusState
         icon={Route}
-        title="Aucun mode de transport actif"
-        description="Activez au moins un mode de transport avant de definir les tarifs."
+        title={t('errors.noActiveModes')}
+        description={t('errors.noActiveModesDescription')}
       />
     );
   }
@@ -1094,17 +1111,17 @@ function CompanyPricingInner({
       <ToastBar toast={toast} />
 
       <SectionHeader
-        title="Moteur de tarification"
-        subtitle={`Grilles operationnelles de ${companyName} par mode, route et type de colis.`}
+        title={t('title')}
+        subtitle={t('subtitle', { values: { company: companyName } })}
         action={
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => void load()} className="gap-2">
               <RefreshCw className="h-4 w-4" />
-              Actualiser
+              {t('actions.refresh')}
             </Button>
             <Button onClick={startNewPricing} className="gap-2">
               <Plus className="h-4 w-4" />
-              Nouvelle grille
+              {t('actions.newGrid')}
             </Button>
           </div>
         }
@@ -1113,27 +1130,27 @@ function CompanyPricingInner({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           icon={ClipboardCheck}
-          label="Grilles"
+          label={t('metrics.grids')}
           value={pricingList.length}
-          helper="Configurations enregistrees"
+          helper={t('metrics.gridsHelper')}
         />
         <MetricCard
           icon={Route}
-          label="Modes couverts"
+          label={t('metrics.modes')}
           value={`${configuredModeCount}/${transportModes.length}`}
-          helper={selectedMode?.name ?? 'Aucun mode'}
+          helper={selectedMode?.name ?? t('metrics.noMode')}
         />
         <MetricCard
           icon={Package}
-          label="Types actifs"
+          label={t('metrics.types')}
           value={availableParcelTypes.length}
-          helper={`${collectionPoints.length} points de collecte`}
+          helper={t('metrics.pointsCount', { values: { count: collectionPoints.length } })}
         />
         <MetricCard
           icon={Sparkles}
-          label="Assurance"
+          label={t('metrics.insurance')}
           value={formatMoney(selectedPricing?.insurancePrice ?? requirements?.defaultInsurancePrice)}
-          helper="Montant fourni par l'API"
+          helper={t('metrics.insuranceHelper')}
         />
       </div>
 
@@ -1141,12 +1158,12 @@ function CompanyPricingInner({
         <div className="space-y-4">
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-base">Mode de transport</CardTitle>
+              <CardTitle className="text-base">{t('modeCard.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Select value={form.transportModeId} onValueChange={handleModeChange}>
                 <SelectTrigger className="bg-secondary">
-                  <SelectValue placeholder="Selectionnez un mode" />
+                  <SelectValue placeholder={t('modeCard.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {transportModes.map((mode) => (
@@ -1160,7 +1177,7 @@ function CompanyPricingInner({
               {requirementsLoading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Spinner className="h-4 w-4" />
-                  Chargement des exigences...
+                  {t('modeCard.loadingRequirements')}
                 </div>
               )}
 
@@ -1192,10 +1209,10 @@ function CompanyPricingInner({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <CardTitle className="text-base">
-                  {selectedPricingId ? 'Modifier la grille' : 'Nouvelle grille'}
+                  {selectedPricingId ? t('form.editTitle') : t('form.newTitle')}
                 </CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Une grille couvre une route, un type de colis et un mode de transport.
+                  {t('form.description')}
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -1207,7 +1224,7 @@ function CompanyPricingInner({
                   className="gap-2"
                 >
                   <Copy className="h-4 w-4" />
-                  Dupliquer
+                  {t('actions.duplicate')}
                 </Button>
                 <Button
                   type="button"
@@ -1217,11 +1234,11 @@ function CompanyPricingInner({
                   className="gap-2"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {checking ? 'Verification...' : 'Verifier'}
+                  {checking ? t('actions.verifying') : t('actions.verify')}
                 </Button>
                 <Button onClick={() => void handleSave()} disabled={saving} className="gap-2">
                   <Save className="h-4 w-4" />
-                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                  {saving ? t('actions.saving') : t('actions.save')}
                 </Button>
               </div>
             </div>
@@ -1243,10 +1260,10 @@ function CompanyPricingInner({
 
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label>Route</Label>
+                <Label>{t('form.route')}</Label>
                 <Select value={routeValue} onValueChange={handleRouteChange}>
                   <SelectTrigger className="bg-secondary">
-                    <SelectValue placeholder="Origine -> destination" />
+                    <SelectValue placeholder={t('form.routePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {(requirements?.availableRoutes ?? []).map((route) => (
@@ -1264,10 +1281,10 @@ function CompanyPricingInner({
               </div>
 
               <div className="space-y-2">
-                <Label>Type de colis</Label>
+                <Label>{t('form.parcelType')}</Label>
                 <Select value={form.parcelTypeId} onValueChange={handleParcelChange}>
                   <SelectTrigger className="bg-secondary">
-                    <SelectValue placeholder="Selectionnez un type" />
+                    <SelectValue placeholder={t('form.parcelPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableParcelTypes.map((parcel) => (
@@ -1280,7 +1297,7 @@ function CompanyPricingInner({
               </div>
 
               <div className="space-y-2">
-                <Label>Surcharge express</Label>
+                <Label>{t('form.expressSurcharge')}</Label>
                 <div className="relative">
                   <Zap className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -1300,9 +1317,9 @@ function CompanyPricingInner({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <Label>Criteres de calcul</Label>
+                <Label>{t('form.criteria')}</Label>
                 {activeEnvelope && (
-                  <Badge className="bg-warning/15 text-warning">Enveloppe: prix fixe uniquement</Badge>
+                  <Badge className="bg-warning/15 text-warning">{t('form.envelopeBadge')}</Badge>
                 )}
               </div>
               <div className="grid gap-3 md:grid-cols-3">
@@ -1324,9 +1341,13 @@ function CompanyPricingInner({
                     >
                       <div className="flex items-center gap-2">
                         <Icon className="h-4 w-4 text-primary" />
-                        <p className="font-medium text-foreground">{criterion.label}</p>
+                        <p className="font-medium text-foreground">
+                          {t(`criteria.${criterion.id}.label`)}
+                        </p>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground">{criterion.hint}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {t(`criteria.${criterion.id}.hint`)}
+                      </p>
                     </button>
                   );
                 })}
@@ -1336,18 +1357,22 @@ function CompanyPricingInner({
             {requirements && (
               <div className="grid gap-3 rounded-lg border border-border bg-secondary/40 p-4 text-sm md:grid-cols-2">
                 <div>
-                  <p className="font-medium text-foreground">Exigences backend</p>
+                  <p className="font-medium text-foreground">{t('form.requirementsTitle')}</p>
                   <p className="mt-1 text-muted-foreground">
-                    Prix fixe: {requirements.fixedPriceRequired ? 'requis' : 'optionnel'} - Poids:{' '}
-                    {requirements.weightRulesRequired ? 'requis' : 'non requis'} - Volume:{' '}
-                    {requirements.volumeRulesRequired ? 'requis' : 'non requis'}
+                    {t('form.fixedPrice')} :{' '}
+                    {requirements.fixedPriceRequired ? t('form.required') : t('form.optional')} -{' '}
+                    {t('criteria.WEIGHT.label')} :{' '}
+                    {requirements.weightRulesRequired ? t('form.required') : t('form.notRequired')} -{' '}
+                    {t('criteria.VOLUME.label')} :{' '}
+                    {requirements.volumeRulesRequired ? t('form.required') : t('form.notRequired')}
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Selection</p>
+                  <p className="font-medium text-foreground">{t('form.selectionTitle')}</p>
                   <p className="mt-1 text-muted-foreground">
-                    {selectedMode?.name ?? 'Mode'} - {selectedParcel?.name ?? 'Type'} - Assurance{' '}
-                    {formatMoney(requirements.defaultInsurancePrice)}
+                    {selectedMode?.name ?? t('form.selectionModeFallback')} -{' '}
+                    {selectedParcel?.name ?? t('form.selectionParcelFallback')} -{' '}
+                    {t('form.insuranceWord')} {formatMoney(requirements.defaultInsurancePrice)}
                   </p>
                 </div>
               </div>
@@ -1355,7 +1380,7 @@ function CompanyPricingInner({
 
             {form.selectedCriteria.includes('FIXED') && (
               <div className="space-y-2">
-                <Label>Prix fixe</Label>
+                <Label>{t('form.fixedPrice')}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -1373,7 +1398,7 @@ function CompanyPricingInner({
             {form.selectedCriteria.includes('WEIGHT') && (
               <div className="space-y-4">
                 <div className="max-w-sm space-y-2">
-                  <Label>Application du poids</Label>
+                  <Label>{t('form.weightApplication')}</Label>
                   <Select
                     value={form.weightApplicationMode}
                     onValueChange={(value: PricingApplicationMode) =>
@@ -1386,14 +1411,14 @@ function CompanyPricingInner({
                     <SelectContent>
                       {APPLICATION_MODES.map((mode) => (
                         <SelectItem key={mode.value} value={mode.value}>
-                          {mode.label}
+                          {t(`applicationModes.${mode.value}.label`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <RangeRulesEditor
-                  title="Tranches de poids"
+                  title={t('form.weightRanges')}
                   unit="kg"
                   instruction={requirements?.weightRulesInstruction}
                   value={form.weightRules}
@@ -1407,7 +1432,7 @@ function CompanyPricingInner({
             {form.selectedCriteria.includes('VOLUME') && (
               <div className="space-y-4">
                 <div className="max-w-sm space-y-2">
-                  <Label>Application du volume</Label>
+                  <Label>{t('form.volumeApplication')}</Label>
                   <Select
                     value={form.volumeApplicationMode}
                     onValueChange={(value: PricingApplicationMode) =>
@@ -1420,14 +1445,14 @@ function CompanyPricingInner({
                     <SelectContent>
                       {APPLICATION_MODES.map((mode) => (
                         <SelectItem key={mode.value} value={mode.value}>
-                          {mode.label}
+                          {t(`applicationModes.${mode.value}.label`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <RangeRulesEditor
-                  title="Tranches de volume"
+                  title={t('form.volumeRanges')}
                   unit="m3"
                   instruction={requirements?.volumeRulesInstruction}
                   value={form.volumeRules}

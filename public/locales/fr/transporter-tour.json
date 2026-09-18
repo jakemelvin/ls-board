@@ -1,0 +1,120 @@
+{
+  "title": "Ma tournée",
+  "subtitle": "Suivez les colis en transit, créez des groupes et déposez-les au point destination.",
+  "actions": {
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "reset": "Réinitialiser",
+    "createGroup": "Créer un groupe",
+    "depositDestination": "Déposer à destination",
+    "create": "Créer",
+    "sendDeposit": "Envoyer le dépôt",
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "note": "Note",
+    "dissolve": "Dissoudre"
+  },
+  "metrics": {
+    "inTransit": "Colis en transit",
+    "activeGroups": "Groupes actifs",
+    "deposits": "Dépôts destination"
+  },
+  "selection": {
+    "summary": "{{parcels}} colis et {{groups}} groupe(s) sélectionné(s)",
+    "hint": "Créez un groupe avec les colis seuls ou une demande de dépôt avec colis et groupes."
+  },
+  "errors": {
+    "loadShipments": "Impossible de charger les colis en transit.",
+    "loadGroups": "Impossible de charger les groupes de transport.",
+    "loadDeposits": "Impossible de charger les dépôts destination."
+  },
+  "transit": {
+    "title": "Colis en transit",
+    "description": "Sélectionnez les colis à regrouper ou à déposer au point destination.",
+    "emptyTitle": "Aucun colis en transit",
+    "emptyDescription": "Les colis embarqués via les demandes de prise apparaîtront ici.",
+    "columns": {
+      "reference": "Référence",
+      "client": "Client",
+      "status": "Statut",
+      "createdAt": "Créé le"
+    },
+    "parcelsCount": "{{count}} colis"
+  },
+  "groups": {
+    "title": "Groupes de transport",
+    "description": "Les groupes peuvent recevoir des notes, être dissous ou être inclus dans un dépôt.",
+    "emptyTitle": "Aucun groupe actif",
+    "emptyDescription": "Créez un groupe depuis les colis en transit sélectionnés.",
+    "columns": {
+      "group": "Groupe",
+      "parcels": "Colis",
+      "createdAt": "Créé le",
+      "actions": "Actions"
+    },
+    "nameFallback": "Sans nom"
+  },
+  "deposits": {
+    "title": "Demandes de dépôt destination",
+    "emptyTitle": "Aucun dépôt créé",
+    "emptyDescription": "Les demandes envoyées aux collecteurs destination apparaîtront ici.",
+    "columns": {
+      "request": "Demande",
+      "destination": "Destination",
+      "collector": "Collecteur",
+      "parcels": "Colis",
+      "status": "Statut",
+      "date": "Date"
+    },
+    "acceptedCount": "{{accepted}}/{{total}} acceptés",
+    "rejectedCount": "{{count}} rejetés"
+  },
+  "groupDialog": {
+    "title": "Créer un groupe de transport",
+    "description": "Le groupe sera créé avec les colis en transit sélectionnés.",
+    "nameLabel": "Nom du groupe",
+    "namePlaceholder": "Ex : Tournée matin Akwa"
+  },
+  "depositDialog": {
+    "title": "Déposer à destination",
+    "description": "Le collecteur destination devra accepter ou rejeter chaque colis.",
+    "noteLabel": "Note au collecteur destination",
+    "notePlaceholder": "Exemple : dépôt au comptoir principal"
+  },
+  "groupActionDialog": {
+    "noteTitle": "Ajouter une note",
+    "dissolveTitle": "Dissoudre le groupe",
+    "groupLabel": "Groupe {{group}}",
+    "noteLabel": "Note",
+    "dissolveHint": "Les colis restent rattachés à votre tournée, mais le groupe ne sera plus actif."
+  },
+  "toasts": {
+    "groupCreated": "Groupe créé",
+    "groupCreatedDescription": "{{count}} colis rattachés au groupe.",
+    "groupFailedTitle": "Création impossible",
+    "groupFailedDescription": "Impossible de créer le groupe.",
+    "depositCreated": "Dépôt destination créé",
+    "depositCreatedDescription": "Le collecteur destination peut maintenant contrôler la demande.",
+    "depositFailedTitle": "Dépôt impossible",
+    "depositFailedDescription": "Impossible de créer le dépôt destination.",
+    "noteAdded": "Note ajoutée",
+    "noteAddedDescription": "La note du groupe a été enregistrée.",
+    "groupDissolved": "Groupe dissous",
+    "groupDissolvedDescription": "Le groupe de transport a été dissous.",
+    "actionFailedTitle": "Action impossible",
+    "actionFailedDescription": "Impossible de mettre à jour le groupe."
+  },
+  "labels": {
+    "destinationFallback": "Destination non renseignée",
+    "senderFallback": "Expéditeur",
+    "receiverFallback": "destinataire",
+    "to": "vers",
+    "typeFallback": "Type non renseigné",
+    "notSpecified": "Non renseigné",
+    "notAssigned": "Non assigné",
+    "selectAria": "Sélectionner {{reference}}",
+    "selection": "Sélection",
+    "emptySelection": "Aucun élément sélectionné.",
+    "groupParcelsCount": "{{count}} colis"
+  }
+}

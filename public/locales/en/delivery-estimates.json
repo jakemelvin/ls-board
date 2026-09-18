@@ -1,0 +1,79 @@
+{
+  "title": "Delivery times",
+  "subtitle": "Configure the estimates used by {{company}}.",
+  "actions": {
+    "newEstimate": "New estimate",
+    "editTitle": "Edit estimate",
+    "newTitle": "New estimate",
+    "description": "Each estimate matches one mode, route and parcel type combination.",
+    "delete": "Delete",
+    "reset": "Reset",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving..."
+  },
+  "deleteDialog": {
+    "title": "Delete this estimate?",
+    "description": "The route, mode and parcel type combination will no longer have a configured delay.",
+    "confirm": "Delete"
+  },
+  "metrics": {
+    "estimates": "Estimates",
+    "estimatesHelper": "Configured combinations",
+    "modes": "Modes covered",
+    "modesHelper": "Active company modes",
+    "currentMode": "Current mode",
+    "selectMode": "Select a mode",
+    "noMode": "None"
+  },
+  "errors": {
+    "noActiveModes": "No active mode",
+    "noActiveModesDescription": "Enable at least one transport mode to configure estimates.",
+    "loadTitle": "Unable to load"
+  },
+  "messages": {
+    "loadError": "Loading failed",
+    "requirementsError": "Unable to load available combinations",
+    "saveSuccess": "Delivery estimate saved",
+    "saveError": "Unable to save",
+    "deleteSuccess": "Estimate deleted",
+    "deleteError": "Unable to delete"
+  },
+  "form": {
+    "mode": "Transport mode",
+    "route": "Route",
+    "parcelType": "Parcel type",
+    "unit": "Unit",
+    "duration": "Duration",
+    "durationPlaceholder": "E.g. 2",
+    "units": {
+      "HOURS": "Hours",
+      "DAYS": "Days"
+    },
+    "preview": "Preview",
+    "previewFallback": "The final label will be generated automatically."
+  },
+  "validation": {
+    "selectMode": "Select a transport mode.",
+    "selectRoute": "Select an origin -> destination route.",
+    "selectParcel": "Select a parcel type.",
+    "durationInvalid": "The duration must be an integer greater than or equal to 1."
+  },
+  "list": {
+    "title": "Existing estimates",
+    "searchPlaceholder": "Search route, parcel, delay",
+    "empty": "No estimate matches this filter.",
+    "updated": "Updated {{date}}",
+    "never": "Never",
+    "hoursShort": "{{count}} h",
+    "days": "{{count}} day(s)"
+  },
+  "coverage": {
+    "title": "Mode coverage",
+    "loading": "Loading combinations...",
+    "noRequirements": "Select a mode to load the available routes and types.",
+    "noCombos": "No usable route or active parcel type for this mode.",
+    "allComplete": "Every route/parcel type combination has an estimate.",
+    "missingCount": "{{count}} combination(s) to complete."
+  }
+}

@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/lib/auth/store';
 import { ApiError } from '@/lib/api-client';
+import { useTranslation } from '@/lib/i18n';
 import { getCompanyEmployees } from '@/lib/admin/api';
 import {
   assignFlotteTransporters,
@@ -48,22 +49,6 @@ import {
 
 const FLOTTE_TYPES: FlotteType[] = ['VAN', 'MOTO', 'CAMION', 'VOITURE', 'PICKUP', 'TRICYCLE', 'AUTRE'];
 const FLOTTE_STATUSES: FlotteStatus[] = ['DISPONIBLE', 'EN_TRANSIT', 'MAINTENANCE'];
-
-const FLOTTE_TYPE_LABELS: Record<FlotteType, string> = {
-  VAN: 'Van',
-  MOTO: 'Moto',
-  CAMION: 'Camion',
-  VOITURE: 'Voiture',
-  PICKUP: 'Pickup',
-  TRICYCLE: 'Tricycle',
-  AUTRE: 'Autre',
-};
-
-const FLOTTE_STATUS_LABELS: Record<FlotteStatus, string> = {
-  DISPONIBLE: 'Disponible',
-  EN_TRANSIT: 'En transit',
-  MAINTENANCE: 'Maintenance',
-};
 
 const FLOTTE_STATUS_STYLES: Record<FlotteStatus, string> = {
   DISPONIBLE: 'bg-success/15 text-success',
@@ -140,19 +125,21 @@ function FleetDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslation('fleet');
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="border-border bg-card sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Modifier le véhicule' : 'Ajouter un véhicule'}</DialogTitle>
+          <DialogTitle>{editing ? t('actions.editVehicle') : t('actions.createVehicle')}</DialogTitle>
           <DialogDescription>
-            Renseignez les capacités, le type et le statut opérationnel du véhicule.
+            {t('vehicleDialog.description')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t('vehicleDialog.type')}</Label>
               <Select
                 value={value.type}
                 onValueChange={(type: FlotteType) => onChange({ ...value, type })}
@@ -163,14 +150,14 @@ function FleetDialog({
                 <SelectContent>
                   {FLOTTE_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {FLOTTE_TYPE_LABELS[type]}
+                      {t(`types.${type}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Immatriculation</Label>
+              <Label>{t('vehicleDialog.plate')}</Label>
               <Input
                 value={value.immatriculation}
                 onChange={(event) => onChange({ ...value, immatriculation: event.target.value })}
@@ -181,7 +168,7 @@ function FleetDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Volume max (m3)</Label>
+              <Label>{t('vehicleDialog.maxVolume')}</Label>
               <Input
                 type="number"
                 min="0"
@@ -192,7 +179,7 @@ function FleetDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Poids max (kg)</Label>
+              <Label>{t('vehicleDialog.maxWeight')}</Label>
               <Input
                 type="number"
                 min="0"
@@ -204,7 +191,7 @@ function FleetDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Statut</Label>
+            <Label>{t('vehicleDialog.status')}</Label>
             <Select
               value={value.status}
               onValueChange={(status: FlotteStatus) => onChange({ ...value, status })}
@@ -215,7 +202,7 @@ function FleetDialog({
               <SelectContent>
                 {FLOTTE_STATUSES.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {FLOTTE_STATUS_LABELS[status]}
+                    {t(`statuses.${status}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -224,7 +211,7 @@ function FleetDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Annuler
+            {t('actions.cancel')}
           </Button>
           <Button
             onClick={onSubmit}
@@ -235,7 +222,7 @@ function FleetDialog({
               value.maxWeightKg.trim() === ''
             }
           >
-            {loading ? 'Enregistrement...' : editing ? 'Mettre à jour' : 'Créer'}
+            {loading ? t('actions.saving') : editing ? t('actions.update') : t('actions.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -262,22 +249,24 @@ function AssignTransportersDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslation('fleet');
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="border-border bg-card sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Assigner des transporteurs</DialogTitle>
+          <DialogTitle>{t('assignDialog.title')}</DialogTitle>
           <DialogDescription>
-            Sélectionnez les transporteurs autorisés à opérer le véhicule {flotteLabel}.
+            {t('assignDialog.description', { values: { vehicle: flotteLabel } })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="rounded-2xl border border-border bg-secondary/20 p-4">
             <p className="text-sm font-medium text-foreground">
-              {selectedIds.length} transporteur(s) sélectionné(s)
+              {t('assignDialog.selectedCount', { values: { count: selectedIds.length } })}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Les affectations existantes seront remplacées par cette sélection.
+              {t('assignDialog.existingReplaced')}
             </p>
           </div>
           <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
@@ -308,10 +297,10 @@ function AssignTransportersDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Annuler
+            {t('actions.cancel')}
           </Button>
           <Button onClick={onSubmit} disabled={loading}>
-            {loading ? 'Enregistrement...' : 'Enregistrer'}
+            {loading ? t('actions.saving') : t('actions.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -320,6 +309,7 @@ function AssignTransportersDialog({
 }
 
 function FleetManagementInner({ companyId, companyName }: { companyId: number; companyName: string }) {
+  const { t } = useTranslation('fleet');
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
 
@@ -351,11 +341,11 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
       setFlottes(flottesData);
       setTransporters(employees.filter((user) => user.role === 'TRANSPORTER'));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur lors du chargement');
+      setError(err instanceof ApiError ? err.message : t('errors.load'));
     } finally {
       setLoading(false);
     }
-  }, [token, companyId]);
+  }, [token, companyId, t]);
 
   useEffect(() => {
     load();
@@ -369,13 +359,13 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
       if (!query) return true;
       return (
         flotte.immatriculation.toLowerCase().includes(query) ||
-        FLOTTE_TYPE_LABELS[flotte.type].toLowerCase().includes(query) ||
+        t(`types.${flotte.type}`).toLowerCase().includes(query) ||
         flotte.transporters.some((transporter) =>
           `${transporter.firstName} ${transporter.lastName}`.trim().toLowerCase().includes(query),
         )
       );
     });
-  }, [flottes, search, statusFilter]);
+  }, [flottes, search, statusFilter, t]);
 
   const stats = useMemo(
     () => ({
@@ -418,10 +408,10 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
           ? current.map((item) => (item.id === saved.id ? saved : item))
           : [saved, ...current],
       );
-      success(editingFlotte ? 'Véhicule mis à jour' : 'Véhicule créé');
+      success(editingFlotte ? t('messages.vehicleUpdated') : t('messages.vehicleCreated'));
       setDialogOpen(false);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Enregistrement impossible');
+      showError(err instanceof ApiError ? err.message : t('errors.save'));
     } finally {
       setSaving(false);
     }
@@ -433,10 +423,10 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
     try {
       await deleteFlotte(token, companyId, deleteTarget.id);
       setFlottes((current) => current.filter((item) => item.id !== deleteTarget.id));
-      success('Véhicule supprimé');
+      success(t('messages.vehicleDeleted'));
       setDeleteTarget(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Suppression impossible');
+      showError(err instanceof ApiError ? err.message : t('errors.delete'));
     } finally {
       setSaving(false);
     }
@@ -461,11 +451,15 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
         );
       }
       setFlottes((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-      success(selectedTransporterIds.length === 0 ? 'Transporteurs retirés' : 'Transporteurs assignés');
+      success(
+        selectedTransporterIds.length === 0
+          ? t('messages.transportersRemoved')
+          : t('messages.transportersAssigned'),
+      );
       setAssignDialogOpen(false);
       setAssigningFlotte(null);
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Assignation impossible');
+      showError(err instanceof ApiError ? err.message : t('errors.assign'));
     } finally {
       setSaving(false);
     }
@@ -484,9 +478,9 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
     try {
       const saved = await updateFlotteStatus(token, companyId, flotte.id, nextStatus);
       setFlottes((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-      success(`Statut mis à jour: ${FLOTTE_STATUS_LABELS[nextStatus]}`);
+      success(t('messages.statusUpdated', { values: { status: t(`statuses.${nextStatus}`) } }));
     } catch (err) {
-      showError(err instanceof ApiError ? err.message : 'Mise à jour du statut impossible');
+      showError(err instanceof ApiError ? err.message : t('errors.statusUpdate'));
     } finally {
       setActionFlotteId(null);
     }
@@ -511,12 +505,12 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
       <StatusState
         icon={Truck}
         tone="destructive"
-        title="Erreur de chargement"
+        title={t('errors.loadTitle')}
         description={error}
         action={
           <Button variant="outline" onClick={load} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Réessayer
+            {t('actions.retry')}
           </Button>
         }
       />
@@ -554,9 +548,9 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Supprimer le véhicule"
-        description={`Le véhicule ${deleteTarget?.immatriculation ?? ''} sera supprimé définitivement.`}
-        confirmLabel="Supprimer"
+        title={t('deleteDialog.title')}
+        description={t('deleteDialog.description', { values: { vehicle: deleteTarget?.immatriculation ?? '' } })}
+        confirmLabel={t('deleteDialog.confirm')}
         destructive
         loading={saving}
         onConfirm={handleDelete}
@@ -564,12 +558,12 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
       />
 
       <SectionHeader
-        title="Gestion de flotte"
-        subtitle={`Pilotage mobile-friendly des véhicules de ${companyName}.`}
+        title={t('title')}
+        subtitle={t('subtitle', { values: { company: companyName } })}
         action={
           <Button onClick={openCreateDialog} className="gap-2">
             <Plus className="h-4 w-4" />
-            Ajouter un véhicule
+            {t('actions.addVehicle')}
           </Button>
         }
       />
@@ -582,7 +576,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Véhicules</p>
+              <p className="text-sm text-muted-foreground">{t('metrics.vehicles')}</p>
             </div>
           </CardContent>
         </Card>
@@ -593,7 +587,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{stats.available}</p>
-              <p className="text-sm text-muted-foreground">Disponibles</p>
+              <p className="text-sm text-muted-foreground">{t('metrics.available')}</p>
             </div>
           </CardContent>
         </Card>
@@ -604,7 +598,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{stats.transit}</p>
-              <p className="text-sm text-muted-foreground">En transit</p>
+              <p className="text-sm text-muted-foreground">{t('metrics.transit')}</p>
             </div>
           </CardContent>
         </Card>
@@ -615,7 +609,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{stats.maintenance}</p>
-              <p className="text-sm text-muted-foreground">Maintenance</p>
+              <p className="text-sm text-muted-foreground">{t('metrics.maintenance')}</p>
             </div>
           </CardContent>
         </Card>
@@ -627,7 +621,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Rechercher une immatriculation, un type ou un transporteur..."
+              placeholder={t('search.placeholder')}
               className="bg-secondary"
             />
             <Select
@@ -635,13 +629,13 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
               onValueChange={(value) => setStatusFilter(value as 'ALL' | FlotteStatus)}
             >
               <SelectTrigger className="w-full bg-secondary md:w-64">
-                <SelectValue placeholder="Tous les statuts" />
+                <SelectValue placeholder={t('search.allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Tous les statuts</SelectItem>
+                <SelectItem value="ALL">{t('search.allStatuses')}</SelectItem>
                 {FLOTTE_STATUSES.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {FLOTTE_STATUS_LABELS[status]}
+                    {t(`statuses.${status}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -651,17 +645,17 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
           {filteredFlottes.length === 0 ? (
             <StatusState
               icon={Truck}
-              title={flottes.length === 0 ? 'Aucun véhicule' : 'Aucun résultat'}
+              title={flottes.length === 0 ? t('empty.noVehicle') : t('empty.noResult')}
               description={
                 flottes.length === 0
-                  ? 'Ajoutez votre premier véhicule pour commencer la gestion de flotte.'
-                  : 'Aucun véhicule ne correspond à votre recherche.'
+                  ? t('empty.noVehicleDescription')
+                  : t('empty.noResultDescription')
               }
               action={
                 flottes.length === 0 ? (
                   <Button onClick={openCreateDialog} className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Ajouter un véhicule
+                    {t('actions.addVehicle')}
                   </Button>
                 ) : undefined
               }
@@ -681,10 +675,10 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-foreground">{flotte.immatriculation}</p>
                             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${FLOTTE_STATUS_STYLES[flotte.status]}`}>
-                              {FLOTTE_STATUS_LABELS[flotte.status]}
+                              {t(`statuses.${flotte.status}`)}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">{FLOTTE_TYPE_LABELS[flotte.type]}</p>
+                          <p className="text-sm text-muted-foreground">{t(`types.${flotte.type}`)}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {flotte.maxVolumeM3} m3 • {flotte.maxWeightKg} kg
                           </p>
@@ -705,7 +699,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                             <Users className="h-4 w-4" />
-                            Transporteurs assignés
+                            {t('card.assignedTransporters')}
                           </div>
                           <span className="text-xs text-muted-foreground">
                             {flotte.transporterCount}
@@ -723,14 +717,14 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
                             ))}
                           </div>
                         ) : (
-                          <p className="mt-3 text-sm text-muted-foreground">Aucun transporteur affecté.</p>
+                          <p className="mt-3 text-sm text-muted-foreground">{t('card.noTransporters')}</p>
                         )}
                       </div>
 
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" onClick={() => openAssignDialog(flotte)} className="gap-2">
                           <UserPlus className="h-4 w-4" />
-                          Affecter
+                          {t('actions.assign')}
                         </Button>
                         <Button
                           variant="outline"
@@ -739,7 +733,7 @@ function FleetManagementInner({ companyId, companyName }: { companyId: number; c
                           disabled={actionFlotteId === flotte.id}
                         >
                           <RefreshCw className={`h-4 w-4 ${actionFlotteId === flotte.id ? 'animate-spin' : ''}`} />
-                          Changer le statut
+                          {t('actions.changeStatus')}
                         </Button>
                       </div>
                     </div>

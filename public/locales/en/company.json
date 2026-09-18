@@ -60,7 +60,7 @@
     "remaining": "Remaining blockers",
     "noBlocking": "No critical blocker detected.",
     "blockingCount": "{{count}} item(s) still prevent full operation.",
-    "allSatisfied": "All critical requirements reported by the API are met.",
+    "allSatisfied": "All critical requirements are met.",
     "checks": {
       "parcelTypes": "Parcel types",
       "transportModes": "Transport modes",

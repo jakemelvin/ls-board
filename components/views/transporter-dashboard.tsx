@@ -79,9 +79,9 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
         <CardContent className="flex min-h-[320px] flex-col items-center justify-center gap-4 p-8 text-center">
           <Truck className="h-10 w-10 text-muted-foreground" />
           <div>
-            <p className="text-lg font-semibold text-foreground">Aucun vehicule assigne</p>
+            <p className="text-lg font-semibold text-foreground">{t('transporterDashboard.noVehicleTitle')}</p>
             <p className="text-sm text-muted-foreground">
-              Ce transporteur n&apos;a pas encore de vehicule rattache dans l&apos;equipe.
+              {t('transporterDashboard.noVehicleDescription')}
             </p>
           </div>
         </CardContent>
@@ -93,14 +93,14 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
     <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Tableau de bord transporteur</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('transporterDashboard.title')}</h2>
           <p className="text-muted-foreground">
             {vehicle?.type ?? displayName}
             {vehicle?.immatriculation ? ` - ${vehicle.immatriculation}` : ''}
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card px-4 py-3">
-          <p className="text-sm text-muted-foreground">Charge actuelle</p>
+          <p className="text-sm text-muted-foreground">{t('transporterDashboard.currentLoad')}</p>
           <p className="mt-1 text-lg font-semibold text-foreground">
             {currentWeight.toFixed(1)} / {maxWeight.toFixed(1)} kg
           </p>
@@ -112,7 +112,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
           <CardContent className="flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className={cn('flex items-center gap-3', error ? 'text-destructive' : 'text-muted-foreground')}>
               {error ? <AlertTriangle className="h-5 w-5" /> : <RefreshCw className="h-5 w-5 animate-spin" />}
-              <span>{error ?? 'Chargement du dashboard transporteur...'}</span>
+              <span>{error ?? t('transporterDashboard.loading')}</span>
             </div>
             {error && (
               <Button variant="outline" size="sm" className="gap-2" onClick={() => void loadDashboard()}>
@@ -129,25 +129,25 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
           icon={ArrowRightLeft}
           iconClassName="bg-warning/20 text-warning"
           value={round(metrics?.acceptedRequestsToLoadCount)}
-          label="Demandes acceptees a charger"
+          label={t('transporterDashboard.metrics.acceptedToLoad')}
         />
         <DashboardMetric
           icon={Package}
           iconClassName="bg-primary/20 text-primary"
           value={round(metrics?.onboardShipmentCount)}
-          label="Colis a bord"
+          label={t('transporterDashboard.metrics.onboard')}
         />
         <DashboardMetric
           icon={Route}
           iconClassName="bg-chart-2/20 text-chart-2"
           value={round(metrics?.completedTripCount)}
-          label="Trajets completes"
+          label={t('transporterDashboard.metrics.completedTrips')}
         />
         <DashboardMetric
           icon={CheckCircle2}
           iconClassName="bg-success/20 text-success"
           value={round(metrics?.deliveredShipmentCount)}
-          label="Colis deja livres"
+          label={t('transporterDashboard.metrics.delivered')}
         />
       </div>
 
@@ -156,9 +156,9 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <Coins className="h-5 w-5 text-primary" />
-              Mes commissions
+              {t('transporterDashboard.commissions.title')}
             </CardTitle>
-            <CardDescription>Montants generes par les trajets traites par le backend.</CardDescription>
+            <CardDescription>{t('transporterDashboard.commissions.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <CommissionGrid commissions={commissions} />
@@ -169,8 +169,8 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Vehicule et disponibilite</CardTitle>
-            <CardDescription>Etat de charge du vehicule assigne.</CardDescription>
+            <CardTitle className="text-foreground">{t('transporterDashboard.vehicle.title')}</CardTitle>
+            <CardDescription>{t('transporterDashboard.vehicle.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-border bg-secondary/20 p-4">
@@ -192,7 +192,9 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                         : 'bg-destructive/20 text-destructive',
                   )}
                 >
-                  {vehicle?.status ?? '-'}
+                  {vehicle?.status
+                    ? t(`transporterDashboard.vehicle.statuses.${vehicle.status}`)
+                    : '-'}
                 </span>
               </div>
             </div>
@@ -201,9 +203,9 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                 <div className="flex min-w-0 items-center gap-3">
                   <Weight className="h-5 w-5 text-chart-1" />
                   <div className="min-w-0">
-                    <p className="font-medium text-foreground">Taux de charge</p>
+                    <p className="font-medium text-foreground">{t('transporterDashboard.vehicle.loadRate')}</p>
                     <p className="text-sm text-muted-foreground">
-                      {currentWeight.toFixed(1)} kg transportes actuellement
+                      {t('transporterDashboard.vehicle.loadRateDetail', { values: { weight: currentWeight.toFixed(1) } })}
                     </p>
                   </div>
                 </div>
@@ -224,8 +226,8 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
 
         <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Demandes a charger</CardTitle>
-            <CardDescription>Demandes acceptees par les collecteurs et renvoyees par l'API.</CardDescription>
+            <CardTitle className="text-foreground">{t('transporterDashboard.requests.title')}</CardTitle>
+            <CardDescription>{t('transporterDashboard.requests.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {(dashboard?.acceptedRequestsToLoad ?? []).map((request) => (
@@ -233,34 +235,37 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-foreground">
-                      {request.originCollectionPointName ?? 'Point de collecte'}
+                      {request.originCollectionPointName ?? t('transporterDashboard.requests.fallbackPoint')}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Collecteur: {request.collectorUsername ?? '-'}
+                      {t('transporterDashboard.requests.collector', {
+                        values: { name: request.collectorUsername ?? '-' },
+                      })}
                     </p>
                   </div>
                   <span className="rounded-lg bg-chart-2/20 px-2 py-1 text-xs font-medium text-chart-2">
-                    {request.status ?? '-'}
+                    {request.status
+                      ? t(`transmissionStatuses.${request.status}`)
+                      : '-'}
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <span>{round(request.shipmentCount)} colis</span>
-                  <span>{round(request.pendingShipmentCount)} en attente</span>
+                  <span>{t('transporterDashboard.requests.parcels', { values: { count: round(request.shipmentCount) } })}</span>
+                  <span>{t('transporterDashboard.requests.pending', { values: { count: round(request.pendingShipmentCount) } })}</span>
                   <span>{formatDate(request.createdAt)}</span>
                 </div>
               </div>
             ))}
             {!dashboard?.acceptedRequestsToLoad?.length && (
-              <EmptyState label="Aucune demande acceptee a charger pour le moment." />
+              <EmptyState label={t('transporterDashboard.requests.empty')} />
             )}
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-border bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Colis actuellement a bord</CardTitle>
-          <CardDescription>Vue rapide sur votre tournee active.</CardDescription>
+        <CardHeader>            <CardTitle className="text-foreground">{t('transporterDashboard.onboard.title')}</CardTitle>
+            <CardDescription>{t('transporterDashboard.onboard.description')}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="space-y-3 p-4 md:hidden">
@@ -283,7 +288,11 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                   </span>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-                  <span className="truncate">Destinataire: {shipment.receiverFullName ?? '-'}</span>
+                  <span className="truncate">
+                    {t('transporterDashboard.onboard.receiver', {
+                      values: { name: shipment.receiverFullName ?? '-' },
+                    })}
+                  </span>
                   <span className="flex min-w-0 items-center gap-2">
                     <MapPin className="h-4 w-4 shrink-0" />
                     <span className="truncate">{shipment.destinationCollectionPointName ?? '-'}</span>
@@ -293,7 +302,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
               </div>
             ))}
             {!dashboard?.onboardShipments?.length && (
-              <EmptyState label="Aucun colis actuellement charge dans ce vehicule." />
+              <EmptyState label={t('transporterDashboard.onboard.empty')} />
             )}
           </div>
 
@@ -301,12 +310,12 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">Reference</TableHead>
-                  <TableHead className="text-muted-foreground">Expediteur</TableHead>
-                  <TableHead className="text-muted-foreground">Destinataire</TableHead>
-                  <TableHead className="text-muted-foreground">Destination</TableHead>
-                  <TableHead className="text-muted-foreground">Poids</TableHead>
-                  <TableHead className="text-muted-foreground">Statut</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.reference')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.sender')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.receiver')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.destination')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.weight')}</TableHead>
+                  <TableHead className="text-muted-foreground">{t('transporterDashboard.columns.status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -333,7 +342,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                     <TableCell className="text-foreground">{round(shipment.weightKg)} kg</TableCell>
                     <TableCell>
                       <span className="rounded-lg bg-primary/15 px-2 py-1 text-xs font-medium text-primary">
-                        {shipment.status ?? '-'}
+                        {shipment.status ? t(`parcelManagement.statuses.${shipment.status}`) : '-'}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -341,7 +350,7 @@ export function TransporterDashboard({ currentUser }: TransporterDashboardProps)
                 {!dashboard?.onboardShipments?.length && (
                   <TableRow>
                     <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
-                      Aucun colis actuellement charge dans ce vehicule.
+                      {t('transporterDashboard.onboard.empty')}
                     </TableCell>
                   </TableRow>
                 )}

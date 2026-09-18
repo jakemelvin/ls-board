@@ -90,7 +90,7 @@ test('map uses nearby and location collection-point endpoints', async ({ page })
   await page.getByRole('button', { name: /Autour de moi|Near me/ }).click();
   await expect(page.getByText('Point Messassi').first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('Agence partenaire').first()).toBeVisible();
-  await expect(page.getByText(/trie.*distance.*backend|sorted by distance by the backend/i)).toBeVisible();
+  await expect(page.getByText(/du plus proche au plus éloigné|from closest to farthest/i)).toBeVisible();
   expect(requestedUrls.find((entry) => entry.includes('/search/nearby'))).toContain('latitude=4.0511');
   expect(requestedUrls.find((entry) => entry.includes('/search/nearby'))).toContain('longitude=9.7043');
 

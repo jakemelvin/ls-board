@@ -1,0 +1,87 @@
+{
+  "title": "Fleet management",
+  "subtitle": "{{company}} vehicles and assignments.",
+  "actions": {
+    "addVehicle": "Add vehicle",
+    "editVehicle": "Edit vehicle",
+    "createVehicle": "Add vehicle",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving...",
+    "update": "Update",
+    "create": "Create",
+    "delete": "Delete",
+    "assign": "Assign",
+    "changeStatus": "Change status"
+  },
+  "types": {
+    "VAN": "Van",
+    "MOTO": "Motorbike",
+    "CAMION": "Truck",
+    "VOITURE": "Car",
+    "PICKUP": "Pickup",
+    "TRICYCLE": "Tricycle",
+    "AUTRE": "Other"
+  },
+  "statuses": {
+    "DISPONIBLE": "Available",
+    "EN_TRANSIT": "In transit",
+    "MAINTENANCE": "Under maintenance"
+  },
+  "metrics": {
+    "vehicles": "Vehicles",
+    "available": "Available",
+    "transit": "In transit",
+    "maintenance": "Under maintenance"
+  },
+  "search": {
+    "placeholder": "Search a plate, a type or a transporter...",
+    "allStatuses": "All statuses"
+  },
+  "empty": {
+    "noVehicle": "No vehicle",
+    "noVehicleDescription": "Add your first vehicle to start managing your fleet.",
+    "noResult": "No result",
+    "noResultDescription": "No vehicle matches your search."
+  },
+  "vehicleDialog": {
+    "description": "Set the capacity, type and operational status of the vehicle.",
+    "type": "Type",
+    "plate": "Plate number",
+    "maxVolume": "Max volume (m3)",
+    "maxWeight": "Max weight (kg)",
+    "status": "Status"
+  },
+  "assignDialog": {
+    "title": "Assign transporters",
+    "description": "Choose the transporters allowed to operate vehicle {{vehicle}}.",
+    "selectedCount": "{{count}} transporter(s) selected",
+    "existingReplaced": "Current assignments will be replaced by this selection."
+  },
+  "deleteDialog": {
+    "title": "Delete vehicle",
+    "description": "Vehicle {{vehicle}} will be permanently deleted.",
+    "confirm": "Delete"
+  },
+  "card": {
+    "assignedTransporters": "Assigned transporters",
+    "noTransporters": "No transporter assigned."
+  },
+  "errors": {
+    "loadTitle": "Loading error",
+    "load": "Loading failed",
+    "save": "Unable to save",
+    "delete": "Unable to delete",
+    "assign": "Unable to assign",
+    "statusUpdate": "Unable to update the status"
+  },
+  "messages": {
+    "vehicleCreated": "Vehicle created",
+    "vehicleUpdated": "Vehicle updated",
+    "vehicleDeleted": "Vehicle deleted",
+    "transportersAssigned": "Transporters assigned",
+    "transportersRemoved": "Transporters removed",
+    "statusUpdated": "Status updated: {{status}}"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "title": "Pricing engine",
+  "subtitle": "{{company}} operating grids by mode, route and parcel type.",
+  "actions": {
+    "refresh": "Refresh",
+    "newGrid": "New grid",
+    "duplicate": "Duplicate",
+    "verify": "Check",
+    "verifying": "Checking...",
+    "save": "Save",
+    "saving": "Saving...",
+    "retry": "Retry",
+    "addRange": "Tier"
+  },
+  "metrics": {
+    "grids": "Grids",
+    "gridsHelper": "Saved configurations",
+    "modes": "Modes covered",
+    "noMode": "No mode",
+    "types": "Active types",
+    "pointsCount": "{{count}} collection points",
+    "insurance": "Insurance",
+    "insuranceHelper": "Reference amount"
+  },
+  "modeCard": {
+    "title": "Transport mode",
+    "placeholder": "Select a mode",
+    "loadingRequirements": "Loading configuration..."
+  },
+  "coverage": {
+    "title": "Mode coverage",
+    "noRequirements": "Select a mode to load the available routes and types.",
+    "noCombos": "No usable route or active parcel type for this mode.",
+    "allComplete": "Every route/parcel type combination has a grid.",
+    "missingCount": "{{count}} combination(s) to complete."
+  },
+  "list": {
+    "title": "Existing grids",
+    "searchPlaceholder": "Search route, parcel, criterion",
+    "empty": "No grid matches this filter.",
+    "never": "Never"
+  },
+  "form": {
+    "editTitle": "Edit grid",
+    "newTitle": "New grid",
+    "description": "One grid covers one route, one parcel type and one transport mode.",
+    "route": "Route",
+    "routePlaceholder": "Origin -> destination",
+    "parcelType": "Parcel type",
+    "parcelPlaceholder": "Select a type",
+    "expressSurcharge": "Express surcharge",
+    "criteria": "Calculation criteria",
+    "envelopeBadge": "Envelope: fixed price only",
+    "requirementsTitle": "Required configuration",
+    "required": "required",
+    "optional": "optional",
+    "notRequired": "not required",
+    "selectionTitle": "Selection",
+    "selectionModeFallback": "Mode",
+    "selectionParcelFallback": "Type",
+    "insuranceWord": "Insurance",
+    "fixedPrice": "Fixed price",
+    "weightApplication": "Weight application",
+    "volumeApplication": "Volume application",
+    "weightRanges": "Weight tiers",
+    "volumeRanges": "Volume tiers"
+  },
+  "criteria": {
+    "FIXED": { "label": "Fixed price", "hint": "Mandatory base for envelopes." },
+    "WEIGHT": { "label": "Weight", "hint": "Unit price per kg tiers." },
+    "VOLUME": { "label": "Volume", "hint": "Unit price per m3 tiers." }
+  },
+  "applicationModes": {
+    "PROPORTIONAL": { "label": "Proportional", "hint": "Prorated from the entered value." },
+    "ROUND_UP_UNIT": { "label": "Round up to unit", "hint": "Rounds up to the next kg or m3." }
+  },
+  "ranges": {
+    "hint": "Contiguous tiers starting at 0. The last maximum can stay empty.",
+    "add": "Tier",
+    "min": "Min {{unit}}",
+    "max": "Max {{unit}}",
+    "amount": "Amount",
+    "remove": "Remove tier"
+  },
+  "validation": {
+    "selectMode": "Select a transport mode.",
+    "selectRoute": "Select an origin -> destination route.",
+    "selectParcel": "Select a parcel type.",
+    "selectCriteria": "Select at least one pricing criterion.",
+    "envelopeFixedOnly": "Envelopes are limited to the Fixed price criterion.",
+    "fieldRequired": "{{field}} is required.",
+    "fieldPositive": "{{field}} must be a positive number.",
+    "rangeRequired": "Add at least one tier for {{label}}.",
+    "rangeMinInvalid": "Tier {{index}} ({{label}}): the minimum in {{unit}} is invalid.",
+    "rangeMaxInvalid": "Tier {{index}} ({{label}}): the maximum in {{unit}} must be greater than the minimum.",
+    "rangeAmountInvalid": "Tier {{index}} ({{label}}): the amount is invalid.",
+    "rangeStartZero": "{{label}} tiers must start at 0 {{unit}}.",
+    "rangeLastMaxEmpty": "Only the last tier can have an empty maximum.",
+    "rangeContiguous": "Tiers must be contiguous, with no gaps or overlaps."
+  },
+  "errors": {
+    "loadTitle": "Loading error",
+    "noActiveModes": "No active transport mode",
+    "noActiveModesDescription": "Enable at least one transport mode before defining prices."
+  },
+  "messages": {
+    "loadError": "Loading failed",
+    "requirementsError": "Unable to load the required configuration",
+    "duplicateSuccess": "Grid duplicated as draft",
+    "selectBeforeVerify": "Select a mode, a route and a parcel type before checking.",
+    "checkSuccess": "Existing grid loaded",
+    "checkError": "No grid for this selection",
+    "saveSuccess": "Pricing saved",
+    "saveError": "Unable to save"
+  }
+}

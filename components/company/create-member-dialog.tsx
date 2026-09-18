@@ -71,7 +71,7 @@ function validate(f: MemberForm, t: (key: string) => string): MemberErrors {
   if (!f.lastName.trim()) e.lastName = t('memberDialog.validation.required');
   if (!/^[a-zA-Z0-9._-]{3,20}$/.test(f.username)) e.username = t('memberDialog.validation.username');
   if (!f.phone.trim()) e.phone = t('memberDialog.validation.required');
-  if (!f.password || f.password.length < 8) e.password = '8 caractères minimum';
+  if (!f.password || f.password.length < 8) e.password = t('memberDialog.validation.password');
   if (!f.role) e.role = t('memberDialog.validation.required');
   if (!f.countryId) e.countryId = t('memberDialog.validation.required');
   if (!f.city.trim()) e.city = t('memberDialog.validation.required');
@@ -153,7 +153,7 @@ export function CreateMemberDialog({
       onCreated(created);
       onClose();
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Erreur lors de la création');
+      setServerError(err instanceof Error ? err.message : t('memberDialog.errors.create'));
     } finally {
       setSubmitting(false);
     }
@@ -201,7 +201,7 @@ export function CreateMemberDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Prénom *</Label>
+              <Label>{t('memberDialog.fields.firstName')} *</Label>
               <input className={inputCls(errors.firstName)} placeholder="Jean" value={form.firstName} onChange={set('firstName')} />
               {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
             </div>
@@ -224,7 +224,7 @@ export function CreateMemberDialog({
               <input type="email" className={inputCls()} placeholder="jean@email.com" value={form.email} onChange={set('email')} />
             </div>
             <div className="space-y-1.5">
-              <Label>Téléphone *</Label>
+              <Label>{t('memberDialog.fields.phone')} *</Label>
               <input className={inputCls(errors.phone)} placeholder="+221 77 000 00 00" value={form.phone} onChange={set('phone')} />
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
@@ -254,9 +254,9 @@ export function CreateMemberDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Rôle *</Label>
+              <Label>{t('memberDialog.fields.role')} *</Label>
               <select className={selectCls(errors.role)} value={form.role} onChange={set('role')}>
-                <option value="">Choisir…</option>
+                <option value="">{t('memberDialog.options.choose')}</option>
                 {MEMBER_ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{t(r.labelKey)}</option>
                 ))}
@@ -285,7 +285,7 @@ export function CreateMemberDialog({
                 value={form.commissionPercentage}
                 onChange={set('commissionPercentage')}
               />
-              <p className="text-xs text-muted-foreground">Laissez vide si aucune commission spécifique.</p>
+              <p className="text-xs text-muted-foreground">{t('memberDialog.hints.commission')}</p>
             </div>
           )}
 
@@ -293,7 +293,7 @@ export function CreateMemberDialog({
             <div className="space-y-1.5">
               <Label>{t('memberDialog.fields.country')} *</Label>
               <select className={selectCls(errors.countryId)} value={form.countryId} onChange={set('countryId')} disabled={countriesLoading}>
-                <option value="">{countriesLoading ? 'Chargement…' : 'Sélectionner…'}</option>
+                <option value="">{countriesLoading ? t('memberDialog.options.loading') : t('memberDialog.options.select')}</option>
                 {countries.map((c) => (
                   <option key={c.countryId} value={c.countryId}>{c.countryName}</option>
                 ))}
@@ -311,14 +311,14 @@ export function CreateMemberDialog({
             <div className="space-y-1.5">
               <Label>{t('memberDialog.fields.gender')}</Label>
               <select className={selectCls()} value={form.gender} onChange={set('gender')}>
-                <option value="">Non précisé</option>
+                <option value="">{t('memberDialog.options.unspecified')}</option>
                 <option value="MALE">{t('memberDialog.options.male')}</option>
                 <option value="FEMALE">{t('memberDialog.options.female')}</option>
                 <option value="OTHER">{t('memberDialog.options.other')}</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>N° pièce d'identité</Label>
+              <Label>{t('memberDialog.fields.idCardNumber')}</Label>
               <input className={inputCls()} placeholder="AB123456789" value={form.idCardNumber} onChange={set('idCardNumber')} />
             </div>
           </div>
@@ -335,12 +335,12 @@ export function CreateMemberDialog({
             {submitting ? (
               <span className="flex items-center gap-2">
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Création…
+                {t('memberDialog.actions.creating')}
               </span>
             ) : (
               <span className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
-                Créer le membre
+                {t('memberDialog.actions.create')}
               </span>
             )}
           </Button>

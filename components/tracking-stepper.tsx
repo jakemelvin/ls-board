@@ -2,6 +2,7 @@
 
 import { Check, Package, Truck, MapPin, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import type { ParcelStatus, ParcelHistoryEntry } from '@/lib/mock-data';
 
 interface TrackingStepperProps {
@@ -35,6 +36,7 @@ const STATUS_ORDER: Record<ParcelStatus, number> = {
 };
 
 export function TrackingStepper({ currentStatus, history }: TrackingStepperProps) {
+  const { t } = useTranslation();
   const currentIndex = STATUS_ORDER[currentStatus];
   const isRejected = currentStatus === 'REJECTED';
   const createdEntry = history.find((entry) => entry.status === 'CREATED');
@@ -54,9 +56,9 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
             <Package className="h-6 w-6 text-destructive" />
           </div>
-          <p className="font-medium text-destructive">Colis Rejete</p>
+          <p className="font-medium text-destructive">{t('tracking.rejectedTitle')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {history[history.length - 1]?.location || 'Non conforme'}
+            {history[history.length - 1]?.location || t('tracking.rejectedFallback')}
           </p>
         </div>
       </div>
@@ -66,7 +68,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
   const steps: DisplayStep[] = [
     {
       key: 'CREATED',
-      label: 'Demande client',
+      label: t('tracking.steps.CREATED'),
       icon: Package,
       isCompleted: currentIndex > STATUS_ORDER.CREATED,
       isCurrent: currentStatus === 'CREATED' && !isCurrentlyTransitToCollection,
@@ -75,7 +77,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
     },
     {
       key: 'TRANSIT_TO_COLLECTION',
-      label: 'En transit vers point',
+      label: t('tracking.steps.TRANSIT_TO_COLLECTION'),
       icon: Truck,
       isCompleted: hasReachedCollection,
       isCurrent: isCurrentlyTransitToCollection,
@@ -84,7 +86,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
     },
     {
       key: 'RECEIVED_AT_COLLECTION_POINT',
-      label: 'Recu au point',
+      label: t('tracking.steps.RECEIVED_AT_COLLECTION_POINT'),
       icon: MapPin,
       isCompleted: currentIndex > STATUS_ORDER.RECEIVED_AT_COLLECTION_POINT,
       isCurrent: currentStatus === 'RECEIVED_AT_COLLECTION_POINT',
@@ -93,7 +95,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
     },
     {
       key: 'IN_TRANSIT',
-      label: 'En transit',
+      label: t('tracking.steps.IN_TRANSIT'),
       icon: Truck,
       isCompleted: currentIndex > STATUS_ORDER.IN_TRANSIT,
       isCurrent: currentStatus === 'IN_TRANSIT',
@@ -102,7 +104,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
     },
     {
       key: 'ARRIVED_AT_DESTINATION',
-      label: 'Arrive au point',
+      label: t('tracking.steps.ARRIVED_AT_DESTINATION'),
       icon: MapPin,
       isCompleted: currentIndex > STATUS_ORDER.ARRIVED_AT_DESTINATION,
       isCurrent: currentStatus === 'ARRIVED_AT_DESTINATION',
@@ -111,7 +113,7 @@ export function TrackingStepper({ currentStatus, history }: TrackingStepperProps
     },
     {
       key: 'DELIVERED',
-      label: 'Livre',
+      label: t('tracking.steps.DELIVERED'),
       icon: CheckCircle2,
       isCompleted: false,
       isCurrent: currentStatus === 'DELIVERED',

@@ -34,8 +34,6 @@ import {
 import {
   formatShipmentDate,
   getShipmentStatusClassName,
-  getShipmentStatusLabel,
-  SHIPMENT_PRIORITY_LABELS,
 } from '@/lib/shipments/presentation';
 import type { TransporterReadyShipment } from '@/lib/shipments/types';
 import { cn } from '@/lib/utils';
@@ -334,12 +332,12 @@ export function PickupRequest() {
                                 <div className="flex flex-wrap gap-2">
                                   {shipment.status && (
                                     <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                                      {getShipmentStatusLabel(shipment.status)}
+                                      {t(`parcelManagement.statuses.${shipment.status}`)}
                                     </Badge>
                                   )}
                                   {shipment.priority && (
                                     <Badge variant="outline">
-                                      {SHIPMENT_PRIORITY_LABELS[shipment.priority]}
+                                      {t(`shipmentPriority.${shipment.priority}`)}
                                     </Badge>
                                   )}
                                 </div>

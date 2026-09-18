@@ -59,9 +59,7 @@ import {
 import {
   formatShipmentDate,
   getShipmentStatusClassName,
-  getShipmentStatusLabel,
   getShipmentTransmissionStatusClassName,
-  SHIPMENT_TRANSMISSION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
 import type {
   ShipmentTransmissionRequest,
@@ -73,6 +71,8 @@ import { cn } from '@/lib/utils';
 interface TransferRequestsProps {
   currentRole: UserRole;
 }
+
+type TranslateFn = (key: string, options?: { values?: Record<string, string | number> }) => string;
 
 type ActionMode = 'approve' | 'reject' | 'embark' | 'note' | null;
 type SortDirection = 'desc' | 'asc';
@@ -136,7 +136,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         setError(
           err instanceof ApiError
             ? err.message
-            : 'Impossible de charger les demandes de prise.',
+            : t('transferRequests.errors.load'),
         );
         setRequests([]);
         setTotalPages(0);
@@ -190,9 +190,9 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     } catch (err) {
       if (isLatestDetailRequest(requestId)) {
         toast({
-          title: 'Detail indisponible',
+          title: t('transferRequests.errors.detailTitle'),
           description:
-            err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
+            err instanceof ApiError ? err.message : t('transferRequests.errors.detailLoad'),
           variant: 'destructive',
         });
       }
@@ -231,14 +231,17 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       const updated = await approveTransmissionRequest(token, selectedRequest.requestId, {
         note: note.trim() || undefined,
       });
-      toast({ title: 'Demande approuvee', description: 'Le transporteur peut embarquer les colis.' });
+      toast({
+        title: t('transferRequests.toasts.approvedTitle'),
+        description: t('transferRequests.toasts.approvedDescription'),
+      });
       resetAction();
       await refreshAfterAction(updated);
     } catch (err) {
       toast({
-        title: 'Approbation impossible',
+        title: t('transferRequests.toasts.approveFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : "Impossible d'approuver la demande.",
+          err instanceof ApiError ? err.message : t('transferRequests.errors.approve'),
         variant: 'destructive',
       });
     } finally {
@@ -255,14 +258,17 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       const updated = await rejectTransmissionRequest(token, selectedRequest.requestId, {
         reason: rejectReason.trim(),
       });
-      toast({ title: 'Demande rejetee', description: 'Le transporteur verra le motif de rejet.' });
+      toast({
+        title: t('transferRequests.toasts.rejectedTitle'),
+        description: t('transferRequests.toasts.rejectedDescription'),
+      });
       resetAction();
       await refreshAfterAction(updated);
     } catch (err) {
       toast({
-        title: 'Rejet impossible',
+        title: t('transferRequests.toasts.rejectFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de rejeter la demande.',
+          err instanceof ApiError ? err.message : t('transferRequests.errors.reject'),
         variant: 'destructive',
       });
     } finally {
@@ -281,16 +287,18 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         note: note.trim() || undefined,
       });
       toast({
-        title: 'Colis embarques',
-        description: `${selectedShipmentIds.length} colis passent en transit.`,
+        title: t('transferRequests.toasts.embarkedTitle'),
+        description: t('transferRequests.toasts.embarkedDescription', {
+          values: { count: selectedShipmentIds.length },
+        }),
       });
       resetAction();
       await refreshAfterAction(updated);
     } catch (err) {
       toast({
-        title: 'Embarquement impossible',
+        title: t('transferRequests.toasts.embarkFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : "Impossible d'embarquer les colis.",
+          err instanceof ApiError ? err.message : t('transferRequests.errors.embark'),
         variant: 'destructive',
       });
     } finally {
@@ -308,14 +316,17 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         shipmentIds: selectedShipmentIds,
         description: note.trim(),
       });
-      toast({ title: 'Note ajoutee', description: 'La note de transit a ete enregistree.' });
+      toast({
+        title: t('transferRequests.toasts.noteAddedTitle'),
+        description: t('transferRequests.toasts.noteAddedDescription'),
+      });
       resetAction();
       await refreshAfterAction(updated);
     } catch (err) {
       toast({
-        title: 'Note impossible',
+        title: t('transferRequests.toasts.noteFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : "Impossible d'ajouter la note.",
+          err instanceof ApiError ? err.message : t('transferRequests.errors.note'),
         variant: 'destructive',
       });
     } finally {
@@ -334,7 +345,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             onClick={() => void openDetail(request, 'reject')}
           >
             <X className="h-4 w-4" />
-            Rejeter
+            {t('transferRequests.actions.reject')}
           </Button>
           <Button
             size="sm"
@@ -342,7 +353,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             onClick={() => void openDetail(request, 'approve')}
           >
             <Check className="h-4 w-4" />
-            Approuver
+            {t('transferRequests.actions.approve')}
           </Button>
         </div>
       );
@@ -360,7 +371,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
           onClick={() => void openDetail(request, 'embark')}
         >
           <Truck className="h-4 w-4" />
-          Embarquer
+          {t('transferRequests.actions.embark')}
         </Button>
       );
     }
@@ -371,10 +382,10 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         size="sm"
         className="h-9 w-full gap-2 md:h-8 md:w-8 md:p-0"
         onClick={() => void openDetail(request)}
-        aria-label={`Voir la demande ${request.requestId}`}
+        aria-label={t('transferRequests.actions.viewRequest', { values: { id: request.requestId } })}
       >
         <Eye className="h-4 w-4" />
-        <span className="md:sr-only">Voir</span>
+        <span className="md:sr-only">{t('transferRequests.actions.view')}</span>
       </Button>
     );
   };
@@ -383,9 +394,9 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     return (
       <Card className="border-border bg-card">
         <CardContent className="py-12 text-center">
-          <p className="font-medium text-foreground">Section reservee aux collecteurs et transporteurs.</p>
+          <p className="font-medium text-foreground">{t('transferRequests.restrictedTitle')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Les endpoints de transmission rejettent les roles administratifs sur les listes.
+            {t('transferRequests.restrictedDescription')}
           </p>
         </CardContent>
       </Card>
@@ -396,11 +407,11 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Demandes de Prise en Charge</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('transferRequests.title')}</h2>
           <p className="text-muted-foreground">
             {currentRole === 'COLLECTOR'
-              ? 'Validez les demandes de transmission creees par les transporteurs.'
-              : 'Suivez vos demandes et confirmez les colis reellement embarques.'}
+              ? t('transferRequests.subtitleCollector')
+              : t('transferRequests.subtitleTransporter')}
           </p>
         </div>
         <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-auto">
@@ -427,16 +438,16 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             disabled={loading}
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Actualiser
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <RequestMetric icon={Clock} label="En attente" value={counters.pending} className="bg-warning/15 text-warning" />
-        <RequestMetric icon={Check} label="Approuvees" value={counters.approved} className="bg-primary/15 text-primary" />
-        <RequestMetric icon={PackageCheck} label="Embarquees" value={counters.dispatched} className="bg-success/15 text-success" />
-        <RequestMetric icon={X} label="Rejetees" value={counters.rejected} className="bg-destructive/15 text-destructive" />
+        <RequestMetric icon={Clock} label={t('transferRequests.metrics.pending')} value={counters.pending} className="bg-warning/15 text-warning" />
+        <RequestMetric icon={Check} label={t('transferRequests.metrics.approved')} value={counters.approved} className="bg-primary/15 text-primary" />
+        <RequestMetric icon={PackageCheck} label={t('transferRequests.metrics.dispatched')} value={counters.dispatched} className="bg-success/15 text-success" />
+        <RequestMetric icon={X} label={t('transferRequests.metrics.rejected')} value={counters.rejected} className="bg-destructive/15 text-destructive" />
       </div>
 
       <Card className="border-border bg-card">
@@ -445,7 +456,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <p className="text-sm text-destructive">{error}</p>
               <Button variant="outline" onClick={() => void loadRequests()}>
-                Reessayer
+                {t('common.retry')}
               </Button>
             </div>
           ) : loading ? (
@@ -458,8 +469,8 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                 {requests.length === 0 ? (
                   <MobileEmptyState
                     icon={Truck}
-                    title="Aucune demande"
-                    description="Les demandes creees via le backend apparaitront ici."
+                    title={t('transferRequests.empty.title')}
+                    description={t('transferRequests.empty.description')}
                   />
                 ) : (
                   requests.map((request) => (
@@ -467,6 +478,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                       key={request.requestId}
                       request={request}
                       actions={renderActions(request)}
+                      t={t}
                     />
                   ))
                 )}
@@ -476,13 +488,13 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">Demande</TableHead>
-                      <TableHead className="text-muted-foreground">Point origine</TableHead>
-                      <TableHead className="text-muted-foreground">Intervenants</TableHead>
-                      <TableHead className="text-muted-foreground">Colis</TableHead>
-                      <TableHead className="text-muted-foreground">Statut</TableHead>
-                      <TableHead className="text-muted-foreground">Date</TableHead>
-                      <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.request')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.originPoint')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.parties')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.parcels')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.status')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('transferRequests.columns.date')}</TableHead>
+                      <TableHead className="text-right text-muted-foreground">{t('transferRequests.columns.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -490,14 +502,14 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                       <TableRow key={request.requestId} className="border-border">
                         <TableCell className="font-mono text-foreground">#{request.requestId}</TableCell>
                         <TableCell className="text-foreground">
-                          {request.originCollectionPointName ?? 'Point non renseigne'}
+                          {request.originCollectionPointName ?? t('transferRequests.fallbacks.noPoint')}
                         </TableCell>
                         <TableCell>
                           <p className="text-sm text-foreground">
-                            Transporteur: {request.transporterUsername ?? 'Non renseigne'}
+                            {t('transferRequests.fields.transporter', { values: { name: request.transporterUsername ?? t('transferRequests.fallbacks.unspecified') } })}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Collecteur: {request.collectorUsername ?? 'Non renseigne'}
+                            {t('transferRequests.fields.collector', { values: { name: request.collectorUsername ?? t('transferRequests.fallbacks.unspecified') } })}
                           </p>
                         </TableCell>
                         <TableCell>
@@ -505,12 +517,12 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                             {request.embarkedShipmentCount ?? 0}/{request.requestedShipmentCount ?? 0}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {request.pendingShipmentCount ?? 0} restant(s)
+                            {request.pendingShipmentCount ?? 0} {t('transferRequests.fields.remaining')}
                           </p>
                         </TableCell>
                         <TableCell>
                           <Badge className={cn('border-0', getShipmentTransmissionStatusClassName(request.status))}>
-                            {SHIPMENT_TRANSMISSION_STATUS_LABELS[request.status]}
+                            {t(`transmissionStatuses.${request.status}`)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -525,9 +537,9 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                         <TableCell colSpan={7} className="h-28 text-center">
                           <div className="flex flex-col items-center gap-2">
                             <Truck className="h-8 w-8 text-muted-foreground" />
-                            <p className="font-medium text-foreground">Aucune demande</p>
+                            <p className="font-medium text-foreground">{t('transferRequests.empty.title')}</p>
                             <p className="text-sm text-muted-foreground">
-                              Les demandes creees via le backend apparaitront ici.
+                              {t('transferRequests.empty.description')}
                             </p>
                           </div>
                         </TableCell>
@@ -556,16 +568,17 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              Demande #{selectedRequest?.requestId}
+              {t('transferRequests.detail.requestTitle', { values: { id: selectedRequest?.requestId ?? '' } })}
             </DialogTitle>
             <DialogDescription>
-              Detail des colis, actions et notes rattachees a la transmission.
+              {t('transferRequests.detail.description')}
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <RequestDetail
               request={selectedRequest}
               canAddNote={currentRole === 'TRANSPORTER'}
+              t={t}
               onAddNote={() => {
                 setDetailOpen(false);
                 setActionMode('note');
@@ -577,7 +590,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              Fermer
+              {t('transferRequests.actions.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -586,8 +599,8 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
       <Dialog open={Boolean(actionMode)} onOpenChange={(open) => !open && resetAction()}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">{getActionTitle(actionMode)}</DialogTitle>
-            <DialogDescription>{getActionDescription(actionMode)}</DialogDescription>
+            <DialogTitle className="text-foreground">{getActionTitle(actionMode, t)}</DialogTitle>
+            <DialogDescription>{getActionDescription(actionMode, t)}</DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
@@ -595,14 +608,14 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-foreground">
-                      Demande #{selectedRequest.requestId}
+                      {t('transferRequests.detail.requestTitle', { values: { id: selectedRequest.requestId } })}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedRequest.originCollectionPointName ?? 'Point origine non renseigne'}
+                      {selectedRequest.originCollectionPointName ?? t('transferRequests.fallbacks.noOriginPoint')}
                     </p>
                   </div>
                   <Badge className={cn('border-0', getShipmentTransmissionStatusClassName(selectedRequest.status))}>
-                    {SHIPMENT_TRANSMISSION_STATUS_LABELS[selectedRequest.status]}
+                    {t(`transmissionStatuses.${selectedRequest.status}`)}
                   </Badge>
                 </div>
               </div>
@@ -626,7 +639,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                           checked={isSelected}
                           disabled={disabled || actionLoading}
                           onCheckedChange={() => toggleShipment(item.shipmentId)}
-                          aria-label={`Selectionner ${item.reference ?? item.shipmentId}`}
+                          aria-label={t('transferRequests.actions.selectParcel', { values: { id: item.reference ?? item.shipmentId } })}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -638,15 +651,20 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
                             )}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {item.senderFullName ?? 'Expediteur'} vers {item.receiverFullName ?? 'destinataire'}
+                            {t('transferRequests.fields.route', {
+                              values: {
+                                sender: item.senderFullName ?? t('transferRequests.fallbacks.sender'),
+                                receiver: item.receiverFullName ?? t('transferRequests.fallbacks.receiver'),
+                              },
+                            })}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {item.shipmentStatus && (
                               <Badge className={cn('border-0', getShipmentStatusClassName(item.shipmentStatus))}>
-                                {getShipmentStatusLabel(item.shipmentStatus)}
+                                {t(`parcelManagement.statuses.${item.shipmentStatus}`)}
                               </Badge>
                             )}
-                            {item.embarked && <Badge variant="outline">Deja embarque</Badge>}
+                            {item.embarked && <Badge variant="outline">{t('transferRequests.badges.alreadyEmbarked')}</Badge>}
                           </div>
                         </div>
                       </label>
@@ -657,7 +675,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
 
               {actionMode === 'reject' ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Motif du rejet</label>
+                  <label className="text-sm font-medium text-foreground">{t('transferRequests.form.rejectReason')}</label>
                   <Textarea
                     value={rejectReason}
                     onChange={(event) => setRejectReason(event.target.value)}
@@ -668,12 +686,12 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
               ) : (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">
-                    {actionMode === 'note' ? 'Note de transit' : 'Note'}
+                    {actionMode === 'note' ? t('transferRequests.form.transitNote') : t('transferRequests.form.note')}
                   </label>
                   <Textarea
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
-                    placeholder="Commentaire optionnel"
+                    placeholder={t('transferRequests.form.optionalComment')}
                     className="min-h-[100px] bg-secondary"
                     disabled={actionLoading}
                   />
@@ -683,7 +701,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={resetAction} disabled={actionLoading}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => {
@@ -697,7 +715,7 @@ export function TransferRequests({ currentRole }: TransferRequestsProps) {
               variant={actionMode === 'reject' ? 'destructive' : 'default'}
             >
               {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
-              Confirmer
+              {t('common.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,9 +753,11 @@ function RequestMetric({
 function MobileTransmissionRequestCard({
   request,
   actions,
+  t,
 }: {
   request: ShipmentTransmissionRequestSummary;
   actions: ReactNode;
+  t: TranslateFn;
 }) {
   return (
     <article className="space-y-3 overflow-hidden rounded-xl border border-border bg-background p-3.5 shadow-sm">
@@ -745,21 +765,22 @@ function MobileTransmissionRequestCard({
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-foreground">#{request.requestId}</p>
           <p className="break-words text-sm text-muted-foreground">
-            {request.originCollectionPointName ?? 'Point non renseigne'}
+            {request.originCollectionPointName ?? t('transferRequests.fallbacks.noPoint')}
           </p>
         </div>
         <Badge className={cn('max-w-full shrink-0 whitespace-normal border-0 text-left text-[11px]', getShipmentTransmissionStatusClassName(request.status))}>
-          {SHIPMENT_TRANSMISSION_STATUS_LABELS[request.status]}
+          {t(`transmissionStatuses.${request.status}`)}
         </Badge>
       </div>
       <div className="grid gap-2 rounded-lg bg-muted/40 p-3 text-sm">
-        <MobileInfo label="Transporteur" value={request.transporterUsername} />
-        <MobileInfo label="Collecteur" value={request.collectorUsername} />
+        <MobileInfo label={t('transferRequests.fields.transporterLabel')} value={request.transporterUsername} emptyLabel={t('transferRequests.fallbacks.unspecified')} />
+        <MobileInfo label={t('transferRequests.fields.collectorLabel')} value={request.collectorUsername} emptyLabel={t('transferRequests.fallbacks.unspecified')} />
         <MobileInfo
-          label="Colis"
-          value={`${request.embarkedShipmentCount ?? 0}/${request.requestedShipmentCount ?? 0} embarques`}
+          label={t('transferRequests.fields.parcelsLabel')}
+          value={`${request.embarkedShipmentCount ?? 0}/${request.requestedShipmentCount ?? 0} ${t('transferRequests.fields.embarkedShort')}`}
+          emptyLabel={t('transferRequests.fallbacks.unspecified')}
         />
-        <MobileInfo label="Date" value={formatShipmentDate(request.createdAt)} />
+        <MobileInfo label={t('transferRequests.fields.dateLabel')} value={formatShipmentDate(request.createdAt)} emptyLabel={t('transferRequests.fallbacks.unspecified')} />
       </div>
       <div className="flex w-full">{actions}</div>
     </article>
@@ -784,12 +805,20 @@ function MobileEmptyState({
   );
 }
 
-function MobileInfo({ label, value }: { label: string; value?: string | number }) {
+function MobileInfo({
+  label,
+  value,
+  emptyLabel,
+}: {
+  label: string;
+  value?: string | number;
+  emptyLabel: string;
+}) {
   return (
     <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="break-words text-right font-medium text-foreground">
-        {value || 'Non renseigne'}
+        {value || emptyLabel}
       </span>
     </div>
   );
@@ -799,29 +828,31 @@ function RequestDetail({
   request,
   canAddNote,
   onAddNote,
+  t,
 }: {
   request: ShipmentTransmissionRequest;
   canAddNote: boolean;
   onAddNote: () => void;
+  t: TranslateFn;
 }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <InfoBox label="Demandes" value={request.requestedShipmentCount ?? 0} />
-        <InfoBox label="Embarques" value={request.embarkedShipmentCount ?? 0} />
-        <InfoBox label="Restants" value={request.pendingShipmentCount ?? 0} />
+        <InfoBox label={t('transferRequests.detail.requested')} value={request.requestedShipmentCount ?? 0} />
+        <InfoBox label={t('transferRequests.detail.embarked')} value={request.embarkedShipmentCount ?? 0} />
+        <InfoBox label={t('transferRequests.detail.remaining')} value={request.pendingShipmentCount ?? 0} />
       </div>
 
       {canAddNote && (request.items?.length ?? 0) > 0 && (
         <Button variant="outline" className="gap-2" onClick={onAddNote}>
           <StickyNote className="h-4 w-4" />
-          Ajouter une note de transit
+          {t('transferRequests.actions.addTransitNote')}
         </Button>
       )}
 
       <div className="rounded-lg border border-border">
         <div className="border-b border-border px-4 py-3">
-          <p className="text-sm font-semibold text-foreground">Colis</p>
+          <p className="text-sm font-semibold text-foreground">{t('transferRequests.fields.parcelsLabel')}</p>
         </div>
         <div className="divide-y divide-border">
           {(request.items ?? []).map((item) => (
@@ -835,19 +866,26 @@ function RequestDetail({
                     {item.reference && <CopyTrackingNumberButton trackingNumber={item.reference} />}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {item.senderFullName ?? 'Expediteur'} vers {item.receiverFullName ?? 'destinataire'}
+                    {t('transferRequests.fields.route', {
+                      values: {
+                        sender: item.senderFullName ?? t('transferRequests.fallbacks.sender'),
+                        receiver: item.receiverFullName ?? t('transferRequests.fallbacks.receiver'),
+                      },
+                    })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Destination: {item.destinationCollectionPointName ?? 'Non renseignee'}
+                    {t('transferRequests.fields.destination', {
+                      values: { destination: item.destinationCollectionPointName ?? t('transferRequests.fallbacks.unspecifiedFeminine') },
+                    })}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {item.shipmentStatus && (
                     <Badge className={cn('border-0', getShipmentStatusClassName(item.shipmentStatus))}>
-                      {getShipmentStatusLabel(item.shipmentStatus)}
+                      {t(`parcelManagement.statuses.${item.shipmentStatus}`)}
                     </Badge>
                   )}
-                  {item.embarked && <Badge variant="outline">Embarque</Badge>}
+                  {item.embarked && <Badge variant="outline">{t('transferRequests.badges.embarked')}</Badge>}
                 </div>
               </div>
             </div>
@@ -857,15 +895,17 @@ function RequestDetail({
 
       {(request.actions?.length ?? 0) > 0 && (
         <div className="rounded-lg border border-border p-4">
-          <p className="mb-3 text-sm font-semibold text-foreground">Historique</p>
+          <p className="mb-3 text-sm font-semibold text-foreground">{t('transferRequests.detail.history')}</p>
           <div className="space-y-3">
             {request.actions?.map((action) => (
               <div key={action.actionId} className="rounded-lg bg-secondary px-3 py-2 text-sm">
                 <p className="font-medium text-foreground">
-                  {action.actionType} par {action.actorUsername ?? 'systeme'}
+                  {t('transferRequests.history.actionBy', {
+                    values: { type: action.actionType, actor: action.actorUsername ?? t('transferRequests.fallbacks.system') },
+                  })}
                 </p>
                 <p className="text-muted-foreground">
-                  {action.note || action.rejectionReason || 'Aucune note'}
+                  {action.note || action.rejectionReason || t('transferRequests.history.noNote')}
                 </p>
                 <p className="text-xs text-muted-foreground">{formatShipmentDate(action.actedAt)}</p>
               </div>
@@ -886,31 +926,31 @@ function InfoBox({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function getActionTitle(actionMode: ActionMode) {
+function getActionTitle(actionMode: ActionMode, t: TranslateFn) {
   switch (actionMode) {
     case 'approve':
-      return 'Approuver la demande';
+      return t('transferRequests.dialogTitles.approve');
     case 'reject':
-      return 'Rejeter la demande';
+      return t('transferRequests.dialogTitles.reject');
     case 'embark':
-      return 'Confirmer l\'embarquement';
+      return t('transferRequests.dialogTitles.embark');
     case 'note':
-      return 'Ajouter une note de transit';
+      return t('transferRequests.dialogTitles.note');
     default:
-      return 'Action';
+      return t('transferRequests.dialogTitles.action');
   }
 }
 
-function getActionDescription(actionMode: ActionMode) {
+function getActionDescription(actionMode: ActionMode, t: TranslateFn) {
   switch (actionMode) {
     case 'approve':
-      return 'Le transporteur pourra ensuite confirmer les colis embarques.';
+      return t('transferRequests.dialogDescriptions.approve');
     case 'reject':
-      return 'Le motif sera renvoye au transporteur.';
+      return t('transferRequests.dialogDescriptions.reject');
     case 'embark':
-      return 'Selectionnez les colis effectivement pris en charge.';
+      return t('transferRequests.dialogDescriptions.embark');
     case 'note':
-      return 'La note sera rattachee aux colis selectionnes.';
+      return t('transferRequests.dialogDescriptions.note');
     default:
       return '';
   }

@@ -42,6 +42,40 @@ test('shipment creation follows API dependencies and links a platform recipient'
       return;
     }
 
+    if (url.pathname === '/api/delivery/payments/countries') {
+      await json([
+        {
+          code: 'CM',
+          name: 'Cameroun',
+          currency: 'XAF',
+          callingCode: '+237',
+          localOperators: [
+            {
+              provider: 'MTN',
+              name: 'MTN Mobile Money',
+              enabled: true,
+              confirmationMode: 'OTP_CODE',
+              otpRequired: false,
+            },
+            {
+              provider: 'ORANGE',
+              name: 'Orange Money',
+              enabled: true,
+              confirmationMode: 'OTP_CODE',
+              otpRequired: false,
+            },
+          ],
+          availableProviders: ['MTN', 'ORANGE'],
+        },
+      ]);
+      return;
+    }
+
+    if (/^\/api\/delivery\/payments\/shipments\/\d+\/attempts$/.test(url.pathname)) {
+      await json([]);
+      return;
+    }
+
     if (url.pathname === '/api/delivery/shipments' && request.method() === 'GET') {
       await json({
         content: [], totalPages: 0, totalElements: 0, number: 0, size: 20,
@@ -254,6 +288,8 @@ test('shipment creation follows API dependencies and links a platform recipient'
 
   const paymentDialog = page.getByRole('dialog');
   await expect(paymentDialog.getByText(/Régler les frais plateforme|Pay the platform fee/)).toBeVisible();
+  // The country-first flow requires choosing a wallet country before providers appear.
+  await paymentDialog.getByRole('combobox').selectOption('CM');
   await expect(paymentDialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
   await expect(paymentDialog.getByRole('radio', { name: /Orange Money/ })).toBeVisible();
   await paymentDialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();

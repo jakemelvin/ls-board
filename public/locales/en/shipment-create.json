@@ -118,7 +118,7 @@
   },
   "review": {
     "title": "Review before creating",
-    "description": "The backend calculates the price from this selection.",
+    "description": "The price is calculated automatically from this selection.",
     "route": "Route",
     "service": "Transport and company",
     "parcel": "Parcel",

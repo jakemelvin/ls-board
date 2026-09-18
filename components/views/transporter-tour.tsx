@@ -40,6 +40,7 @@ import { toast } from '@/hooks/use-toast';
 import { usePaginatedQuery } from '@/hooks/use-paginated-query';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
 import {
   addTransportGroupNote,
   createDestinationDepositRequest,
@@ -53,9 +54,7 @@ import {
   formatShipmentDate,
   getShipmentDestinationDepositStatusClassName,
   getShipmentStatusClassName,
-  getShipmentStatusLabel,
   SHIPMENT_DESTINATION_DEPOSIT_STATUS_LABELS,
-  SHIPMENT_PRIORITY_LABELS,
 } from '@/lib/shipments/presentation';
 import type {
   ShipmentDestinationDepositRequestSummary,
@@ -67,6 +66,7 @@ import { cn } from '@/lib/utils';
 type GroupAction = 'note' | 'dissolve' | null;
 
 export function TransporterTour() {
+  const { t } = useTranslation('transporter-tour');
   const token = useAuthStore((state) => state.token);
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<number[]>([]);
@@ -97,19 +97,19 @@ export function TransporterTour() {
     query: shipmentQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les colis en transit.',
+    errorMessage: t('errors.loadShipments'),
   });
   const groupPagination = usePaginatedQuery({
     query: groupQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les groupes de transport.',
+    errorMessage: t('errors.loadGroups'),
   });
   const depositPagination = usePaginatedQuery({
     query: depositQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les depots destination.',
+    errorMessage: t('errors.loadDeposits'),
   });
   const shipments = shipmentPagination.items;
   const groups = groupPagination.items;
@@ -145,10 +145,10 @@ export function TransporterTour() {
 
     return Array.from(map.entries()).map(([destinationId, items]) => ({
       destinationId,
-      destinationName: items[0]?.destinationCollectionPointName ?? 'Destination non renseignee',
+      destinationName: items[0]?.destinationCollectionPointName ?? t('labels.destinationFallback'),
       items,
     }));
-  }, [shipments]);
+  }, [shipments, t]);
 
   const toggleShipment = (shipmentId: number) => {
     setSelectedShipmentIds((current) =>
@@ -184,17 +184,19 @@ export function TransporterTour() {
         shipmentIds: selectedShipmentIds,
       });
       toast({
-        title: 'Groupe cree',
-        description: `${selectedShipmentIds.length} colis rattaches au groupe.`,
+        title: t('toasts.groupCreated'),
+        description: t('toasts.groupCreatedDescription', {
+          values: { count: selectedShipmentIds.length },
+        }),
       });
       setIsGroupDialogOpen(false);
       resetSelection();
       await loadTour();
     } catch (err) {
       toast({
-        title: 'Creation impossible',
+        title: t('toasts.groupFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de creer le groupe.',
+          err instanceof ApiError ? err.message : t('toasts.groupFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -214,17 +216,17 @@ export function TransporterTour() {
         note: note.trim() || undefined,
       });
       toast({
-        title: 'Depot destination cree',
-        description: 'Le collecteur destination peut maintenant controler la demande.',
+        title: t('toasts.depositCreated'),
+        description: t('toasts.depositCreatedDescription'),
       });
       setIsDepositDialogOpen(false);
       resetSelection();
       await loadTour();
     } catch (err) {
       toast({
-        title: 'Depot impossible',
+        title: t('toasts.depositFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de creer le depot destination.',
+          err instanceof ApiError ? err.message : t('toasts.depositFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -254,19 +256,19 @@ export function TransporterTour() {
         await addTransportGroupNote(token, selectedGroup.groupId, {
           description: note.trim(),
         });
-        toast({ title: 'Note ajoutee', description: 'La note du groupe a ete enregistree.' });
+        toast({ title: t('toasts.noteAdded'), description: t('toasts.noteAddedDescription') });
       } else {
         await dissolveTransportGroup(token, selectedGroup.groupId);
-        toast({ title: 'Groupe dissous', description: 'Le groupe de transport a ete dissous.' });
+        toast({ title: t('toasts.groupDissolved'), description: t('toasts.groupDissolvedDescription') });
       }
 
       resetGroupAction();
       await loadTour();
     } catch (err) {
       toast({
-        title: 'Action impossible',
+        title: t('toasts.actionFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de mettre a jour le groupe.',
+          err instanceof ApiError ? err.message : t('toasts.actionFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -278,21 +280,21 @@ export function TransporterTour() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Ma tournee</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
           <p className="text-muted-foreground">
-            Suivez les colis en transit, creez des groupes et deposez-les au point destination.
+            {t('subtitle')}
           </p>
         </div>
         <Button variant="outline" className="w-fit gap-2" onClick={() => void loadTour()}>
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
+          {t('actions.refresh')}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <TourMetric icon={Truck} label="Colis en transit" value={shipments.length} className="bg-primary/15 text-primary" />
-        <TourMetric icon={Layers3} label="Groupes actifs" value={activeGroups.length} className="bg-chart-2/15 text-chart-2" />
-        <TourMetric icon={CheckCircle2} label="Depots destination" value={depositRequests.length} className="bg-success/15 text-success" />
+        <TourMetric icon={Truck} label={t('metrics.inTransit')} value={shipments.length} className="bg-primary/15 text-primary" />
+        <TourMetric icon={Layers3} label={t('metrics.activeGroups')} value={activeGroups.length} className="bg-chart-2/15 text-chart-2" />
+        <TourMetric icon={CheckCircle2} label={t('metrics.deposits')} value={depositRequests.length} className="bg-success/15 text-success" />
       </div>
 
       {(selectedShipmentIds.length > 0 || selectedGroupIds.length > 0) && (
@@ -301,15 +303,17 @@ export function TransporterTour() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="font-medium text-foreground">
-                  {selectedShipmentIds.length} colis et {selectedGroupIds.length} groupe(s) selectionne(s)
+                  {t('selection.summary', {
+                    values: { parcels: selectedShipmentIds.length, groups: selectedGroupIds.length },
+                  })}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Creez un groupe avec les colis seuls ou une demande de depot avec colis/groupes.
+                  {t('selection.hint')}
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button variant="outline" onClick={resetSelection} disabled={actionLoading}>
-                  Reinitialiser
+                  {t('actions.reset')}
                 </Button>
                 <Button
                   variant="outline"
@@ -318,11 +322,11 @@ export function TransporterTour() {
                   disabled={selectedShipmentIds.length === 0}
                 >
                   <PackagePlus className="h-4 w-4" />
-                  Creer un groupe
+                  {t('actions.createGroup')}
                 </Button>
                 <Button className="gap-2" onClick={() => setIsDepositDialogOpen(true)}>
                   <MapPin className="h-4 w-4" />
-                  Deposer a destination
+                  {t('actions.depositDestination')}
                 </Button>
               </div>
             </div>
@@ -334,7 +338,7 @@ export function TransporterTour() {
         <Card className="border-destructive/30 bg-card">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" onClick={() => void loadTour()}>Reessayer</Button>
+            <Button variant="outline" onClick={() => void loadTour()}>{t('actions.retry')}</Button>
           </CardContent>
         </Card>
       ) : loading ? (
@@ -345,17 +349,17 @@ export function TransporterTour() {
         <>
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Colis en transit</CardTitle>
+              <CardTitle>{t('transit.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Selectionnez les colis a regrouper ou a deposer au point destination.
+                {t('transit.description')}
               </p>
             </CardHeader>
             <CardContent className="space-y-5 p-0">
               {shipmentsByDestination.length === 0 ? (
                 <EmptyState
                   icon={Package}
-                  title="Aucun colis en transit"
-                  description="Les colis embarques via les demandes de prise apparaitront ici."
+                  title={t('transit.emptyTitle')}
+                  description={t('transit.emptyDescription')}
                 />
               ) : (
                 shipmentsByDestination.map((group) => (
@@ -364,7 +368,9 @@ export function TransporterTour() {
                       <MapPin className="h-4 w-4 text-primary" />
                       <div>
                         <p className="font-medium text-foreground">{group.destinationName}</p>
-                        <p className="text-xs text-muted-foreground">{group.items.length} colis</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('transit.parcelsCount', { values: { count: group.items.length } })}
+                        </p>
                       </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -372,10 +378,10 @@ export function TransporterTour() {
                         <TableHeader>
                           <TableRow className="border-border hover:bg-transparent">
                             <TableHead className="w-12" />
-                            <TableHead className="text-muted-foreground">Reference</TableHead>
-                            <TableHead className="text-muted-foreground">Client</TableHead>
-                            <TableHead className="text-muted-foreground">Statut</TableHead>
-                            <TableHead className="text-muted-foreground">Cree le</TableHead>
+                            <TableHead className="text-muted-foreground">{t('transit.columns.reference')}</TableHead>
+                            <TableHead className="text-muted-foreground">{t('transit.columns.client')}</TableHead>
+                            <TableHead className="text-muted-foreground">{t('transit.columns.status')}</TableHead>
+                            <TableHead className="text-muted-foreground">{t('transit.columns.createdAt')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -393,7 +399,7 @@ export function TransporterTour() {
                                     checked={isSelected}
                                     onCheckedChange={() => toggleShipment(shipment.shipmentId)}
                                     onClick={(event) => event.stopPropagation()}
-                                    aria-label={`Selectionner ${shipment.reference}`}
+                                    aria-label={t('labels.selectAria', { values: { reference: shipment.reference } })}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -405,25 +411,25 @@ export function TransporterTour() {
                                     <CopyTrackingNumberButton trackingNumber={shipment.reference} />
                                   </div>
                                   <p className="text-xs text-muted-foreground">
-                                    {shipment.parcelTypeName ?? 'Type non renseigne'}
+                                    {shipment.parcelTypeName ?? t('labels.typeFallback')}
                                     {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
                                   </p>
                                 </TableCell>
                                 <TableCell>
-                                  <p className="text-sm text-foreground">{shipment.senderFullName ?? 'Expediteur'}</p>
+                                  <p className="text-sm text-foreground">{shipment.senderFullName ?? t('labels.senderFallback')}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    vers {shipment.receiverFullName ?? 'destinataire'}
+                                    {t('labels.to')} {shipment.receiverFullName ?? t('labels.receiverFallback')}
                                   </p>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex flex-wrap gap-2">
                                     {shipment.status && (
                                       <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                                        {getShipmentStatusLabel(shipment.status)}
+                                        {t(`parcelManagement.statuses.${shipment.status}`)}
                                       </Badge>
                                     )}
                                     {shipment.priority && (
-                                      <Badge variant="outline">{SHIPMENT_PRIORITY_LABELS[shipment.priority]}</Badge>
+                                      <Badge variant="outline">{t(`shipmentPriority.${shipment.priority}`)}</Badge>
                                     )}
                                   </div>
                                 </TableCell>
@@ -462,17 +468,17 @@ export function TransporterTour() {
 
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Groupes de transport</CardTitle>
+              <CardTitle>{t('groups.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Les groupes peuvent recevoir des notes, etre dissous ou etre inclus dans un depot.
+                {t('groups.description')}
               </p>
             </CardHeader>
             <CardContent className="p-0">
               {activeGroups.length === 0 ? (
                 <EmptyState
                   icon={Layers3}
-                  title="Aucun groupe actif"
-                  description="Creez un groupe depuis les colis en transit selectionnes."
+                  title={t('groups.emptyTitle')}
+                  description={t('groups.emptyDescription')}
                 />
               ) : (
                 <div className="overflow-x-auto">
@@ -480,10 +486,10 @@ export function TransporterTour() {
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
                         <TableHead className="w-12" />
-                        <TableHead className="text-muted-foreground">Groupe</TableHead>
-                        <TableHead className="text-muted-foreground">Colis</TableHead>
-                        <TableHead className="text-muted-foreground">Cree le</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                        <TableHead className="text-muted-foreground">{t('groups.columns.group')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('groups.columns.parcels')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('groups.columns.createdAt')}</TableHead>
+                        <TableHead className="text-right text-muted-foreground">{t('groups.columns.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -496,14 +502,16 @@ export function TransporterTour() {
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() => toggleGroup(group.groupId)}
-                                aria-label={`Selectionner ${group.reference ?? group.groupId}`}
+                                aria-label={t('labels.selectAria', {
+                                  values: { reference: group.reference ?? group.groupId },
+                                })}
                               />
                             </TableCell>
                             <TableCell>
                               <p className="font-mono text-sm font-medium text-foreground">
                                 {group.reference ?? `#${group.groupId}`}
                               </p>
-                              <p className="text-xs text-muted-foreground">{group.name ?? 'Sans nom'}</p>
+                              <p className="text-xs text-muted-foreground">{group.name ?? t('groups.nameFallback')}</p>
                             </TableCell>
                             <TableCell>
                               <p className="text-sm text-foreground">
@@ -522,7 +530,7 @@ export function TransporterTour() {
                                   onClick={() => openGroupAction(group, 'note')}
                                 >
                                   <StickyNote className="h-4 w-4" />
-                                  Note
+                                  {t('actions.note')}
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -531,7 +539,7 @@ export function TransporterTour() {
                                   onClick={() => openGroupAction(group, 'dissolve')}
                                 >
                                   <Ungroup className="h-4 w-4" />
-                                  Dissoudre
+                                  {t('actions.dissolve')}
                                 </Button>
                               </div>
                             </TableCell>
@@ -565,14 +573,14 @@ export function TransporterTour() {
 
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Demandes de depot destination</CardTitle>
+              <CardTitle>{t('deposits.title')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {depositRequests.length === 0 ? (
                 <EmptyState
                   icon={CheckCircle2}
-                  title="Aucun depot cree"
-                  description="Les demandes envoyees aux collecteurs destination apparaitront ici."
+                  title={t('deposits.emptyTitle')}
+                  description={t('deposits.emptyDescription')}
                 />
               ) : (
                 <>
@@ -585,12 +593,12 @@ export function TransporterTour() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-muted-foreground">Demande</TableHead>
-                        <TableHead className="text-muted-foreground">Destination</TableHead>
-                        <TableHead className="text-muted-foreground">Collecteur</TableHead>
-                        <TableHead className="text-muted-foreground">Colis</TableHead>
-                        <TableHead className="text-muted-foreground">Statut</TableHead>
-                        <TableHead className="text-muted-foreground">Date</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.request')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.destination')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.collector')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.parcels')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.status')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.date')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -598,17 +606,24 @@ export function TransporterTour() {
                         <TableRow key={request.requestId} className="border-border">
                           <TableCell className="font-mono text-foreground">#{request.requestId}</TableCell>
                           <TableCell className="text-foreground">
-                            {request.destinationCollectionPointName ?? 'Destination non renseignee'}
+                            {request.destinationCollectionPointName ?? t('labels.destinationFallback')}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {request.collectorUsername ?? 'Non assigne'}
+                            {request.collectorUsername ?? t('labels.notAssigned')}
                           </TableCell>
                           <TableCell>
                             <p className="text-sm text-foreground">
-                              {request.acceptedShipmentCount ?? 0}/{request.totalShipmentCount ?? 0} acceptes
+                              {t('deposits.acceptedCount', {
+                                values: {
+                                  accepted: request.acceptedShipmentCount ?? 0,
+                                  total: request.totalShipmentCount ?? 0,
+                                },
+                              })}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {request.rejectedShipmentCount ?? 0} rejetes
+                              {t('deposits.rejectedCount', {
+                                values: { count: request.rejectedShipmentCount ?? 0 },
+                              })}
                             </p>
                           </TableCell>
                           <TableCell>
@@ -646,18 +661,18 @@ export function TransporterTour() {
       <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
         <DialogContent className="border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Creer un groupe de transport</DialogTitle>
+            <DialogTitle className="text-foreground">{t('groupDialog.title')}</DialogTitle>
             <DialogDescription>
-              Le groupe sera cree avec les colis en transit selectionnes.
+              {t('groupDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Nom du groupe</label>
+              <label className="text-sm font-medium text-foreground">{t('groupDialog.nameLabel')}</label>
               <Input
                 value={groupName}
                 onChange={(event) => setGroupName(event.target.value)}
-                placeholder="Ex: Tournee matin Akwa"
+                placeholder={t('groupDialog.namePlaceholder')}
                 className="bg-secondary"
               />
             </div>
@@ -665,11 +680,11 @@ export function TransporterTour() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGroupDialogOpen(false)} disabled={actionLoading}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button onClick={() => void handleCreateGroup()} disabled={actionLoading || selectedShipmentIds.length === 0} className="gap-2">
               {actionLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Creer
+              {t('actions.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -678,30 +693,30 @@ export function TransporterTour() {
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Deposer a destination</DialogTitle>
+            <DialogTitle className="text-foreground">{t('depositDialog.title')}</DialogTitle>
             <DialogDescription>
-              Le collecteur destination devra accepter ou rejeter chaque colis.
+              {t('depositDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <SelectionSummary shipments={selectedShipments} groups={selectedGroups} />
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Note au collecteur destination</label>
+              <label className="text-sm font-medium text-foreground">{t('depositDialog.noteLabel')}</label>
               <Textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Exemple: depot au comptoir principal"
+                placeholder={t('depositDialog.notePlaceholder')}
                 className="min-h-[100px] bg-secondary"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDepositDialogOpen(false)} disabled={actionLoading}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button onClick={() => void handleCreateDeposit()} disabled={actionLoading || (selectedShipmentIds.length === 0 && selectedGroupIds.length === 0)} className="gap-2">
               {actionLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Envoyer le depot
+              {t('actions.sendDeposit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -711,15 +726,17 @@ export function TransporterTour() {
         <DialogContent className="border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {groupAction === 'note' ? 'Ajouter une note' : 'Dissoudre le groupe'}
+              {groupAction === 'note' ? t('groupActionDialog.noteTitle') : t('groupActionDialog.dissolveTitle')}
             </DialogTitle>
             <DialogDescription>
-              Groupe {selectedGroup?.reference ?? selectedGroup?.groupId}
+              {t('groupActionDialog.groupLabel', {
+                values: { group: selectedGroup?.reference ?? selectedGroup?.groupId ?? '' },
+              })}
             </DialogDescription>
           </DialogHeader>
           {groupAction === 'note' ? (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Note</label>
+              <label className="text-sm font-medium text-foreground">{t('groupActionDialog.noteLabel')}</label>
               <Textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
@@ -728,19 +745,19 @@ export function TransporterTour() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Les colis restent dans votre scope transporteur, mais le groupe ne sera plus actif.
+              {t('groupActionDialog.dissolveHint')}
             </p>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={resetGroupAction} disabled={actionLoading}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button
               onClick={() => void handleGroupAction()}
               disabled={actionLoading || (groupAction === 'note' && !note.trim())}
               variant={groupAction === 'dissolve' ? 'destructive' : 'default'}
             >
-              Confirmer
+              {t('actions.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -798,13 +815,15 @@ function MobileTransporterDepositCard({
 }: {
   request: ShipmentDestinationDepositRequestSummary;
 }) {
+  const { t } = useTranslation('transporter-tour');
+
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-foreground">#{request.requestId}</p>
           <p className="truncate text-sm text-muted-foreground">
-            {request.destinationCollectionPointName ?? 'Destination non renseignee'}
+            {request.destinationCollectionPointName ?? t('labels.destinationFallback')}
           </p>
         </div>
         <Badge className={cn('shrink-0 border-0', getShipmentDestinationDepositStatusClassName(request.status))}>
@@ -812,24 +831,34 @@ function MobileTransporterDepositCard({
         </Badge>
       </div>
       <div className="grid gap-2 text-sm">
-        <MobileInfo label="Collecteur" value={request.collectorUsername} />
+        <MobileInfo label={t('deposits.columns.collector')} value={request.collectorUsername} />
         <MobileInfo
-          label="Acceptes"
-          value={`${request.acceptedShipmentCount ?? 0}/${request.totalShipmentCount ?? 0}`}
+          label={t('deposits.acceptedCount', {
+            values: {
+              accepted: request.acceptedShipmentCount ?? 0,
+              total: request.totalShipmentCount ?? 0,
+            },
+          })}
+          value=""
         />
-        <MobileInfo label="Rejetes" value={request.rejectedShipmentCount ?? 0} />
-        <MobileInfo label="Date" value={formatShipmentDate(request.createdAt)} />
+        <MobileInfo
+          label={t('deposits.rejectedCount', { values: { count: request.rejectedShipmentCount ?? 0 } })}
+          value=""
+        />
+        <MobileInfo label={t('deposits.columns.date')} value={formatShipmentDate(request.createdAt)} />
       </div>
     </div>
   );
 }
 
 function MobileInfo({ label, value }: { label: string; value?: string | number }) {
+  const { t } = useTranslation('transporter-tour');
+
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="truncate text-right font-medium text-foreground">
-        {value || 'Non renseigne'}
+        {value || t('labels.notSpecified')}
       </span>
     </div>
   );
@@ -842,11 +871,13 @@ function SelectionSummary({
   shipments: TransporterReadyShipment[];
   groups: ShipmentTransportGroupSummary[];
 }) {
+  const { t } = useTranslation('transporter-tour');
+
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">
-      <p className="text-sm font-semibold text-foreground">Selection</p>
+      <p className="text-sm font-semibold text-foreground">{t('labels.selection')}</p>
       {shipments.length === 0 && groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucun element selectionne.</p>
+        <p className="text-sm text-muted-foreground">{t('labels.emptySelection')}</p>
       ) : (
         <div className="max-h-56 space-y-2 overflow-y-auto">
           {shipments.map((shipment) => (
@@ -869,7 +900,7 @@ function SelectionSummary({
                 {group.reference ?? `#${group.groupId}`}
               </span>
               <span className="text-sm text-muted-foreground">
-                {group.activeShipmentCount ?? 0} colis
+                {t('labels.groupParcelsCount', { values: { count: group.activeShipmentCount ?? 0 } })}
               </span>
             </div>
           ))}

@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
+import type { TranslateOptions } from '@/lib/i18n/client';
 import {
   deleteCompanyDeliveryEstimate,
   getCompanyDeliveryEstimates,
@@ -44,6 +46,8 @@ import {
   ToastBar,
   useToastSimple,
 } from '@/components/company/company-shared';
+
+type Translate = (key: string, options?: Omit<TranslateOptions, 'ns'>) => string;
 
 type EstimateFormState = {
   transportModeId: string;
@@ -115,20 +119,20 @@ function estimateMatchesSelection(
   );
 }
 
-function validateForm(form: EstimateFormState): {
+function validateForm(form: EstimateFormState, t: Translate): {
   errors: string[];
   payload?: CompanyDeliveryEstimateRequest;
 } {
   const errors: string[] = [];
   const durationValue = Number(form.durationValue);
 
-  if (!form.transportModeId) errors.push('Selectionnez un mode de transport.');
+  if (!form.transportModeId) errors.push(t('validation.selectMode'));
   if (!form.originCollectionPointId || !form.destinationCollectionPointId) {
-    errors.push('Selectionnez une route origine -> destination.');
+    errors.push(t('validation.selectRoute'));
   }
-  if (!form.parcelTypeId) errors.push('Selectionnez un type de colis.');
+  if (!form.parcelTypeId) errors.push(t('validation.selectParcel'));
   if (!Number.isInteger(durationValue) || durationValue < 1) {
-    errors.push('La duree doit etre un entier superieur ou egal a 1.');
+    errors.push(t('validation.durationInvalid'));
   }
 
   if (errors.length > 0) return { errors };
@@ -145,8 +149,8 @@ function validateForm(form: EstimateFormState): {
   };
 }
 
-function formatDate(value?: string) {
-  if (!value) return 'Jamais';
+function formatDate(value: string | undefined, neverLabel: string) {
+  if (!value) return neverLabel;
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
@@ -155,10 +159,10 @@ function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
-function formatDuration(value?: number, unit?: DeliveryEstimateUnit) {
+function formatDuration(t: Translate, value?: number, unit?: DeliveryEstimateUnit) {
   if (!value || !unit) return '-';
-  if (unit === 'HOURS') return `${value} h`;
-  return `${value} jour${value > 1 ? 's' : ''}`;
+  if (unit === 'HOURS') return t('list.hoursShort', { values: { count: value } });
+  return t('list.days', { values: { count: value } });
 }
 
 export function DeliveryEstimatesView() {
@@ -178,6 +182,7 @@ function DeliveryEstimatesInner({
   companyId: number;
   companyName: string;
 }) {
+  const { t } = useTranslation('delivery-estimates');
   const token = useAuthStore((state) => state.token);
   const { toast, success, error: showError } = useToastSimple();
 
@@ -249,11 +254,11 @@ function DeliveryEstimatesInner({
         setForm(createDefaultForm(firstModeId ? String(firstModeId) : ''));
       }
     } catch (cause) {
-      setLoadError(cause instanceof ApiError ? cause.message : 'Erreur lors du chargement');
+      setLoadError(cause instanceof ApiError ? cause.message : t('messages.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [companyId, token]);
+  }, [companyId, token, t]);
 
   useEffect(() => {
     void load();
@@ -323,7 +328,7 @@ function DeliveryEstimatesInner({
       .catch((cause) => {
         if (!cancelled) {
           setRequirementsError(
-            cause instanceof ApiError ? cause.message : 'Impossible de charger les exigences',
+            cause instanceof ApiError ? cause.message : t('messages.requirementsError'),
           );
         }
       })
@@ -334,7 +339,7 @@ function DeliveryEstimatesInner({
     return () => {
       cancelled = true;
     };
-  }, [companyId, form.transportModeId, token]);
+  }, [companyId, form.transportModeId, token, t]);
 
   const findEstimateForSelection = (selection: EstimateSelection) => {
     if (!hasCompleteSelection(selection)) return null;
@@ -433,7 +438,7 @@ function DeliveryEstimatesInner({
   const saveEstimate = async () => {
     if (!token) return;
 
-    const result = validateForm(form);
+    const result = validateForm(form, t);
     setValidationErrors(result.errors);
     if (!result.payload) return;
 
@@ -463,9 +468,9 @@ function DeliveryEstimatesInner({
       });
       setSelectedEstimateId(saved.id);
       setForm(buildFormFromEstimate(saved));
-      success('Estimation de livraison enregistree');
+      success(t('messages.saveSuccess'));
     } catch (cause) {
-      showError(cause instanceof ApiError ? cause.message : 'Enregistrement impossible');
+      showError(cause instanceof ApiError ? cause.message : t('messages.saveError'));
     } finally {
       setSaving(false);
     }
@@ -488,9 +493,9 @@ function DeliveryEstimatesInner({
       setSelectedEstimateId(null);
       startNewEstimate();
       setConfirmDeleteOpen(false);
-      success('Estimation supprimee');
+      success(t('messages.deleteSuccess'));
     } catch (cause) {
-      showError(cause instanceof ApiError ? cause.message : 'Suppression impossible');
+      showError(cause instanceof ApiError ? cause.message : t('messages.deleteError'));
     } finally {
       setDeleting(false);
     }
@@ -514,11 +519,11 @@ function DeliveryEstimatesInner({
       <StatusState
         icon={AlertTriangle}
         tone="destructive"
-        title="Chargement impossible"
+        title={t('errors.loadTitle')}
         description={loadError}
         action={
           <Button variant="outline" onClick={() => void load()}>
-            Reessayer
+            {t('actions.retry')}
           </Button>
         }
       />
@@ -530,9 +535,9 @@ function DeliveryEstimatesInner({
       <ToastBar toast={toast} />
       <ConfirmDialog
         open={confirmDeleteOpen}
-        title="Supprimer cette estimation ?"
-        description="La combinaison route, mode et type de colis n'aura plus de delai configure."
-        confirmLabel="Supprimer"
+        title={t('deleteDialog.title')}
+        description={t('deleteDialog.description')}
+        confirmLabel={t('deleteDialog.confirm')}
         destructive
         loading={deleting}
         onConfirm={() => void deleteEstimate()}
@@ -540,12 +545,12 @@ function DeliveryEstimatesInner({
       />
 
       <SectionHeader
-        title="Delais de livraison"
-        subtitle={`Configurez les estimations exploitees par ${companyName}.`}
+        title={t('title')}
+        subtitle={t('subtitle', { values: { company: companyName } })}
         action={
           <Button className="w-full gap-2 sm:w-auto" onClick={startNewEstimate}>
             <Plus className="h-4 w-4" />
-            Nouvelle estimation
+            {t('actions.newEstimate')}
           </Button>
         }
       />
@@ -553,21 +558,21 @@ function DeliveryEstimatesInner({
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
         <MetricCard
           icon={Clock3}
-          label="Estimations"
+          label={t('metrics.estimates')}
           value={estimates.length}
-          helper="Combinaisons configurees"
+          helper={t('metrics.estimatesHelper')}
         />
         <MetricCard
           icon={Route}
-          label="Modes couverts"
+          label={t('metrics.modes')}
           value={`${configuredModeCount}/${transportModes.length}`}
-          helper="Modes actifs de la compagnie"
+          helper={t('metrics.modesHelper')}
         />
         <MetricCard
           icon={CheckCircle2}
-          label="Mode courant"
-          value={selectedMode?.name ?? 'Aucun'}
-          helper={requirements?.instruction ?? 'Selectionnez un mode'}
+          label={t('metrics.currentMode')}
+          value={selectedMode?.name ?? t('metrics.noMode')}
+          helper={requirements?.instruction ?? t('metrics.selectMode')}
         />
       </div>
 
@@ -575,8 +580,8 @@ function DeliveryEstimatesInner({
         <StatusState
           icon={AlertTriangle}
           tone="warning"
-          title="Aucun mode actif"
-          description="Activez au moins un mode de transport pour configurer les estimations."
+          title={t('errors.noActiveModes')}
+          description={t('errors.noActiveModesDescription')}
         />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)]">
@@ -602,10 +607,10 @@ function DeliveryEstimatesInner({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <CardTitle className="text-lg">
-                    {selectedEstimateId ? 'Modifier une estimation' : 'Nouvelle estimation'}
+                    {selectedEstimateId ? t('actions.editTitle') : t('actions.newTitle')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Le backend cree ou met a jour la combinaison mode, route et type de colis.
+                    {t('actions.description')}
                   </p>
                 </div>
                 {selectedEstimateId && (
@@ -615,7 +620,7 @@ function DeliveryEstimatesInner({
                     onClick={() => setConfirmDeleteOpen(true)}
                   >
                     <Trash2 className="h-4 w-4" />
-                    Supprimer
+                    {t('actions.delete')}
                   </Button>
                 )}
               </div>
@@ -630,7 +635,7 @@ function DeliveryEstimatesInner({
               )}
 
               <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
-                <Field label="Mode de transport">
+                <Field label={t('form.mode')}>
                   <select
                     value={form.transportModeId}
                     onChange={(event) => handleModeChange(event.target.value)}
@@ -644,7 +649,7 @@ function DeliveryEstimatesInner({
                   </select>
                 </Field>
 
-                <Field label="Route">
+                <Field label={t('form.route')}>
                   <select
                     value={routeValue}
                     onChange={(event) => handleRouteChange(event.target.value)}
@@ -668,7 +673,7 @@ function DeliveryEstimatesInner({
                   </select>
                 </Field>
 
-                <Field label="Type de colis">
+                <Field label={t('form.parcelType')}>
                   <select
                     value={form.parcelTypeId}
                     onChange={(event) => handleParcelChange(event.target.value)}
@@ -683,7 +688,7 @@ function DeliveryEstimatesInner({
                   </select>
                 </Field>
 
-                <Field label="Unite">
+                <Field label={t('form.unit')}>
                   <select
                     value={form.durationUnit}
                     onChange={(event) =>
@@ -694,12 +699,12 @@ function DeliveryEstimatesInner({
                     }
                     className="h-10 w-full min-w-0 rounded-md border border-input bg-secondary px-3 text-sm text-foreground"
                   >
-                    <option value="HOURS">Heures</option>
-                    <option value="DAYS">Jours</option>
+                    <option value="HOURS">{t('form.units.HOURS')}</option>
+                    <option value="DAYS">{t('form.units.DAYS')}</option>
                   </select>
                 </Field>
 
-                <Field label="Duree">
+                <Field label={t('form.duration')}>
                   <Input
                     type="number"
                     min="1"
@@ -708,25 +713,25 @@ function DeliveryEstimatesInner({
                     onChange={(event) =>
                       setForm((current) => ({ ...current, durationValue: event.target.value }))
                     }
-                    placeholder="Ex: 2"
+                    placeholder={t('form.durationPlaceholder')}
                     className="bg-secondary"
                   />
                 </Field>
               </div>
 
               <div className="rounded-lg border border-border bg-secondary/30 p-4">
-                <p className="text-sm font-medium text-foreground">Apercu</p>
+                <p className="text-sm font-medium text-foreground">{t('form.preview')}</p>
                 <p className="mt-1 text-2xl font-bold text-foreground">
-                  {formatDuration(Number(form.durationValue), form.durationUnit)}
+                  {formatDuration(t, Number(form.durationValue), form.durationUnit)}
                 </p>
                 <p className="break-words text-sm text-muted-foreground">
-                  {selectedEstimate?.label ?? 'Le libelle final est renvoye par le backend.'}
+                  {selectedEstimate?.label ?? t('form.previewFallback')}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" onClick={startNewEstimate}>
-                  Reinitialiser
+                  {t('actions.reset')}
                 </Button>
                 <Button onClick={() => void saveEstimate()} disabled={saving} className="gap-2">
                   {saving ? (
@@ -734,7 +739,7 @@ function DeliveryEstimatesInner({
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                  {saving ? t('actions.saving') : t('actions.save')}
                 </Button>
               </div>
             </CardContent>
@@ -794,6 +799,7 @@ function EstimatesList({
   onSearchChange: (value: string) => void;
   onSelect: (estimate: CompanyDeliveryEstimateResponse) => void;
 }) {
+  const { t } = useTranslation('delivery-estimates');
   const filtered = useMemo(() => {
     const normalized = search.trim().toLowerCase();
     if (!normalized) return estimates;
@@ -814,13 +820,13 @@ function EstimatesList({
   return (
     <Card className="min-w-0 border-border bg-card">
       <CardHeader className="space-y-3 px-4 sm:px-6">
-        <CardTitle className="text-base">Estimations existantes</CardTitle>
+        <CardTitle className="text-base">{t('list.title')}</CardTitle>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Rechercher route, colis, delai"
+            placeholder={t('list.searchPlaceholder')}
             className="bg-secondary pl-9"
           />
         </div>
@@ -828,7 +834,7 @@ function EstimatesList({
       <CardContent className="max-h-[520px] space-y-2 overflow-y-auto px-4 sm:px-6">
         {filtered.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Aucune estimation ne correspond a ce filtre.
+            {t('list.empty')}
           </p>
         ) : (
           filtered.map((item) => (
@@ -853,11 +859,13 @@ function EstimatesList({
                   </p>
                 </div>
                 <Badge className="max-w-full self-start truncate bg-success/15 text-success">
-                  {item.label ?? formatDuration(item.durationValue, item.durationUnit)}
+                  {item.label ?? formatDuration(t, item.durationValue, item.durationUnit)}
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Maj {formatDate(item.updatedAt ?? item.createdAt)}
+                {t('list.updated', {
+                  values: { date: formatDate(item.updatedAt ?? item.createdAt, t('list.never')) },
+                })}
               </p>
             </button>
           ))
@@ -880,6 +888,7 @@ function CoveragePanel({
   error: string | null;
   onPickMissing: (route: CompanyPricingRouteResponse, parcel: ParcelTypeResponse) => void;
 }) {
+  const { t } = useTranslation('delivery-estimates');
   const routes = requirements?.availableRoutes ?? [];
   const parcels = requirements?.availableParcelTypes ?? [];
   const combos = routes.flatMap((route) => parcels.map((parcel) => ({ route, parcel })));
@@ -895,7 +904,7 @@ function CoveragePanel({
     <Card className="min-w-0 border-border bg-card">
       <CardHeader className="px-4 sm:px-6">
         <div className="flex min-w-0 items-center justify-between gap-3">
-          <CardTitle className="text-base">Couverture du mode</CardTitle>
+          <CardTitle className="text-base">{t('coverage.title')}</CardTitle>
           <Badge
             className={cn(
               'shrink-0',
@@ -910,7 +919,7 @@ function CoveragePanel({
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4 animate-spin" />
-            Chargement des combinaisons...
+            {t('coverage.loading')}
           </div>
         ) : error ? (
           <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -918,21 +927,21 @@ function CoveragePanel({
           </p>
         ) : !requirements ? (
           <p className="text-sm text-muted-foreground">
-            Selectionnez un mode pour charger les routes et types disponibles.
+            {t('coverage.noRequirements')}
           </p>
         ) : combos.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Aucune route exploitable ou aucun type de colis actif pour ce mode.
+            {t('coverage.noCombos')}
           </p>
         ) : missing.length === 0 ? (
           <div className="flex items-start gap-2 rounded-lg bg-success/10 p-3 text-sm text-success">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            Toutes les combinaisons route/type de colis disposent d'une estimation.
+            {t('coverage.allComplete')}
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              {missing.length} combinaison(s) a completer.
+              {t('coverage.missingCount', { values: { count: missing.length } })}
             </p>
             <div className="max-h-48 space-y-2 overflow-y-auto">
               {missing.slice(0, 8).map(({ route, parcel }) => (

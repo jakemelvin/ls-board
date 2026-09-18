@@ -1,4 +1,5 @@
 export { I18nProvider, useI18n, useTranslation } from './client'
+export type { TranslateOptions } from './client'
 export {
   defaultLocale,
   defaultNamespace,

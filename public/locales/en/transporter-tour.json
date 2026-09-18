@@ -1,0 +1,120 @@
+{
+  "title": "My route",
+  "subtitle": "Follow parcels in transit, group them and drop them at the destination point.",
+  "actions": {
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "reset": "Reset",
+    "createGroup": "Create group",
+    "depositDestination": "Drop at destination",
+    "create": "Create",
+    "sendDeposit": "Send deposit",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "note": "Note",
+    "dissolve": "Dissolve"
+  },
+  "metrics": {
+    "inTransit": "Parcels in transit",
+    "activeGroups": "Active groups",
+    "deposits": "Destination deposits"
+  },
+  "selection": {
+    "summary": "{{parcels}} parcels and {{groups}} group(s) selected",
+    "hint": "Create a group with the parcels alone, or a deposit request with parcels and groups."
+  },
+  "errors": {
+    "loadShipments": "Unable to load parcels in transit.",
+    "loadGroups": "Unable to load transport groups.",
+    "loadDeposits": "Unable to load destination deposits."
+  },
+  "transit": {
+    "title": "Parcels in transit",
+    "description": "Select the parcels to group or drop at the destination point.",
+    "emptyTitle": "No parcels in transit",
+    "emptyDescription": "Parcels loaded through pickup requests will appear here.",
+    "columns": {
+      "reference": "Reference",
+      "client": "Customer",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "parcelsCount": "{{count}} parcels"
+  },
+  "groups": {
+    "title": "Transport groups",
+    "description": "Groups can receive notes, be dissolved or be included in a deposit.",
+    "emptyTitle": "No active group",
+    "emptyDescription": "Create a group from the selected parcels in transit.",
+    "columns": {
+      "group": "Group",
+      "parcels": "Parcels",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "nameFallback": "Unnamed"
+  },
+  "deposits": {
+    "title": "Destination deposit requests",
+    "emptyTitle": "No deposit created",
+    "emptyDescription": "Requests sent to destination collectors will appear here.",
+    "columns": {
+      "request": "Request",
+      "destination": "Destination",
+      "collector": "Collector",
+      "parcels": "Parcels",
+      "status": "Status",
+      "date": "Date"
+    },
+    "acceptedCount": "{{accepted}}/{{total}} accepted",
+    "rejectedCount": "{{count}} rejected"
+  },
+  "groupDialog": {
+    "title": "Create a transport group",
+    "description": "The group will be created with the selected parcels in transit.",
+    "nameLabel": "Group name",
+    "namePlaceholder": "E.g. Morning route Akwa"
+  },
+  "depositDialog": {
+    "title": "Drop at destination",
+    "description": "The destination collector will accept or reject each parcel.",
+    "noteLabel": "Note for the destination collector",
+    "notePlaceholder": "Example: deposit at the main counter"
+  },
+  "groupActionDialog": {
+    "noteTitle": "Add a note",
+    "dissolveTitle": "Dissolve group",
+    "groupLabel": "Group {{group}}",
+    "noteLabel": "Note",
+    "dissolveHint": "Parcels stay on your route, but the group will no longer be active."
+  },
+  "toasts": {
+    "groupCreated": "Group created",
+    "groupCreatedDescription": "{{count}} parcels added to the group.",
+    "groupFailedTitle": "Creation failed",
+    "groupFailedDescription": "Unable to create the group.",
+    "depositCreated": "Destination deposit created",
+    "depositCreatedDescription": "The destination collector can now review the request.",
+    "depositFailedTitle": "Deposit failed",
+    "depositFailedDescription": "Unable to create the destination deposit.",
+    "noteAdded": "Note added",
+    "noteAddedDescription": "The group note has been saved.",
+    "groupDissolved": "Group dissolved",
+    "groupDissolvedDescription": "The transport group has been dissolved.",
+    "actionFailedTitle": "Action failed",
+    "actionFailedDescription": "Unable to update the group."
+  },
+  "labels": {
+    "destinationFallback": "Destination not specified",
+    "senderFallback": "Sender",
+    "receiverFallback": "recipient",
+    "to": "to",
+    "typeFallback": "Type not specified",
+    "notSpecified": "Not specified",
+    "notAssigned": "Unassigned",
+    "selectAria": "Select {{reference}}",
+    "selection": "Selection",
+    "emptySelection": "Nothing selected.",
+    "groupParcelsCount": "{{count}} parcels"
+  }
+}

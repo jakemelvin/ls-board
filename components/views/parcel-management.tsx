@@ -55,12 +55,7 @@ import {
   getShipmentReceiverName,
   getShipmentSenderName,
   getShipmentStatusClassName,
-  getShipmentStatusLabel,
   getShipmentTransactionStatusClassName,
-  SHIPMENT_COLLECTION_MODE_LABELS,
-  SHIPMENT_PAYMENT_STATUS_LABELS,
-  SHIPMENT_PRIORITY_LABELS,
-  SHIPMENT_TRANSACTION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
 import { useCurrency } from '@/lib/currency';
 import { getShipment, getShipments } from '@/lib/shipments/api';
@@ -84,20 +79,24 @@ const COLLECTOR_REFERENCE_VISIBLE_STATUSES = new Set<ShipmentStatus>([
   'RETURNED',
 ]);
 
-const STATUS_FILTERS: Array<{ value: ShipmentStatus | 'ALL'; label: string }> = [
-  { value: 'ALL', label: 'Tous' },
-  { value: 'CREATED', label: 'Cree' },
-  { value: 'PAID', label: 'Paye' },
-  { value: 'AWAITING_DROP_OFF', label: 'En attente de depot' },
-  { value: 'RECEIVED_AT_COLLECTION_POINT', label: 'Recu au point' },
-  { value: 'READY_FOR_TRANSPORT', label: 'Pret au transport' },
-  { value: 'IN_TRANSIT', label: 'En transit' },
-  { value: 'ARRIVED_DESTINATION_POINT', label: 'Arrive au point' },
-  { value: 'READY_FOR_PICKUP', label: 'Pret au retrait' },
-  { value: 'DELIVERED', label: 'Livre' },
-  { value: 'CANCELLED', label: 'Annule' },
-  { value: 'RETURNED', label: 'Retourne' },
-];
+function getStatusFilters(
+  t: ReturnType<typeof useTranslation>['t'],
+): Array<{ value: ShipmentStatus | 'ALL'; label: string }> {
+  return [
+    { value: 'ALL', label: t('parcelManagement.statuses.ALL') },
+    { value: 'CREATED', label: t('parcelManagement.statuses.CREATED') },
+    { value: 'PAID', label: t('parcelManagement.statuses.PAID') },
+    { value: 'AWAITING_DROP_OFF', label: t('parcelManagement.statuses.AWAITING_DROP_OFF') },
+    { value: 'RECEIVED_AT_COLLECTION_POINT', label: t('parcelManagement.statuses.RECEIVED_AT_COLLECTION_POINT') },
+    { value: 'READY_FOR_TRANSPORT', label: t('parcelManagement.statuses.READY_FOR_TRANSPORT') },
+    { value: 'IN_TRANSIT', label: t('parcelManagement.statuses.IN_TRANSIT') },
+    { value: 'ARRIVED_DESTINATION_POINT', label: t('parcelManagement.statuses.ARRIVED_DESTINATION_POINT') },
+    { value: 'READY_FOR_PICKUP', label: t('parcelManagement.statuses.READY_FOR_PICKUP') },
+    { value: 'DELIVERED', label: t('parcelManagement.statuses.DELIVERED') },
+    { value: 'CANCELLED', label: t('parcelManagement.statuses.CANCELLED') },
+    { value: 'RETURNED', label: t('parcelManagement.statuses.RETURNED') },
+  ];
+}
 
 interface ParcelManagementProps {
   currentRole: UserRole;
@@ -107,6 +106,7 @@ interface ParcelManagementProps {
 export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const token = useAuthStore((state) => state.token);
   const { t } = useTranslation('dashboard');
+  const statusFilters = useMemo(() => getStatusFilters(t), [t]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
@@ -142,7 +142,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
 
   const loadShipments = useCallback(async () => {
     if (!token) {
-      setError('Session expiree');
+      setError(t('parcelManagement.errors.sessionExpired'));
       setLoading(false);
       return;
     }
@@ -166,7 +166,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       }
     } catch (err) {
       if (isLatestListRequest(requestId)) {
-        setError(err instanceof ApiError ? err.message : 'Impossible de charger les shipments.');
+        setError(err instanceof ApiError ? err.message : t('parcelManagement.errors.load'));
       }
     } finally {
       if (isLatestListRequest(requestId)) setLoading(false);
@@ -180,7 +180,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
   const loadShipmentDetail = useCallback(
     async (shipmentId: number) => {
       if (!token) {
-        setDetailError('Session expiree');
+        setDetailError(t('parcelManagement.errors.sessionExpired'));
         return;
       }
 
@@ -197,7 +197,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       } catch (err) {
         if (isLatestDetailRequest(requestId)) {
           setDetailError(
-            err instanceof ApiError ? err.message : 'Impossible de charger le detail du shipment.',
+            err instanceof ApiError ? err.message : t('parcelManagement.errors.detailLoad'),
           );
         }
       } finally {
@@ -261,38 +261,38 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     () => [
       {
         key: 'IN_TRANSIT',
-        label: 'En transit',
+        label: t('parcelManagement.statusCards.inTransit'),
         value: shipments.filter((item) => item.status === 'IN_TRANSIT').length,
         icon: Truck,
       },
       {
         key: 'DELIVERED',
-        label: 'Livres',
+        label: t('parcelManagement.statusCards.delivered'),
         value: shipments.filter((item) => item.status === 'DELIVERED').length,
         icon: ShieldCheck,
       },
       {
         key: 'READY_FOR_PICKUP',
-        label: 'Pret retrait',
+        label: t('parcelManagement.statusCards.readyPickup'),
         value: shipments.filter((item) => item.status === 'READY_FOR_PICKUP').length,
         icon: Package,
       },
       {
         key: 'RECEIVED_AT_COLLECTION_POINT',
-        label: 'Recus au point',
+        label: t('parcelManagement.statusCards.receivedPoint'),
         value: shipments.filter((item) => item.status === 'RECEIVED_AT_COLLECTION_POINT').length,
         icon: MapPin,
       },
     ],
-    [shipments],
+    [shipments, t],
   );
 
   const roleDescription =
     currentRole === 'TRANSPORTER'
-      ? 'Shipments qui vous concernent, scopes automatiquement par le backend.'
+      ? t('parcelManagement.roleDescriptions.transporter')
       : currentRole === 'COLLECTOR'
-        ? 'Shipments visibles depuis votre perimetre de collecte et de depot.'
-        : "Liste des shipments de l'entreprise courante, scopes automatiquement par le backend.";
+        ? t('parcelManagement.roleDescriptions.collector')
+        : t('parcelManagement.roleDescriptions.other');
 
   if (isCreateViewOpen) {
     return (
@@ -323,19 +323,19 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Gestion des shipments</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('parcelManagement.title')}</h2>
           <p className="text-muted-foreground">{roleDescription}</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start">
           {currentRole === 'COLLECTOR' && (
             <Button className="gap-2" onClick={() => setIsCreateViewOpen(true)}>
               <Plus className="h-4 w-4" />
-              Nouveau shipment
+              {t('parcelManagement.create')}
             </Button>
           )}
           <Button variant="outline" className="gap-2" onClick={loadShipments} disabled={loading}>
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Actualiser
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -365,10 +365,10 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
           <Input
             placeholder={
               currentRole === 'TRANSPORTER'
-                ? 'Rechercher par reference ou code...'
+                ? t('parcelManagement.search.transporterPlaceholder')
                 : currentRole === 'COLLECTOR'
                   ? t('parcelManagement.search.collectorPlaceholder')
-                  : 'Rechercher par reference, expediteur ou destinataire...'
+                  : t('parcelManagement.search.otherPlaceholder')
             }
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
@@ -377,7 +377,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((filter) => (
+            {statusFilters.map((filter) => (
               <Button
                 key={filter.value}
                 variant={statusFilter === filter.value ? 'default' : 'outline'}
@@ -396,7 +396,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-col gap-2 border-b border-border sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg">
-            {totalElements} shipment{totalElements > 1 ? 's' : ''}
+            {t('parcelManagement.count', { values: { count: totalElements } })}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -408,7 +408,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
             <div className="px-6 py-16 text-center">
               <p className="text-sm text-destructive">{error}</p>
               <Button variant="outline" className="mt-4" onClick={loadShipments}>
-                Reessayer
+                {t('common.retry')}
               </Button>
             </div>
           ) : (
@@ -425,7 +425,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
 
                 {filteredShipments.length === 0 && (
                   <div className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    Aucun shipment trouve sur cette page.
+                    {t('parcelManagement.empty')}
                   </div>
                 )}
               </div>
@@ -441,18 +441,18 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                             'sticky left-0 z-20 min-w-48 border-r border-border bg-card shadow-[4px_0_10px_-8px_currentColor]',
                         )}
                       >
-                        Reference
+                        {t('parcelManagement.columns.reference')}
                       </TableHead>
                       <TableHead className="text-muted-foreground">
-                        {getSenderColumnLabel(currentRole)}
+                        {t('parcelManagement.columns.sender')}
                       </TableHead>
                       <TableHead className="text-muted-foreground">
-                        {getRecipientColumnLabel(currentRole)}
+                        {t('parcelManagement.columns.recipient')}
                       </TableHead>
-                      <TableHead className="text-muted-foreground">Origine</TableHead>
-                      <TableHead className="text-muted-foreground">Destination</TableHead>
-                      <TableHead className="text-muted-foreground">Statut</TableHead>
-                      <TableHead className="text-muted-foreground">Maj</TableHead>
+                      <TableHead className="text-muted-foreground">{t('parcelManagement.columns.origin')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('parcelManagement.columns.destination')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('parcelManagement.columns.status')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('parcelManagement.columns.updatedAt')}</TableHead>
                       <TableHead
                         className={cn(
                           'text-right text-muted-foreground',
@@ -460,7 +460,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                             'sticky right-0 z-20 w-16 border-l border-border bg-card shadow-[-4px_0_10px_-8px_currentColor]',
                         )}
                       >
-                        Actions
+                        {t('parcelManagement.columns.actions')}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -483,10 +483,10 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-foreground">
-                          {getSenderDisplayName(getShipmentSenderName(shipment), currentRole)}
+                          {getSenderDisplayName(getShipmentSenderName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))}
                         </TableCell>
                         <TableCell className="text-foreground">
-                          {getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole)}
+                          {getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {getShipmentOriginLabel(shipment)}
@@ -496,7 +496,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                         </TableCell>
                         <TableCell>
                           <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                            {getShipmentStatusLabel(shipment.status)}
+                            {t(`parcelManagement.statuses.${shipment.status}`)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -525,7 +525,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
                     {filteredShipments.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                          Aucun shipment trouve sur cette page.
+                          {t('parcelManagement.empty')}
                         </TableCell>
                       </TableRow>
                     )}
@@ -538,7 +538,7 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Les filtres de recherche s&apos;appliquent a la page actuellement chargee.
+        {t('parcelManagement.filtersHint')}
       </p>
       <DataPagination
         page={page}
@@ -562,6 +562,7 @@ function ShipmentMobileCard({
   currentRole: UserRole;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation('dashboard');
   const canShowReference = canShowShipmentReference(shipment, currentRole);
 
   return (
@@ -583,9 +584,9 @@ function ShipmentMobileCard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-              {getShipmentStatusLabel(shipment.status)}
+              {t(`parcelManagement.statuses.${shipment.status}`)}
             </Badge>
-            <Badge variant="outline">{SHIPMENT_PRIORITY_LABELS[shipment.priority]}</Badge>
+            <Badge variant="outline">{t(`shipmentPriority.${shipment.priority}`)}</Badge>
           </div>
         </div>
 
@@ -595,17 +596,17 @@ function ShipmentMobileCard({
       </div>
 
       <div className="grid gap-3 rounded-2xl bg-secondary/40 p-4 sm:grid-cols-2">
-        <CompactInfo label={getSenderColumnLabel(currentRole)} value={getSenderDisplayName(getShipmentSenderName(shipment), currentRole)} />
-        <CompactInfo label={getRecipientColumnLabel(currentRole)} value={getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole)} />
-        <CompactInfo label="Origine" value={getShipmentOriginLabel(shipment)} />
-        <CompactInfo label="Destination" value={getShipmentDestinationLabel(shipment)} />
+        <CompactInfo label={getSenderColumnLabel(currentRole, t('parcelManagement.columns.sender'))} value={getSenderDisplayName(getShipmentSenderName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))} />
+        <CompactInfo label={getRecipientColumnLabel(currentRole, t('parcelManagement.columns.recipient'))} value={getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))} />
+        <CompactInfo label={t('parcelManagement.columns.origin')} value={getShipmentOriginLabel(shipment)} />
+        <CompactInfo label={t('parcelManagement.columns.destination')} value={getShipmentDestinationLabel(shipment)} />
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">Mise a jour {formatShipmentDate(shipment.updatedAt)}</p>
+        <p className="text-xs text-muted-foreground">{t('parcelManagement.mobile.updatedAt', { values: { date: formatShipmentDate(shipment.updatedAt) } })}</p>
         <Button variant="outline" size="sm" className="gap-2" onClick={onOpen}>
           <Eye className="h-4 w-4" />
-          Voir details
+          {t('parcelManagement.mobile.viewDetails')}
         </Button>
       </div>
     </div>
@@ -691,7 +692,7 @@ function ShipmentDetailView({
     : false;
   const shipmentDisplayName = shipment
     ? getShipmentReferenceDisplay(shipment, currentRole, t)
-    : `Shipment #${shipmentId}`;
+    : t('parcelManagement.detail.fallbackId', { values: { id: shipmentId } });
   const platformFeeIsSettled = shipment
     ? shipment.paymentStatus === 'PAID' ||
       shipment.transactionStatus === 'PLATFORM_FEE_PAID' ||
@@ -716,22 +717,22 @@ function ShipmentDetailView({
         <div className="space-y-3">
           <Button variant="ghost" className="w-fit gap-2 px-0 text-muted-foreground hover:text-foreground" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
-            Retour a la liste
+            {t('parcelManagement.detail.back')}
           </Button>
           <div>
-            <p className="text-sm font-medium text-primary">Detail shipment</p>
+            <p className="text-sm font-medium text-primary">{t('parcelManagement.detail.label')}</p>
             <h2 className="text-2xl font-bold text-foreground">
               {shipmentDisplayName}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Vue detaillee, optimisee pour mobile et alimentee par l&apos;API backend.
+              {t('parcelManagement.detail.description')}
             </p>
           </div>
         </div>
 
         <Button variant="outline" className="gap-2 self-start" onClick={onRetry} disabled={loading}>
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
+          {t('common.refresh')}
         </Button>
       </div>
 
@@ -747,9 +748,9 @@ function ShipmentDetailView({
             <p className="text-sm text-destructive">{error}</p>
             <div className="flex justify-center gap-3">
               <Button variant="outline" onClick={onBack}>
-                Retour
+                {t('parcelManagement.detail.back')}
               </Button>
-              <Button onClick={onRetry}>Reessayer</Button>
+              <Button onClick={onRetry}>{t('common.retry')}</Button>
             </div>
           </CardContent>
         </Card>
@@ -804,12 +805,12 @@ function ShipmentDetailView({
 
                   <div className="flex flex-wrap gap-2">
                     <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                      {getShipmentStatusLabel(shipment.status)}
+                      {t(`parcelManagement.statuses.${shipment.status}`)}
                     </Badge>
-                    <Badge variant="outline">{SHIPMENT_PRIORITY_LABELS[shipment.priority]}</Badge>
+                    <Badge variant="outline">{t(`shipmentPriority.${shipment.priority}`)}</Badge>
                     {shipment.paymentStatus && (
                       <Badge variant="outline">
-                        {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
+                        {t(`shipmentPaymentStatuses.${shipment.paymentStatus}`)}
                       </Badge>
                     )}
                     {shipment.transactionStatus && (
@@ -819,7 +820,7 @@ function ShipmentDetailView({
                           getShipmentTransactionStatusClassName(shipment.transactionStatus),
                         )}
                       >
-                        {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
+                        {t(`shipmentTransactionStatuses.${shipment.transactionStatus}`)}
                       </Badge>
                     )}
                   </div>
@@ -833,12 +834,12 @@ function ShipmentDetailView({
 
                 <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-sm lg:grid-cols-1">
                   <HighlightPanel
-                    label="Entreprise"
+                    label={t('parcelManagement.detail.company')}
                     value={shipment.companyName}
                     icon={Building2}
                   />
                   <HighlightPanel
-                    label="Derniere mise a jour"
+                    label={t('parcelManagement.detail.lastUpdate')}
                     value={formatShipmentDate(shipment.updatedAt)}
                     icon={Clock3}
                   />
@@ -847,7 +848,7 @@ function ShipmentDetailView({
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <DetailMetric
-                  label="Origine"
+                  label={t('parcelManagement.detail.origin')}
                   value={getShipmentOriginLabel(shipment)}
                   description={joinParts([
                     shipment.originCityName,
@@ -857,7 +858,7 @@ function ShipmentDetailView({
                   icon={MapPin}
                 />
                 <DetailMetric
-                  label="Destination"
+                  label={t('parcelManagement.detail.destination')}
                   value={getShipmentDestinationLabel(shipment)}
                   description={joinParts([
                     shipment.destinationCityName,
@@ -867,18 +868,18 @@ function ShipmentDetailView({
                   icon={Truck}
                 />
                 <DetailMetric
-                  label="Creation"
+                  label={t('parcelManagement.detail.createdAt')}
                   value={formatShipmentDate(shipment.createdAt)}
-                  description={shipment.createdBy || 'Non renseigne'}
+                  description={shipment.createdBy || t('parcelManagement.fallbacks.unspecified')}
                   icon={CalendarClock}
                 />
                 <DetailMetric
-                  label="Tarif final"
-                  value={formatMoney(shipment.price, { fallback: 'Non renseigne' })}
+                  label={t('parcelManagement.detail.finalPrice')}
+                  value={formatMoney(shipment.price, { fallback: t('parcelManagement.fallbacks.unspecified') })}
                   description={
                     shipment.paymentCollectionMode
-                      ? SHIPMENT_COLLECTION_MODE_LABELS[shipment.paymentCollectionMode]
-                      : 'Mode de collecte non renseigne'
+                      ? t(`shipmentCollectionModes.${shipment.paymentCollectionMode}`)
+                      : t('parcelManagement.detail.collectionModeFallback')
                   }
                   icon={CreditCard}
                 />
@@ -888,68 +889,68 @@ function ShipmentDetailView({
 
           <div className="grid gap-6 xl:grid-cols-2">
             <PersonCard
-              title={getSenderColumnLabel(currentRole)}
-              displayName={getSenderDisplayName(getShipmentSenderName(shipment), currentRole)}
+              title={getSenderColumnLabel(currentRole, t('parcelManagement.columns.sender'))}
+              displayName={getSenderDisplayName(getShipmentSenderName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))}
               party={shipment.sender}
             />
             <PersonCard
-              title={getRecipientColumnLabel(currentRole)}
-              displayName={getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole)}
+              title={getRecipientColumnLabel(currentRole, t('parcelManagement.columns.recipient'))}
+              displayName={getRecipientDisplayName(getShipmentReceiverName(shipment), currentRole, t('parcelManagement.fallbacks.restrictedInfo'))}
               party={shipment.receiver}
             />
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
             <SectionCard
-              title="Caracteristiques"
+              title={t('parcelManagement.detail.characteristics')}
               icon={Package}
               items={[
-                { label: 'Type de colis', value: shipment.parcelTypeName },
-                { label: 'Mode de transport', value: shipment.transportModeName },
+                { label: t('parcelManagement.detail.fields.parcelType'), value: shipment.parcelTypeName },
+                { label: t('parcelManagement.detail.fields.transportMode'), value: shipment.transportModeName },
                 {
-                  label: 'Poids',
+                  label: t('parcelManagement.detail.fields.weight'),
                   value: shipment.weightKg != null ? `${shipment.weightKg} kg` : undefined,
                 },
                 {
-                  label: 'Volume',
+                  label: t('parcelManagement.detail.fields.volume'),
                   value: shipment.volumeM3 != null ? `${shipment.volumeM3} m3` : undefined,
                 },
-                { label: 'Description', value: shipment.description },
+                { label: t('parcelManagement.detail.fields.description'), value: shipment.description },
               ]}
             />
 
             <SectionCard
-              title="Tarification"
+              title={t('parcelManagement.detail.pricing')}
               icon={ShieldCheck}
               items={[
-                { label: 'Prix entreprise', value: formatMoney(shipment.companyPrice, { fallback: 'Non renseigne' }) },
-                { label: 'Frais', value: formatMoney(shipment.feeAmount, { fallback: 'Non renseigne' }) },
+                { label: t('parcelManagement.detail.fields.companyPrice'), value: formatMoney(shipment.companyPrice, { fallback: t('parcelManagement.fallbacks.unspecified') }) },
+                { label: t('parcelManagement.detail.fields.fees'), value: formatMoney(shipment.feeAmount, { fallback: t('parcelManagement.fallbacks.unspecified') }) },
                 {
                   label: t('parcelManagement.finance.expressSurcharge'),
-                  value: formatMoney(shipment.expressSurchargeAmount, { fallback: 'Non renseigne' }),
+                  value: formatMoney(shipment.expressSurchargeAmount, { fallback: t('parcelManagement.fallbacks.unspecified') }),
                 },
                 {
                   label: t('parcelManagement.finance.insurance'),
-                  value: formatMoney(shipment.insuranceAmount, { fallback: 'Non renseigne' }),
+                  value: formatMoney(shipment.insuranceAmount, { fallback: t('parcelManagement.fallbacks.unspecified') }),
                 },
-                { label: 'Remise', value: formatMoney(shipment.discountAmount, { fallback: 'Non renseigne' }) },
-                { label: 'Prix final', value: formatMoney(shipment.price, { fallback: 'Non renseigne' }) },
+                { label: t('parcelManagement.detail.fields.discount'), value: formatMoney(shipment.discountAmount, { fallback: t('parcelManagement.fallbacks.unspecified') }) },
+                { label: t('parcelManagement.detail.fields.finalPrice'), value: formatMoney(shipment.price, { fallback: t('parcelManagement.fallbacks.unspecified') }) },
                 {
-                  label: 'Statut paiement',
+                  label: t('parcelManagement.detail.fields.paymentStatus'),
                   value: shipment.paymentStatus
-                    ? SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]
+                    ? t(`shipmentPaymentStatuses.${shipment.paymentStatus}`)
                     : undefined,
                 },
                 {
                   label: t('parcelManagement.finance.transactionStatus'),
                   value: shipment.transactionStatus
-                    ? SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]
+                    ? t(`shipmentTransactionStatuses.${shipment.transactionStatus}`)
                     : undefined,
                 },
                 {
-                  label: 'Mode de collecte',
+                  label: t('parcelManagement.detail.fields.collectionMode'),
                   value: shipment.paymentCollectionMode
-                    ? SHIPMENT_COLLECTION_MODE_LABELS[shipment.paymentCollectionMode]
+                    ? t(`shipmentCollectionModes.${shipment.paymentCollectionMode}`)
                     : undefined,
                 },
               ]}
@@ -961,9 +962,9 @@ function ShipmentDetailView({
           )}
 
           <SectionCard
-            title="Photos du shipment"
+            title={t('parcelManagement.detail.photos')}
             icon={FileText}
-            emptyMessage="Aucune photo disponible."
+            emptyMessage={t('parcelManagement.detail.photosEmpty')}
             items={[]}
           >
             {shipment.photos && shipment.photos.length > 0 ? (
@@ -976,7 +977,7 @@ function ShipmentDetailView({
                     <div className="relative aspect-[4/3] w-full bg-muted">
                       <Image
                         src={photo.photoUrl}
-                        alt={`Photo ${photo.id} du shipment ${shipmentDisplayName}`}
+                        alt={t('parcelManagement.detail.photoAlt', { values: { id: photo.id, reference: shipmentDisplayName } })}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                         className="object-cover"
@@ -984,10 +985,10 @@ function ShipmentDetailView({
                       />
                     </div>
                     <div className="space-y-2 p-4">
-                      <p className="text-sm font-medium text-foreground">Photo #{photo.id}</p>
+                      <p className="text-sm font-medium text-foreground">{t('parcelManagement.detail.photoNumber', { values: { id: photo.id } })}</p>
                       {photo.uploadedAt && (
                         <p className="text-xs text-muted-foreground">
-                          Ajoutee le {formatShipmentDate(photo.uploadedAt)}
+                          {t('parcelManagement.detail.photoAdded', { values: { date: formatShipmentDate(photo.uploadedAt) } })}
                         </p>
                       )}
                     </div>
@@ -995,7 +996,7 @@ function ShipmentDetailView({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucune photo disponible.</p>
+              <p className="text-sm text-muted-foreground">{t('parcelManagement.detail.photosEmpty')}</p>
             )}
           </SectionCard>
 
@@ -1005,9 +1006,9 @@ function ShipmentDetailView({
                 <Clock3 className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base sm:text-lg">Historique des statuts</CardTitle>
+                <CardTitle className="text-base sm:text-lg">{t('parcelManagement.detail.history')}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Chronologie detaillee du shipment.
+                  {t('parcelManagement.detail.historyDescription')}
                 </p>
               </div>
             </CardHeader>
@@ -1023,7 +1024,7 @@ function ShipmentDetailView({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Aucun historique de statut disponible.</p>
+                <p className="text-sm text-muted-foreground">{t('parcelManagement.detail.historyEmpty')}</p>
               )}
             </CardContent>
           </Card>
@@ -1145,6 +1146,7 @@ function PersonCard({
   displayName: string;
   party?: ShipmentParty;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <Card className="border-border bg-card">
       <CardHeader className="flex flex-row items-center gap-3 space-y-0">
@@ -1153,22 +1155,28 @@ function PersonCard({
         </div>
         <div>
           <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
-          <p className="text-sm text-muted-foreground">Informations de contact et d&apos;identification.</p>
+          <p className="text-sm text-muted-foreground">{t('parcelManagement.detail.person.contactHint')}</p>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
-        <InfoTile label="Nom" value={displayName} icon={UserIcon} />
-        <InfoTile label="Telephone" value={party?.whatsappNumber} icon={Phone} />
-        <InfoTile label="Adresse" value={party?.address} icon={MapPin} />
+        <InfoTile label={t('parcelManagement.detail.person.name')} value={displayName} icon={UserIcon} />
+        <InfoTile label={t('parcelManagement.detail.person.phone')} value={party?.whatsappNumber} icon={Phone} />
+        <InfoTile label={t('parcelManagement.detail.person.address')} value={party?.address} icon={MapPin} />
         <InfoTile
-          label="Ville / pays"
+          label={t('parcelManagement.detail.person.cityCountry')}
           value={joinParts([party?.cityName, party?.countryName])}
           icon={Building2}
         />
-        <InfoTile label="Piece d'identite" value={party?.idCardNumber} icon={FileText} />
+        <InfoTile label={t('parcelManagement.detail.person.idCard')} value={party?.idCardNumber} icon={FileText} />
         <InfoTile
-          label="Profil rattache"
-          value={party?.usesRegisteredProfile ? 'Oui' : party?.usesRegisteredProfile === false ? 'Non' : undefined}
+          label={t('parcelManagement.detail.person.linkedProfile')}
+          value={
+            party?.usesRegisteredProfile === true
+              ? t('parcelManagement.detail.person.yes')
+              : party?.usesRegisteredProfile === false
+                ? t('parcelManagement.detail.person.no')
+                : undefined
+          }
           icon={ShieldCheck}
         />
       </CardContent>
@@ -1183,6 +1191,7 @@ function ShipmentQrCodeCard({
   qrCodeUrl?: string;
   reference: string;
 }) {
+  const { t } = useTranslation('dashboard');
   const imageUrl = resolveShipmentAssetUrl(qrCodeUrl);
 
   return (
@@ -1192,8 +1201,8 @@ function ShipmentQrCodeCard({
           <QrCode className="h-5 w-5" />
         </div>
         <div>
-          <CardTitle className="text-base sm:text-lg">QR code du shipment</CardTitle>
-          <p className="text-sm text-muted-foreground">Code a scanner pour identifier ce shipment.</p>
+          <CardTitle className="text-base sm:text-lg">{t('parcelManagement.detail.qrTitle')}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t('parcelManagement.detail.qrDescription')}</p>
         </div>
       </CardHeader>
       <CardContent>
@@ -1203,23 +1212,23 @@ function ShipmentQrCodeCard({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imageUrl}
-                alt={`QR code du shipment ${reference}`}
+                alt={t('parcelManagement.detail.qrAlt', { values: { reference } })}
                 className="h-56 w-56 object-contain"
                 loading="lazy"
               />
             </div>
             <div className="min-w-0 flex-1 space-y-3">
-              <InfoTile label="Reference" value={reference} icon={Package} />
+              <InfoTile label={t('parcelManagement.columns.reference')} value={reference} icon={Package} />
               <Button variant="outline" asChild className="w-full gap-2 sm:w-fit">
                 <a href={imageUrl} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-4 w-4" />
-                  Ouvrir l&apos;image
+                  {t('parcelManagement.detail.openImage')}
                 </a>
               </Button>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Aucun QR code disponible pour ce shipment.</p>
+          <p className="text-sm text-muted-foreground">{t('parcelManagement.detail.qrEmpty')}</p>
         )}
       </CardContent>
     </Card>
@@ -1239,6 +1248,7 @@ function SectionCard({
   children?: ReactNode;
   emptyMessage?: string;
 }) {
+  const { t } = useTranslation('dashboard');
   const visibleItems = items.filter((item) => item.value);
 
   return (
@@ -1257,7 +1267,7 @@ function SectionCard({
             ))}
           </div>
         ) : !children ? (
-          <p className="text-sm text-muted-foreground">{emptyMessage ?? 'Aucune information disponible.'}</p>
+          <p className="text-sm text-muted-foreground">{emptyMessage ?? t('parcelManagement.noInfo')}</p>
         ) : null}
         {children}
       </CardContent>
@@ -1274,6 +1284,7 @@ function InfoTile({
   value?: string;
   icon?: ElementType;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="rounded-2xl border border-border bg-secondary/20 p-4">
       <div className="flex items-start gap-3">
@@ -1285,7 +1296,7 @@ function InfoTile({
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
           <p className="mt-1 break-words text-sm leading-6 text-foreground">
-            {value || 'Non renseigne'}
+            {value || t('parcelManagement.fallbacks.unspecified')}
           </p>
         </div>
       </div>
@@ -1309,6 +1320,7 @@ function StatusTimelineEntry({
   entry: ShipmentStatusHistory;
   isLast: boolean;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
@@ -1321,8 +1333,8 @@ function StatusTimelineEntry({
           <div className="min-w-0">
             <p className="break-words text-sm font-semibold text-foreground">
               {entry.fromStatus
-                ? `${getShipmentStatusLabel(entry.fromStatus)} -> ${getShipmentStatusLabel(entry.toStatus)}`
-                : getShipmentStatusLabel(entry.toStatus)}
+                ? `${t(`parcelManagement.statuses.${entry.fromStatus}`)} -> ${t(`parcelManagement.statuses.${entry.toStatus}`)}`
+                : t(`parcelManagement.statuses.${entry.toStatus}`)}
             </p>
             {entry.note && (
               <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
@@ -1336,7 +1348,7 @@ function StatusTimelineEntry({
         </div>
 
         {entry.changedByUsername && (
-          <p className="mt-3 text-xs text-muted-foreground">Modifie par {entry.changedByUsername}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{t('parcelManagement.timeline.modifiedBy', { values: { name: entry.changedByUsername } })}</p>
         )}
       </div>
     </div>

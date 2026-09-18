@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Building2 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 import { resolveRemoteAssetUrl } from '@/lib/asset-url';
 import type { CompanyResponse } from '@/lib/auth/types';
@@ -28,10 +29,11 @@ function getInitials(name?: string) {
 }
 
 export function CompanyBrand({ company, className, variant = 'sidebar' }: CompanyBrandProps) {
+  const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
   const logoUrl = useMemo(() => resolveRemoteAssetUrl(company?.logoUrl), [company?.logoUrl]);
   const showImage = Boolean(logoUrl && !imageFailed);
-  const companyName = company?.name ?? 'Entreprise';
+  const companyName = company?.name ?? t('company.fallbackName');
   const initials = getInitials(company?.name);
   const isHeader = variant === 'header';
 

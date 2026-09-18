@@ -1,0 +1,106 @@
+{
+  "title": "Local stock",
+  "subtitle": "Review destination deposits and hand over parcels ready for pickup.",
+  "actions": {
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "close": "Close",
+    "cancel": "Cancel",
+    "deliver": "Hand over",
+    "review": "Review",
+    "view": "View",
+    "confirmReview": "Confirm review"
+  },
+  "metrics": {
+    "depositsToReview": "Deposits to review",
+    "incomingDeclared": "Declared incoming",
+    "readyForPickup": "Ready for pickup"
+  },
+  "errors": {
+    "loadDeposits": "Unable to load destination deposits.",
+    "loadIncoming": "Unable to load incoming parcels.",
+    "loadGroups": "Unable to load incoming groups.",
+    "loadPickup": "Unable to load parcels ready for pickup."
+  },
+  "deposits": {
+    "title": "Destination deposits",
+    "description": "Accept or reject parcels dropped off by transporters.",
+    "emptyTitle": "No deposit request",
+    "emptyDescription": "Deposits created by transporters will appear here.",
+    "columns": {
+      "request": "Request",
+      "transporter": "Transporter",
+      "destination": "Destination",
+      "parcels": "Parcels",
+      "status": "Status",
+      "action": "Action"
+    },
+    "acceptedCount": "{{accepted}}/{{total}} accepted",
+    "rejectedCount": "{{count}} rejected"
+  },
+  "incoming": {
+    "title": "Declared incoming",
+    "description": "Overview of parcels and groups that may arrive at the destination point.",
+    "emptyTitle": "Nothing incoming",
+    "emptyDescription": "Parcels on their way to the destination will be listed here.",
+    "groupFallback": "Transport group",
+    "parcelsCount": "{{count}} parcels",
+    "noGroup": "No group"
+  },
+  "pickup": {
+    "title": "Parcels ready for pickup",
+    "description": "Hand the parcel to the recipient after checking the code.",
+    "emptyTitle": "No parcel ready",
+    "emptyDescription": "Parcels accepted at destination and ready for pickup will appear here.",
+    "columns": {
+      "reference": "Reference",
+      "client": "Customer",
+      "type": "Type",
+      "updatedAt": "Updated",
+      "action": "Action"
+    }
+  },
+  "labels": {
+    "transporterFallback": "Transporter not specified",
+    "destinationFallback": "Destination not specified",
+    "senderFallback": "Sender",
+    "receiverFallback": "recipient",
+    "to": "to",
+    "typeFallback": "Type not specified",
+    "notSpecified": "Not specified",
+    "updatedAt": "Updated",
+    "group": "Group: {{reference}}",
+    "reason": "Reason: {{reason}}",
+    "acceptAria": "Accept {{reference}}"
+  },
+  "reviewDialog": {
+    "title": "Deposit review #{{id}}",
+    "description": "Untick a parcel to reject it and enter the reason.",
+    "transporter": "Transporter: {{name}}",
+    "globalNote": "Overall note",
+    "rejectReason": "Rejection reason",
+    "rejectReasonPlaceholder": "Parcel missing, damaged..."
+  },
+  "deliverDialog": {
+    "title": "Hand over to recipient",
+    "description": "Check the reference and enter the code given to the recipient.",
+    "reference": "Parcel reference",
+    "pickupCode": "Pickup code",
+    "pickupCodePlaceholder": "Code given to the recipient",
+    "note": "Note"
+  },
+  "toasts": {
+    "detailUnavailable": "Details unavailable",
+    "loadRequestFailed": "Unable to load the request.",
+    "reasonRequiredTitle": "Reason required",
+    "reasonRequiredDescription": "Every rejected parcel must have a reason.",
+    "reviewSuccess": "Deposit reviewed",
+    "reviewSuccessDescription": "{{accepted}} parcel(s) accepted, {{rejected}} rejected.",
+    "reviewFailedTitle": "Review failed",
+    "reviewFailedDescription": "Unable to review the deposit.",
+    "deliveredTitle": "Parcel handed over",
+    "deliveredDescription": "Parcel {{reference}} has been handed to the recipient.",
+    "deliverFailedTitle": "Handover failed",
+    "deliverFailedDescription": "Unable to hand over the parcel."
+  }
+}

@@ -10,31 +10,6 @@ import type {
   ShipmentTransmissionStatus,
 } from './types';
 
-export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
-  CREATED: 'Cree',
-  PAID: 'Paye',
-  AWAITING_DROP_OFF: 'En attente de depot',
-  RECEIVED_AT_COLLECTION_POINT: 'Recu au point',
-  READY_FOR_TRANSPORT: 'Pret au transport',
-  IN_TRANSIT: 'En transit',
-  ARRIVED_DESTINATION_POINT: 'Arrive au point destination',
-  READY_FOR_PICKUP: 'Pret au retrait',
-  DELIVERED: 'Livre',
-  CANCELLED: 'Annule',
-  RETURNED: 'Retourne',
-};
-
-export const SHIPMENT_PRIORITY_LABELS: Record<ShipmentPriority, string> = {
-  STANDARD: 'Standard',
-  EXPRESS: 'Express',
-};
-
-export const SHIPMENT_PAYMENT_STATUS_LABELS: Record<ShipmentPaymentStatus, string> = {
-  UNPAID: 'Non paye',
-  PAID: 'Paye',
-  PAYMENT_AT_COLLECTION_POINT: 'Paiement au point',
-};
-
 export function getShipmentPaymentStatusClassName(status: ShipmentPaymentStatus) {
   switch (status) {
     case 'PAID':
@@ -47,19 +22,6 @@ export function getShipmentPaymentStatusClassName(status: ShipmentPaymentStatus)
       return 'bg-muted text-muted-foreground';
   }
 }
-
-export const SHIPMENT_COLLECTION_MODE_LABELS: Record<ShipmentPaymentCollectionMode, string> = {
-  PLATFORM: 'Plateforme',
-  COLLECTION_POINT: 'Point de collecte',
-};
-
-export const SHIPMENT_TRANSACTION_STATUS_LABELS: Record<ShipmentTransactionStatus, string> = {
-  INITIATED: 'Paiement initie',
-  PLATFORM_FEE_PAID: 'Frais plateforme payes',
-  COMPLETED: 'Transaction terminee',
-  FAILED: 'Transaction echouee',
-  CANCELLED: 'Transaction annulee',
-};
 
 export function getShipmentTransactionStatusClassName(status: ShipmentTransactionStatus) {
   switch (status) {
@@ -75,10 +37,6 @@ export function getShipmentTransactionStatusClassName(status: ShipmentTransactio
     default:
       return 'bg-muted text-muted-foreground';
   }
-}
-
-export function getShipmentStatusLabel(status: ShipmentStatus) {
-  return SHIPMENT_STATUS_LABELS[status] ?? status;
 }
 
 export function getShipmentStatusClassName(status: ShipmentStatus) {
@@ -104,14 +62,6 @@ export function getShipmentStatusClassName(status: ShipmentStatus) {
       return 'bg-muted text-muted-foreground';
   }
 }
-
-export const SHIPMENT_TRANSMISSION_STATUS_LABELS: Record<ShipmentTransmissionStatus, string> = {
-  PENDING_COLLECTOR_APPROVAL: 'En attente collecteur',
-  COLLECTOR_APPROVED: 'Approuvee',
-  COLLECTOR_REJECTED: 'Rejetee',
-  PARTIALLY_DISPATCHED: 'Partiellement embarquee',
-  FULLY_DISPATCHED: 'Entierement embarquee',
-};
 
 export function getShipmentTransmissionStatusClassName(status: ShipmentTransmissionStatus) {
   switch (status) {

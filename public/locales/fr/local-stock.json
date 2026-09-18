@@ -1,0 +1,106 @@
+{
+  "title": "Stock local",
+  "subtitle": "Contrôlez les dépôts destination et livrez les colis prêts au retrait.",
+  "actions": {
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "deliver": "Livrer",
+    "review": "Contrôler",
+    "view": "Voir",
+    "confirmReview": "Confirmer le contrôle"
+  },
+  "metrics": {
+    "depositsToReview": "Dépôts à contrôler",
+    "incomingDeclared": "Entrants déclarés",
+    "readyForPickup": "Prêts au retrait"
+  },
+  "errors": {
+    "loadDeposits": "Impossible de charger les dépôts destination.",
+    "loadIncoming": "Impossible de charger les colis entrants.",
+    "loadGroups": "Impossible de charger les groupes entrants.",
+    "loadPickup": "Impossible de charger les colis prêts au retrait."
+  },
+  "deposits": {
+    "title": "Dépôts destination",
+    "description": "Acceptez ou rejetez les colis déposés par les transporteurs.",
+    "emptyTitle": "Aucune demande de dépôt",
+    "emptyDescription": "Les dépôts créés par les transporteurs apparaîtront ici.",
+    "columns": {
+      "request": "Demande",
+      "transporter": "Transporteur",
+      "destination": "Destination",
+      "parcels": "Colis",
+      "status": "Statut",
+      "action": "Action"
+    },
+    "acceptedCount": "{{accepted}}/{{total}} acceptés",
+    "rejectedCount": "{{count}} rejetés"
+  },
+  "incoming": {
+    "title": "Entrants déclarés",
+    "description": "Aperçu des colis et groupes qui peuvent arriver au point destination.",
+    "emptyTitle": "Aucun entrant",
+    "emptyDescription": "Les colis en cours de dépôt destination seront listés ici.",
+    "groupFallback": "Groupe transport",
+    "parcelsCount": "{{count}} colis",
+    "noGroup": "Sans groupe"
+  },
+  "pickup": {
+    "title": "Colis prêts au retrait",
+    "description": "Remettez le colis au destinataire après vérification du code.",
+    "emptyTitle": "Aucun colis prêt",
+    "emptyDescription": "Les colis acceptés à destination et prêts au retrait apparaîtront ici.",
+    "columns": {
+      "reference": "Référence",
+      "client": "Client",
+      "type": "Type",
+      "updatedAt": "Maj",
+      "action": "Action"
+    }
+  },
+  "labels": {
+    "transporterFallback": "Transporteur non renseigné",
+    "destinationFallback": "Destination non renseignée",
+    "senderFallback": "Expéditeur",
+    "receiverFallback": "destinataire",
+    "to": "vers",
+    "typeFallback": "Type non renseigné",
+    "notSpecified": "Non renseigné",
+    "updatedAt": "Maj",
+    "group": "Groupe : {{reference}}",
+    "reason": "Motif : {{reason}}",
+    "acceptAria": "Accepter {{reference}}"
+  },
+  "reviewDialog": {
+    "title": "Contrôle dépôt #{{id}}",
+    "description": "Décochez un colis pour le rejeter et renseignez son motif.",
+    "transporter": "Transporteur : {{name}}",
+    "globalNote": "Note globale",
+    "rejectReason": "Motif de rejet",
+    "rejectReasonPlaceholder": "Colis absent, endommagé..."
+  },
+  "deliverDialog": {
+    "title": "Livrer au destinataire",
+    "description": "Vérifiez la référence et saisissez le code fourni au destinataire.",
+    "reference": "Référence du colis",
+    "pickupCode": "Code de retrait",
+    "pickupCodePlaceholder": "Code remis au destinataire",
+    "note": "Note"
+  },
+  "toasts": {
+    "detailUnavailable": "Détail indisponible",
+    "loadRequestFailed": "Impossible de charger la demande.",
+    "reasonRequiredTitle": "Motif requis",
+    "reasonRequiredDescription": "Chaque colis rejeté doit avoir un motif.",
+    "reviewSuccess": "Dépôt contrôlé",
+    "reviewSuccessDescription": "{{accepted}} colis accepté(s), {{rejected}} rejeté(s).",
+    "reviewFailedTitle": "Contrôle impossible",
+    "reviewFailedDescription": "Impossible de contrôler le dépôt.",
+    "deliveredTitle": "Colis livré",
+    "deliveredDescription": "Le colis {{reference}} a été remis au destinataire.",
+    "deliverFailedTitle": "Livraison impossible",
+    "deliverFailedDescription": "Impossible de livrer le colis."
+  }
+}

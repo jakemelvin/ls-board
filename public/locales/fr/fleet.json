@@ -1,0 +1,87 @@
+{
+  "title": "Gestion de flotte",
+  "subtitle": "Véhicules et affectations de {{company}}.",
+  "actions": {
+    "addVehicle": "Ajouter un véhicule",
+    "editVehicle": "Modifier le véhicule",
+    "createVehicle": "Ajouter un véhicule",
+    "cancel": "Annuler",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "update": "Mettre à jour",
+    "create": "Créer",
+    "delete": "Supprimer",
+    "assign": "Affecter",
+    "changeStatus": "Changer le statut"
+  },
+  "types": {
+    "VAN": "Van",
+    "MOTO": "Moto",
+    "CAMION": "Camion",
+    "VOITURE": "Voiture",
+    "PICKUP": "Pickup",
+    "TRICYCLE": "Tricycle",
+    "AUTRE": "Autre"
+  },
+  "statuses": {
+    "DISPONIBLE": "Disponible",
+    "EN_TRANSIT": "En transit",
+    "MAINTENANCE": "Maintenance"
+  },
+  "metrics": {
+    "vehicles": "Véhicules",
+    "available": "Disponibles",
+    "transit": "En transit",
+    "maintenance": "Maintenance"
+  },
+  "search": {
+    "placeholder": "Rechercher une immatriculation, un type ou un transporteur...",
+    "allStatuses": "Tous les statuts"
+  },
+  "empty": {
+    "noVehicle": "Aucun véhicule",
+    "noVehicleDescription": "Ajoutez votre premier véhicule pour commencer la gestion de flotte.",
+    "noResult": "Aucun résultat",
+    "noResultDescription": "Aucun véhicule ne correspond à votre recherche."
+  },
+  "vehicleDialog": {
+    "description": "Renseignez les capacités, le type et le statut opérationnel du véhicule.",
+    "type": "Type",
+    "plate": "Immatriculation",
+    "maxVolume": "Volume max (m3)",
+    "maxWeight": "Poids max (kg)",
+    "status": "Statut"
+  },
+  "assignDialog": {
+    "title": "Affecter des transporteurs",
+    "description": "Choisissez les transporteurs autorisés à utiliser le véhicule {{vehicle}}.",
+    "selectedCount": "{{count}} transporteur(s) sélectionné(s)",
+    "existingReplaced": "Les affectations actuelles seront remplacées par cette sélection."
+  },
+  "deleteDialog": {
+    "title": "Supprimer le véhicule",
+    "description": "Le véhicule {{vehicle}} sera supprimé définitivement.",
+    "confirm": "Supprimer"
+  },
+  "card": {
+    "assignedTransporters": "Transporteurs affectés",
+    "noTransporters": "Aucun transporteur affecté."
+  },
+  "errors": {
+    "loadTitle": "Erreur de chargement",
+    "load": "Erreur lors du chargement",
+    "save": "Enregistrement impossible",
+    "delete": "Suppression impossible",
+    "assign": "Affectation impossible",
+    "statusUpdate": "Mise à jour du statut impossible"
+  },
+  "messages": {
+    "vehicleCreated": "Véhicule créé",
+    "vehicleUpdated": "Véhicule mis à jour",
+    "vehicleDeleted": "Véhicule supprimé",
+    "transportersAssigned": "Transporteurs affectés",
+    "transportersRemoved": "Transporteurs retirés",
+    "statusUpdated": "Statut mis à jour : {{status}}"
+  }
+}

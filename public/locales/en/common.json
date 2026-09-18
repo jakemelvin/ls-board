@@ -45,5 +45,38 @@
   "navigation": {
     "back": "Back",
     "logout": "Log out"
+  },
+  "periodFilter": {
+    "label": "Analysis period",
+    "presets": {
+      "TODAY": "Today",
+      "LAST_7_DAYS": "Last 7 days",
+      "CURRENT_MONTH": "This month",
+      "PREVIOUS_MONTH": "Last month",
+      "CURRENT_YEAR": "This year",
+      "CUSTOM": "Custom"
+    }
+  },
+  "tracking": {
+    "rejectedTitle": "Parcel rejected",
+    "rejectedFallback": "Non-compliant",
+    "steps": {
+      "CREATED": "Customer request",
+      "TRANSIT_TO_COLLECTION": "In transit to the point",
+      "RECEIVED_AT_COLLECTION_POINT": "Received at the point",
+      "IN_TRANSIT": "In transit",
+      "ARRIVED_AT_DESTINATION": "Arrived at the point",
+      "DELIVERED": "Delivered"
+    }
+  },
+  "copyTracking": {
+    "copyTitle": "Reference copied",
+    "copyFailedTitle": "Copy failed",
+    "copyFailedDescription": "The reference number could not be copied.",
+    "copyAria": "Copy reference {{reference}}",
+    "copyTitleAttr": "Copy reference"
+  },
+  "company": {
+    "fallbackName": "Company"
   }
 }

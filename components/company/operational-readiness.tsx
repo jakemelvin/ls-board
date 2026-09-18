@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CompanyOperationalReadiness } from '@/lib/admin/types';
 import { useTranslation } from '@/lib/i18n';
+import type { TranslateOptions } from '@/lib/i18n';
 
 interface OperationalReadinessCheck {
   label: string;
@@ -22,25 +23,26 @@ interface OperationalReadinessCheck {
 
 function getOperationalReadinessChecks(
   data: CompanyOperationalReadiness,
+  t: (key: string, options?: Omit<TranslateOptions, 'ns'>) => string,
 ): OperationalReadinessCheck[] {
   return [
-    { label: 'Types de colis', ok: data.parcelTypesConfigured, count: data.parcelTypeCount },
-    { label: 'Modes de transport', ok: data.transportModesConfigured, count: data.transportModeCount },
-    { label: 'Tarification', ok: data.pricingConfigured, count: data.pricingCount },
+    { label: t('readiness.checks.parcelTypes'), ok: data.parcelTypesConfigured, count: data.parcelTypeCount },
+    { label: t('readiness.checks.transportModes'), ok: data.transportModesConfigured, count: data.transportModeCount },
+    { label: t('readiness.checks.pricing'), ok: data.pricingConfigured, count: data.pricingCount },
     {
-      label: 'Estimations de livraison',
+      label: t('readiness.checks.deliveryEstimates'),
       ok: data.deliveryEstimatesConfigured,
       count: data.deliveryEstimateCount,
     },
-    { label: 'Zones geographiques', ok: data.zonesConfigured, count: data.zoneCount },
-    { label: 'Points de collecte', ok: data.collectionPointsConfigured, count: data.collectionPointCount },
+    { label: t('readiness.checks.zones'), ok: data.zonesConfigured, count: data.zoneCount },
+    { label: t('readiness.checks.collectionPoints'), ok: data.collectionPointsConfigured, count: data.collectionPointCount },
     {
-      label: 'Responsables de points',
+      label: t('readiness.checks.responsibles'),
       ok: data.collectionPointResponsiblesConfigured,
       count: data.collectionPointsWithResponsibleCount,
     },
-    { label: 'Transporteurs', ok: data.transportersConfigured, count: data.transporterCount },
-    { label: 'Flottes assignees', ok: data.assignedFlottesConfigured, count: data.assignedFlotteCount },
+    { label: t('readiness.checks.transporters'), ok: data.transportersConfigured, count: data.transporterCount },
+    { label: t('readiness.checks.fleets'), ok: data.assignedFlottesConfigured, count: data.assignedFlotteCount },
   ];
 }
 
@@ -61,7 +63,7 @@ export function OperationalReadinessDialog({
   const { t, locale } = useTranslation('company');
   if (!data) return null;
 
-  const checks = getOperationalReadinessChecks(data);
+  const checks = getOperationalReadinessChecks(data, t);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -86,7 +88,7 @@ export function OperationalReadinessDialog({
             </div>
           </div>
           <Button variant="outline" onClick={onClose}>
-            Fermer
+            {t('readiness.close')}
           </Button>
         </div>
 
@@ -125,13 +127,13 @@ export function OperationalReadinessDialog({
                 <CardDescription>
                   {data.missingItems.length === 0
                     ? t('readiness.noBlocking')
-                    : `${data.missingItems.length} element(s) empechent encore une exploitation complete.`}
+                    : t('readiness.blockingCount', { values: { count: data.missingItems.length } })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {data.missingItems.length === 0 ? (
                   <div className="rounded-2xl border border-success/30 bg-success/10 p-4 text-sm text-success">
-                    Tous les prerequis critiques remontes par l'API sont satisfaits.
+                    {t('readiness.allSatisfied')}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -157,24 +159,28 @@ export function OperationalReadinessDialog({
                 <CardDescription>{t('readiness.pricing.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <InfoRow label="Tarifs configures" value={data.pricingCount} ok={data.pricingConfigured} />
-                <InfoRow label="Compatibilite enveloppes" value={data.envelopePricingCompatible ? 'OK' : 'Incomplet'} ok={data.envelopePricingCompatible} />
+                <InfoRow label={t('readiness.pricing.configured')} value={data.pricingCount} ok={data.pricingConfigured} />
+                <InfoRow
+                  label={t('readiness.pricing.compatibility')}
+                  value={data.envelopePricingCompatible ? t('readiness.pricing.complete') : t('readiness.pricing.incomplete')}
+                  ok={data.envelopePricingCompatible}
+                />
                 <ReadinessList
-                  title="Modes sans tarification"
+                  title={t('readiness.pricing.missingModes')}
                   items={data.missingPricingTransportModes ?? []}
-                  emptyLabel="Tous les modes actifs ont une tarification."
+                  emptyLabel={t('readiness.pricing.allModes')}
                   icon={Waypoints}
                 />
                 <ReadinessList
-                  title="Configurations tarifaires manquantes"
+                  title={t('readiness.pricing.missingConfigurations')}
                   items={data.missingPricingConfigurations ?? []}
-                  emptyLabel="Toutes les configurations tarifaires requises sont couvertes."
+                  emptyLabel={t('readiness.pricing.allConfigurations')}
                   icon={Waypoints}
                 />
                 <ReadinessList
-                  title="Modes non compatibles enveloppes"
+                  title={t('readiness.pricing.missingEnvelopeModes')}
                   items={data.missingEnvelopeCompatiblePricingTransportModes ?? []}
-                  emptyLabel="Les tarifs sont compatibles avec les envois enveloppe."
+                  emptyLabel={t('readiness.pricing.allEnvelopeModes')}
                   icon={Package}
                 />
               </CardContent>
@@ -187,20 +193,20 @@ export function OperationalReadinessDialog({
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <InfoRow
-                  label="Estimations configurees"
+                  label={t('readiness.estimates.configured')}
                   value={data.deliveryEstimateCount}
                   ok={data.deliveryEstimatesConfigured}
                 />
                 <ReadinessList
-                  title="Modes sans estimation"
+                  title={t('readiness.estimates.missingModes')}
                   items={data.missingDeliveryEstimateTransportModes ?? []}
-                  emptyLabel="Tous les modes actifs ont une estimation."
+                  emptyLabel={t('readiness.estimates.allModes')}
                   icon={Clock3}
                 />
                 <ReadinessList
-                  title="Configurations d'estimation manquantes"
+                  title={t('readiness.estimates.missingConfigurations')}
                   items={data.missingDeliveryEstimateConfigurations ?? []}
-                  emptyLabel="Toutes les configurations d'estimation sont couvertes."
+                  emptyLabel={t('readiness.estimates.allConfigurations')}
                   icon={Clock3}
                 />
               </CardContent>
@@ -212,10 +218,10 @@ export function OperationalReadinessDialog({
                 <CardDescription>{t('readiness.network.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <InfoRow label="Zones" value={data.zoneCount} ok={data.zonesConfigured} />
-                <InfoRow label="Points de collecte" value={data.collectionPointCount} ok={data.collectionPointsConfigured} />
+                <InfoRow label={t('readiness.network.zones')} value={data.zoneCount} ok={data.zonesConfigured} />
+                <InfoRow label={t('readiness.network.collectionPoints')} value={data.collectionPointCount} ok={data.collectionPointsConfigured} />
                 <InfoRow
-                  label="Points avec responsable"
+                  label={t('readiness.network.pointsWithResponsible')}
                   value={data.collectionPointsWithResponsibleCount}
                   ok={data.collectionPointResponsiblesConfigured}
                 />
@@ -228,9 +234,9 @@ export function OperationalReadinessDialog({
                 <CardDescription>{t('readiness.capacity.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <InfoRow label="Transporteurs actifs" value={data.transporterCount} ok={data.transportersConfigured} />
-                <InfoRow label="Flottes assignees" value={data.assignedFlotteCount} ok={data.assignedFlottesConfigured} />
-                <InfoRow label="Types de colis" value={data.parcelTypeCount} ok={data.parcelTypesConfigured} />
+                <InfoRow label={t('readiness.capacity.transporters')} value={data.transporterCount} ok={data.transportersConfigured} />
+                <InfoRow label={t('readiness.capacity.fleets')} value={data.assignedFlotteCount} ok={data.assignedFlottesConfigured} />
+                <InfoRow label={t('readiness.capacity.parcelTypes')} value={data.parcelTypeCount} ok={data.parcelTypesConfigured} />
               </CardContent>
             </Card>
           </div>

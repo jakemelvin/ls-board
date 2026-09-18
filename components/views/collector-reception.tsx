@@ -58,11 +58,7 @@ import {
   formatShipmentDate,
   getShipmentPaymentStatusClassName,
   getShipmentStatusClassName,
-  getShipmentStatusLabel,
   getShipmentTransactionStatusClassName,
-  SHIPMENT_PAYMENT_STATUS_LABELS,
-  SHIPMENT_PRIORITY_LABELS,
-  SHIPMENT_TRANSACTION_STATUS_LABELS,
 } from '@/lib/shipments/presentation';
 import type { CollectorIncomingShipment } from '@/lib/shipments/types';
 import {
@@ -107,7 +103,7 @@ export function CollectorReception() {
 
   const loadIncomingShipments = useCallback(async () => {
     if (!token) {
-      setError('Session expiree');
+      setError(t('parcelManagement.errors.sessionExpired'));
       setLoading(false);
       return;
     }
@@ -160,7 +156,7 @@ export function CollectorReception() {
         setError(
           err instanceof ApiError
             ? err.message
-            : 'Impossible de charger les colis a receptionner.',
+            : t('collectorReception.errors.loadIncoming'),
         );
         setShipments([]);
         setTotalPages(0);
@@ -429,19 +425,19 @@ export function CollectorReception() {
       });
 
       toast({
-        title: 'Colis receptionne',
+        title: t('collectorReception.toasts.receivedTitle'),
         description:
           response.note ??
-          `Le colis #${selectedShipment.shipmentId} a ete valide par le collecteur.`,
+          t('collectorReception.toasts.receivedDescription', { values: { id: selectedShipment.shipmentId } }),
       });
       setValidatedCount((current) => current + 1);
       resetValidateDialog();
       await loadIncomingShipments();
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : 'Impossible de valider la reception du colis.';
+        err instanceof ApiError ? err.message : t('collectorReception.toasts.validateFailed');
       toast({
-        title: 'Validation refusee',
+        title: t('collectorReception.toasts.validationRefusedTitle'),
         description: message,
         variant: 'destructive',
       });
@@ -463,19 +459,19 @@ export function CollectorReception() {
       });
 
       toast({
-        title: 'Colis rejete',
+        title: t('collectorReception.toasts.rejectedTitle'),
         description:
           response.note ??
-          `Le colis #${selectedShipment.shipmentId} a ete rejete par le collecteur.`,
+          t('collectorReception.toasts.rejectedDescription', { values: { id: selectedShipment.shipmentId } }),
       });
       setRejectedCount((current) => current + 1);
       resetRejectDialog();
       await loadIncomingShipments();
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : 'Impossible de rejeter la reception du colis.';
+        err instanceof ApiError ? err.message : t('collectorReception.toasts.rejectFailed');
       toast({
-        title: 'Rejet impossible',
+        title: t('collectorReception.toasts.rejectRefusedTitle'),
         description: message,
         variant: 'destructive',
       });
@@ -488,9 +484,9 @@ export function CollectorReception() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Flux de Reception</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('collectorReception.title')}</h2>
           <p className="text-muted-foreground">
-            Receptionnez ou rejetez les colis remis par les clients au point de collecte.
+            {t('collectorReception.subtitle')}
           </p>
         </div>
         <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-auto">
@@ -517,7 +513,7 @@ export function CollectorReception() {
             disabled={loading}
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Actualiser
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -541,20 +537,20 @@ export function CollectorReception() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <ReceptionStatCard
           icon={Clock3}
-          label="A receptionner"
+          label={t('collectorReception.stats.toReceive')}
           value={totalElements}
           className="bg-warning/15 text-warning"
           cardClassName="col-span-2 md:col-span-1"
         />
         <ReceptionStatCard
           icon={Check}
-          label="Valides session"
+          label={t('collectorReception.stats.validated')}
           value={validatedCount}
           className="bg-success/15 text-success"
         />
         <ReceptionStatCard
           icon={X}
-          label="Rejetes session"
+          label={t('collectorReception.stats.rejected')}
           value={rejectedCount}
           className="bg-destructive/15 text-destructive"
         />
@@ -567,7 +563,7 @@ export function CollectorReception() {
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Rechercher par expediteur, destinataire, point ou type..."
+              placeholder={t('collectorReception.list.searchPlaceholder')}
               className="bg-secondary pl-10"
             />
           </div>
@@ -581,7 +577,7 @@ export function CollectorReception() {
                 onClick={() => void loadIncomingShipments()}
               >
                 <RefreshCw className="h-4 w-4" />
-                Reessayer
+                {t('common.retry')}
               </Button>
             </div>
           ) : loading ? (
@@ -607,12 +603,12 @@ export function CollectorReception() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">Colis</TableHead>
-                      <TableHead className="text-muted-foreground">Client</TableHead>
-                      <TableHead className="text-muted-foreground">Trajet</TableHead>
-                      <TableHead className="text-muted-foreground">Statut paiement</TableHead>
-                      <TableHead className="text-muted-foreground">Statut</TableHead>
-                      <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                      <TableHead className="text-muted-foreground">{t('collectorReception.list.headers.parcel')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('collectorReception.list.headers.client')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('collectorReception.list.headers.route')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('collectorReception.list.headers.paymentStatus')}</TableHead>
+                      <TableHead className="text-muted-foreground">{t('collectorReception.list.headers.status')}</TableHead>
+                      <TableHead className="text-right text-muted-foreground">{t('collectorReception.list.headers.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -623,12 +619,12 @@ export function CollectorReception() {
                           <div className="space-y-1">
                             <p className="font-medium text-foreground">#{shipment.shipmentId}</p>
                             <p className="text-xs text-muted-foreground">
-                              {shipment.parcelTypeName ?? 'Type non renseigne'}
+                              {shipment.parcelTypeName ?? t('collectorReception.list.fallbacks.parcelType')}
                               {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
                             </p>
                             {shipment.priority && (
                               <Badge variant="outline">
-                                {SHIPMENT_PRIORITY_LABELS[shipment.priority]}
+                                {t(`shipmentPriority.${shipment.priority}`)}
                               </Badge>
                             )}
                           </div>
@@ -636,20 +632,20 @@ export function CollectorReception() {
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p className="font-medium text-foreground">
-                              {shipment.senderFullName ?? 'Expediteur non renseigne'}
+                              {shipment.senderFullName ?? t('collectorReception.list.fallbacks.sender')}
                             </p>
                             <p className="text-muted-foreground">
-                              Vers {shipment.receiverFullName ?? 'destinataire non renseigne'}
+                              {t('collectorReception.list.fallbacks.to', { values: { name: shipment.receiverFullName ?? t('collectorReception.list.fallbacks.receiverShort') } })}
                             </p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1 text-sm">
                             <p className="text-foreground">
-                              {shipment.originCollectionPointName ?? 'Origine non renseignee'}
+                              {shipment.originCollectionPointName ?? t('collectorReception.list.fallbacks.origin')}
                             </p>
                             <p className="text-muted-foreground">
-                              {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+                              {shipment.destinationCollectionPointName ?? t('collectorReception.list.fallbacks.destination')}
                             </p>
                           </div>
                         </TableCell>
@@ -657,10 +653,10 @@ export function CollectorReception() {
                         <TableCell>
                           {shipment.status ? (
                             <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                              {getShipmentStatusLabel(shipment.status)}
+                              {t(`parcelManagement.statuses.${shipment.status}`)}
                             </Badge>
                           ) : (
-                            <Badge variant="outline">Non renseigne</Badge>
+                            <Badge variant="outline">{t('collectorReception.list.fallbacks.unspecified')}</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -703,9 +699,9 @@ export function CollectorReception() {
       <Dialog open={isValidateDialogOpen} onOpenChange={handleValidateDialogChange}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Reception du colis client</DialogTitle>
+            <DialogTitle className="text-foreground">{t('collectorReception.validateDialog.title')}</DialogTitle>
             <DialogDescription>
-              Controlez le deposant, le colis et saisissez la reference lue sur le colis.
+              {t('collectorReception.validateDialog.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -713,26 +709,24 @@ export function CollectorReception() {
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <ReceptionInfoPanel
-                  title="Remise client"
+                  title={t('collectorReception.validateDialog.clientPanel')}
                   rows={[
-                    ['Expediteur', selectedShipment.senderFullName],
-                    ['Destinataire', selectedShipment.receiverFullName],
-                    ['Cree le', formatShipmentDate(selectedShipment.createdAt)],
-                    ['Entreprise', selectedShipment.companyName],
+                    [t('collectorReception.validateDialog.rows.sender'), selectedShipment.senderFullName],
+                    [t('collectorReception.validateDialog.rows.receiver'), selectedShipment.receiverFullName],
+                    [t('collectorReception.validateDialog.rows.createdAt'), formatShipmentDate(selectedShipment.createdAt)],
+                    [t('collectorReception.validateDialog.rows.company'), selectedShipment.companyName],
                   ]}
                 />
                 <ReceptionInfoPanel
-                  title="Colis"
+                  title={t('collectorReception.validateDialog.parcelPanel')}
                   rows={[
-                    ['Type', selectedShipment.parcelTypeName],
-                    ['Transport', selectedShipment.transportModeName],
+                    [t('collectorReception.validateDialog.rows.type'), selectedShipment.parcelTypeName],
+                    [t('collectorReception.validateDialog.rows.transport'), selectedShipment.transportModeName],
                     [
-                      'Priorite',
-                      selectedShipment.priority
-                        ? SHIPMENT_PRIORITY_LABELS[selectedShipment.priority]
-                        : undefined,
+                      t('collectorReception.validateDialog.rows.priority'),
+                      selectedShipment.priority ? t(`shipmentPriority.${selectedShipment.priority}`) : undefined,
                     ],
-                    ['Prix', formatMoney(selectedShipment.price, { fallback: 'Non renseigne' })],
+                    [t('collectorReception.validateDialog.rows.price'), formatMoney(selectedShipment.price, { fallback: t('collectorReception.list.fallbacks.unspecified') })],
                   ]}
                 />
               </div>
@@ -758,10 +752,9 @@ export function CollectorReception() {
                 <div className="mb-3 flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Reference du colis</p>
+                    <p className="text-sm font-semibold text-foreground">{t('collectorReception.validateDialog.referenceTitle')}</p>
                     <p className="text-sm text-muted-foreground">
-                      La reference n&apos;est pas exposee dans la liste pour eviter une validation
-                      automatique. Le backend verifiera la reference saisie.
+                      {t('collectorReception.validateDialog.referenceHint')}
                     </p>
                   </div>
                 </div>
@@ -769,7 +762,7 @@ export function CollectorReception() {
                   <Input
                     value={referenceInput}
                     onChange={(event) => setReferenceInput(event.target.value)}
-                    placeholder="Reference presente sur le colis ou le bordereau"
+                    placeholder={t('collectorReception.validateDialog.referencePlaceholder')}
                     className="w-full min-w-0 flex-1 bg-secondary"
                     disabled={actionLoading}
                   />
@@ -800,24 +793,24 @@ export function CollectorReception() {
                   />
                   <p className="text-sm text-muted-foreground">
                     {isReferenceReady
-                      ? 'Reference prete pour verification backend.'
-                      : 'Saisissez la reference du colis remis par le client.'}
+                      ? t('collectorReception.validateDialog.referenceReady')
+                      : t('collectorReception.validateDialog.referenceMissing')}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4">
-                <p className="mb-3 text-sm font-semibold text-foreground">Checklist obligatoire</p>
+                <p className="mb-3 text-sm font-semibold text-foreground">{t('collectorReception.validateDialog.checklistTitle')}</p>
                 <div className="space-y-3">
                   <label className="flex items-start gap-3 rounded-lg border border-border px-3 py-3">
                     <Checkbox
                       checked={isIdentityChecked}
                       onCheckedChange={(checked) => setIsIdentityChecked(checked === true)}
                       disabled={actionLoading}
-                      aria-label="Confirmer la verification du deposant"
+                      aria-label={t('collectorReception.validateDialog.identityAria')}
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai verifie l&apos;identite du deposant et la coherence avec le colis.
+                      {t('collectorReception.validateDialog.identityCheck')}
                     </span>
                   </label>
                   {selectedShipmentRequiresCollection && (
@@ -840,10 +833,10 @@ export function CollectorReception() {
                       checked={isParcelChecked}
                       onCheckedChange={(checked) => setIsParcelChecked(checked === true)}
                       disabled={actionLoading}
-                      aria-label="Confirmer la verification physique du colis"
+                      aria-label={t('collectorReception.validateDialog.parcelAria')}
                     />
                     <span className="text-sm text-foreground">
-                      J&apos;ai controle physiquement le colis avant la prise en charge.
+                      {t('collectorReception.validateDialog.parcelCheck')}
                     </span>
                   </label>
                 </div>
@@ -857,7 +850,7 @@ export function CollectorReception() {
               onClick={() => handleValidateDialogChange(false)}
               disabled={actionLoading}
             >
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => void handleFinalValidation()}
@@ -869,7 +862,7 @@ export function CollectorReception() {
               ) : (
                 <QrCode className="h-4 w-4" />
               )}
-              {actionLoading ? 'Validation...' : 'Valider la reception'}
+              {actionLoading ? t('collectorReception.validateDialog.validating') : t('collectorReception.validateDialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -878,17 +871,17 @@ export function CollectorReception() {
       <Dialog open={isRejectDialogOpen} onOpenChange={handleRejectDialogChange}>
         <DialogContent className="max-h-[80vh] max-w-lg overflow-y-auto border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Rejeter la reception</DialogTitle>
+            <DialogTitle className="text-foreground">{t('collectorReception.rejectDialog.title')}</DialogTitle>
             <DialogDescription>
-              Indiquez le motif de rejet du colis #{selectedShipment?.shipmentId}.
+              {t('collectorReception.rejectDialog.description', { values: { id: selectedShipment?.shipmentId ?? '' } })}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <label className="mb-2 block text-sm font-medium text-foreground">Motif du rejet</label>
+            <label className="mb-2 block text-sm font-medium text-foreground">{t('collectorReception.rejectDialog.reason')}</label>
             <Textarea
               value={rejectReason}
               onChange={(event) => setRejectReason(event.target.value)}
-              placeholder="Colis endommage, reference incoherente, client non conforme..."
+              placeholder={t('collectorReception.rejectDialog.placeholder')}
               className="min-h-[100px] bg-secondary"
               disabled={actionLoading}
             />
@@ -899,7 +892,7 @@ export function CollectorReception() {
               onClick={() => handleRejectDialogChange(false)}
               disabled={actionLoading}
             >
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -912,7 +905,7 @@ export function CollectorReception() {
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {actionLoading ? 'Rejet...' : 'Confirmer le rejet'}
+              {actionLoading ? t('collectorReception.rejectDialog.rejecting') : t('collectorReception.rejectDialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -965,7 +958,7 @@ function ReceptionPaymentSummary({ shipment }: { shipment: CollectorIncomingShip
   return (
     <div className="min-w-0 space-y-1.5 text-sm">
       <p className="font-semibold text-foreground">
-        {formatMoney(shipment.price, { fallback: 'Non renseigne' })}
+        {formatMoney(shipment.price, { fallback: t('collectorReception.list.fallbacks.unspecified') })}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {shipment.paymentStatus ? (
@@ -975,10 +968,10 @@ function ReceptionPaymentSummary({ shipment }: { shipment: CollectorIncomingShip
               getShipmentPaymentStatusClassName(shipment.paymentStatus),
             )}
           >
-            {SHIPMENT_PAYMENT_STATUS_LABELS[shipment.paymentStatus]}
+            {t(`shipmentPaymentStatuses.${shipment.paymentStatus}`)}
           </Badge>
         ) : (
-          <Badge variant="outline">Paiement non renseigne</Badge>
+          <Badge variant="outline">{t('collectorReception.list.fallbacks.payment')}</Badge>
         )}
         {shipment.transactionStatus && (
           <Badge
@@ -987,7 +980,7 @@ function ReceptionPaymentSummary({ shipment }: { shipment: CollectorIncomingShip
               getShipmentTransactionStatusClassName(shipment.transactionStatus),
             )}
           >
-            {SHIPMENT_TRANSACTION_STATUS_LABELS[shipment.transactionStatus]}
+            {t(`shipmentTransactionStatuses.${shipment.transactionStatus}`)}
           </Badge>
         )}
       </div>
@@ -1035,7 +1028,7 @@ function ReceptionActions({
         onClick={() => onReject(shipment)}
       >
         <AlertTriangle className="h-4 w-4" />
-        Rejeter
+        {t('collectorReception.actions.reject')}
       </Button>
       {paymentBlocked ? (
         <Button
@@ -1076,39 +1069,40 @@ function MobileReceptionShipmentCard({
   onReceive: (shipment: CollectorIncomingShipment) => void;
   onPay: (shipment: CollectorIncomingShipment) => void;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <article className="space-y-3 overflow-hidden rounded-xl border border-border bg-background p-3.5 shadow-sm">
       <div className="flex flex-col items-start gap-2 min-[400px]:flex-row min-[400px]:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-foreground">#{shipment.shipmentId}</p>
           <p className="break-words text-sm text-muted-foreground">
-            {shipment.parcelTypeName ?? 'Type non renseigne'}
+            {shipment.parcelTypeName ?? t('collectorReception.list.fallbacks.parcelType')}
             {shipment.transportModeName ? ` · ${shipment.transportModeName}` : ''}
           </p>
         </div>
         {shipment.status && (
           <Badge className={cn('max-w-full shrink-0 whitespace-normal border-0 text-left text-[11px]', getShipmentStatusClassName(shipment.status))}>
-            {getShipmentStatusLabel(shipment.status)}
+            {t(`parcelManagement.statuses.${shipment.status}`)}
           </Badge>
         )}
       </div>
 
       <div className="grid gap-3 rounded-lg bg-muted/40 p-3 text-sm">
         <MobileReceptionInfo
-          label="Expediteur"
-          value={shipment.senderFullName ?? 'Non renseigne'}
+          label={t('collectorReception.mobile.sender')}
+          value={shipment.senderFullName ?? t('collectorReception.list.fallbacks.unspecified')}
         />
         <MobileReceptionInfo
-          label="Destinataire"
-          value={shipment.receiverFullName ?? 'Non renseigne'}
+          label={t('collectorReception.mobile.receiver')}
+          value={shipment.receiverFullName ?? t('collectorReception.list.fallbacks.unspecified')}
         />
         <div className="border-t border-border/70 pt-2">
-          <p className="text-xs text-muted-foreground">Trajet</p>
+          <p className="text-xs text-muted-foreground">{t('collectorReception.mobile.route')}</p>
           <p className="mt-1 break-words font-medium text-foreground">
-            {shipment.originCollectionPointName ?? 'Origine non renseignee'}
+            {shipment.originCollectionPointName ?? t('collectorReception.list.fallbacks.origin')}
           </p>
           <p className="break-words text-muted-foreground">
-            → {shipment.destinationCollectionPointName ?? 'Destination non renseignee'}
+            → {shipment.destinationCollectionPointName ?? t('collectorReception.list.fallbacks.destination')}
           </p>
         </div>
       </div>
@@ -1138,12 +1132,13 @@ function MobileReceptionInfo({ label, value }: { label: string; value: string })
 }
 
 function ReceptionEmptyState() {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="flex flex-col items-center gap-2 py-8 text-center">
       <Package className="h-8 w-8 text-muted-foreground" />
-      <p className="font-medium text-foreground">Aucun colis a receptionner</p>
+      <p className="font-medium text-foreground">{t('collectorReception.empty.title')}</p>
       <p className="max-w-sm text-sm text-muted-foreground">
-        Les colis entrants valides par le backend apparaitront ici.
+        {t('collectorReception.empty.description')}
       </p>
     </div>
   );
@@ -1184,6 +1179,7 @@ function ReceptionInfoPanel({
   title: string;
   rows: Array<[string, string | number | undefined]>;
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="rounded-lg border border-border bg-secondary/40 p-4">
       <p className="mb-3 text-sm font-semibold text-foreground">{title}</p>
@@ -1192,7 +1188,7 @@ function ReceptionInfoPanel({
           <div key={label} className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">{label}</span>
             <span className="text-right font-medium text-foreground">
-              {value || 'Non renseigne'}
+              {value || t('collectorReception.list.fallbacks.unspecified')}
             </span>
           </div>
         ))}

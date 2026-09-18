@@ -52,7 +52,7 @@
   },
   "cancel": { "title": "Cancel subscription?", "description": "The subscription will no longer grant operating rights after cancellation.", "confirm": "Cancel subscription" },
   "invoices": {
-    "title": "Recent invoices", "description": "Statuses and amounts supplied by the backend.",
+    "title": "Recent invoices", "description": "Your latest invoices, statuses and amounts.",
     "emptyTitle": "No invoices", "emptyDescription": "Invoices created by subscriptions will appear here.",
     "reference": "Reference", "plan": "Plan", "date": "Date", "amount": "Amount", "status": "Status", "action": "Action", "pay": "Pay"
   },

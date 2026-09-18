@@ -1,0 +1,96 @@
+{
+  "title": "Team management",
+  "subtitle": "{{company}} members: employees, collectors and transporters.",
+  "actions": {
+    "addMember": "Add member",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "roles": {
+    "CLIENT": "Customer",
+    "COLLECTOR": "Collector",
+    "TRANSPORTER": "Transporter",
+    "ADMIN_COMPANY": "Admin",
+    "EMPLOYEE_COMPANY": "Employee",
+    "SUPER_ADMIN": "Super admin"
+  },
+  "statuses": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "SUSPENDED": "Suspended",
+    "DELETED": "Deleted"
+  },
+  "stats": {
+    "members": "Members",
+    "active": "Active",
+    "suspended": "Suspended",
+    "collectors": "Collectors",
+    "transporters": "Transporters"
+  },
+  "search": {
+    "placeholder": "Search by name, username, email or phone…",
+    "all": "All ({{count}})",
+    "roleCount": "{{role}} ({{count}})"
+  },
+  "empty": {
+    "noMember": "No member",
+    "noMemberDescription": "Add your first team member to get started.",
+    "noResult": "No result",
+    "noResultDescription": "No member matches your search."
+  },
+  "table": {
+    "member": "Member",
+    "contact": "Contact",
+    "role": "Role",
+    "status": "Status",
+    "commission": "Commission",
+    "actions": "Actions"
+  },
+  "memberActions": {
+    "phone": "Phone",
+    "password": "Password",
+    "commission": "Commission",
+    "suspend": "Suspend",
+    "activate": "Activate"
+  },
+  "phoneDialog": {
+    "title": "Edit phone number",
+    "phoneLabel": "Phone number"
+  },
+  "passwordDialog": {
+    "title": "Change password",
+    "oldPassword": "Current password",
+    "newPassword": "New password",
+    "confirm": "Confirm",
+    "mismatch": "Passwords do not match"
+  },
+  "commissionDialog": {
+    "title": "Edit commission",
+    "commissionLabel": "Commission (%)",
+    "placeholder": "E.g. 12"
+  },
+  "deleteDialog": {
+    "title": "Delete member",
+    "description": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+    "confirm": "Delete"
+  },
+  "errors": {
+    "loadTitle": "Loading error",
+    "load": "Loading failed",
+    "action": "Action failed",
+    "update": "Unable to update",
+    "delete": "Unable to delete"
+  },
+  "messages": {
+    "memberAdded": "{{name}} added",
+    "memberSuspended": "{{name}} suspended",
+    "memberActivated": "{{name}} activated",
+    "memberDeleted": "{{name}} deleted",
+    "phoneUpdated": "Phone number updated",
+    "passwordUpdated": "Password updated",
+    "commissionUpdated": "Commission updated"
+  }
+}

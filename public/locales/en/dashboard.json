@@ -103,7 +103,7 @@
     }
   },
   "profile": {
-    "description": "Review the information returned by the API and update your profile.",
+    "description": "Review your information and keep your profile up to date.",
     "fields": {
       "address": "Address",
       "city": "City",
@@ -123,11 +123,11 @@
       "loadFailed": "Unable to load the profile.",
       "loading": "Loading profile...",
       "saved": "Profile updated",
-      "savedDescription": "Your information has been synced with the backend.",
+      "savedDescription": "Your information has been saved.",
       "saveFailed": "Unable to update profile",
       "sessionExpired": "Session expired."
     },
-    "photoHint": "The photo is sent through the backend profile endpoint.",
+    "photoHint": "Your profile photo will be visible to your team and customers.",
     "title": "My profile"
   },
   "collectorDashboard": {
@@ -151,11 +151,11 @@
     },
     "priorities": {
       "title": "Immediate priorities",
-      "description": "Items returned by the backend to guide processing."
+      "description": "Handle these first to keep operations running smoothly."
     },
     "recentOperations": {
       "title": "Latest operations",
-      "description": "Recent operations confirmed by the API.",
+      "description": "Recent operations confirmed by the system.",
       "empty": "No recent operation."
     },
     "pendingReceptions": {
@@ -517,7 +517,7 @@
         "relatedEntityType": "SHIPMENT",
         "title": "Ex: Parcel ready for pickup"
       },
-      "subtitle": "Create a backend notification and target specific users or a segment.",
+      "subtitle": "Create an announcement and target specific users or a segment.",
       "target": {
         "allCompanies": "All companies",
         "allCountries": "All countries",
@@ -591,7 +591,7 @@
       "messages": {
         "revoked": "Device revoked"
       },
-      "subtitle": "Devices registered with the notification backend.",
+      "subtitle": "Devices that will receive your notifications.",
       "title": "Devices",
       "unknownDevice": "Unknown device"
     },
@@ -609,7 +609,7 @@
       "deleted": "Notification deleted",
       "readAll": "Notifications marked as read"
     },
-    "pageSubtitle": "Read your notifications, handle alerts, and manage backend sends.",
+    "pageSubtitle": "Read your notifications, handle alerts, and manage your sends.",
     "pageTitle": "Notifications",
     "pagination": {
       "current": "{{page}} / {{total}}",
@@ -865,7 +865,7 @@
       "sameCity": "Same city"
     },
     "empty": {
-      "initialDescription": "Use your position to get points sorted by distance by the backend, or select a country and city.",
+      "initialDescription": "Use your location to find the closest points, or select a country and city.",
       "initialTitle": "Find collection points around you",
       "noResultsDescription": "Change the search, location, or network filter.",
       "noResultsTitle": "No collection point found"
@@ -896,7 +896,7 @@
     "messages": {
       "locating": "Retrieving your position...",
       "locationResults": "{{count}} point(s) available in this city.",
-      "nearbyResults": "{{count}} point(s) sorted by distance by the backend.",
+      "nearbyResults": "{{count}} point(s), from closest to farthest.",
       "noLocationResults": "No point available in this city.",
       "noNearbyResults": "No point found around this position."
     },
@@ -917,7 +917,7 @@
       "closed": "Closed",
       "open": "Open"
     },
-    "subtitle": "Active points supplied by the backend, by GPS proximity or city.",
+    "subtitle": "Active points, by GPS proximity or city.",
     "title": "Collection points map"
   },
   "collectorReception": {
@@ -951,7 +951,7 @@
       "collectAndReceive": "Collect and receive",
       "collectCompanyPrice": "Collect on site: {{amount}}",
       "companyPriceDue": "Company amount to collect: {{amount}}",
-      "companyPriceDueDescription": "The platform fee is already settled. After confirmation, the backend will automatically record the COLLECTION_POINT payment and complete the transaction.",
+      "companyPriceDueDescription": "The platform fee is already settled. After your confirmation, the payment will be recorded automatically and the transaction completed.",
       "confirmCash": "I confirm that I collected {{amount}} on behalf of the company.",
       "confirmCashAria": "Confirm physical collection of the company price",
       "payPlatformFee": "Pay platform fee",
@@ -959,6 +959,95 @@
       "platformFeeRequiredDescription": "The platform fee must be confirmed before receiving the parcel.",
       "platformFeeRequiredTitle": "Platform fee required",
       "receive": "Receive"
+    },
+    "title": "Reception flow",
+    "subtitle": "Receive or reject the parcels handed over by customers at the collection point.",
+    "stats": {
+      "toReceive": "To receive",
+      "validated": "Validated (session)",
+      "rejected": "Rejected (session)"
+    },
+    "list": {
+      "searchPlaceholder": "Search by sender, receiver, point or type…",
+      "headers": {
+        "parcel": "Parcel",
+        "client": "Customer",
+        "route": "Route",
+        "paymentStatus": "Payment status",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "fallbacks": {
+        "parcelType": "Type not specified",
+        "sender": "Sender not specified",
+        "to": "To {{name}}",
+        "receiverShort": "receiver not specified",
+        "origin": "Origin not specified",
+        "destination": "Destination not specified",
+        "unspecified": "Not specified",
+        "payment": "Payment not specified"
+      }
+    },
+    "toasts": {
+      "receivedTitle": "Parcel received",
+      "receivedDescription": "Parcel #{{id}} was validated by the collector.",
+      "validateFailed": "Unable to validate the parcel reception.",
+      "validationRefusedTitle": "Validation refused",
+      "rejectedTitle": "Parcel rejected",
+      "rejectedDescription": "Parcel #{{id}} was rejected by the collector.",
+      "rejectFailed": "Unable to reject the parcel reception.",
+      "rejectRefusedTitle": "Rejection failed"
+    },
+    "validateDialog": {
+      "title": "Customer parcel reception",
+      "description": "Check the depositor and the parcel, then enter the reference read on the parcel.",
+      "clientPanel": "Customer handover",
+      "parcelPanel": "Parcel",
+      "rows": {
+        "sender": "Sender",
+        "receiver": "Receiver",
+        "createdAt": "Created on",
+        "company": "Company",
+        "type": "Type",
+        "transport": "Transport",
+        "priority": "Priority",
+        "price": "Price"
+      },
+      "referenceTitle": "Parcel reference",
+      "referenceHint": "To avoid mistakes, the reference is not displayed in the list. We will verify it as soon as it is entered.",
+      "referencePlaceholder": "Reference printed on the parcel or the slip",
+      "referenceReady": "Reference ready for verification.",
+      "referenceMissing": "Enter the reference of the parcel handed over by the customer.",
+      "checklistTitle": "Mandatory checklist",
+      "identityAria": "Confirm the depositor verification",
+      "identityCheck": "I verified the depositor identity and its consistency with the parcel.",
+      "parcelAria": "Confirm the physical parcel check",
+      "parcelCheck": "I physically checked the parcel before taking charge.",
+      "validating": "Validating…",
+      "submit": "Validate reception"
+    },
+    "rejectDialog": {
+      "title": "Reject reception",
+      "description": "Indicate the reason for rejecting parcel #{{id}}.",
+      "reason": "Rejection reason",
+      "placeholder": "Damaged parcel, inconsistent reference, non-compliant customer…",
+      "rejecting": "Rejecting…",
+      "submit": "Confirm rejection"
+    },
+    "empty": {
+      "title": "No parcel to receive",
+      "description": "Incoming parcels will appear here once confirmed."
+    },
+    "mobile": {
+      "route": "Route",
+      "sender": "Sender",
+      "receiver": "Receiver"
+    },
+    "actions": {
+      "reject": "Reject"
+    },
+    "errors": {
+      "loadIncoming": "Unable to load the incoming parcels."
     }
   },
   "parcelManagement": {
@@ -976,7 +1065,116 @@
       "hiddenLabel": "Shipment #{{id}}"
     },
     "search": {
-      "collectorPlaceholder": "Search by sender or receiver..."
+      "transporterPlaceholder": "Search by reference or code…",
+      "otherPlaceholder": "Search by reference, sender or receiver…"
+    },
+    "statuses": {
+      "CREATED": "Created",
+      "PAID": "Paid",
+      "AWAITING_DROP_OFF": "Awaiting drop-off",
+      "RECEIVED_AT_COLLECTION_POINT": "Received at point",
+      "READY_FOR_TRANSPORT": "Ready for transport",
+      "IN_TRANSIT": "In transit",
+      "ARRIVED_DESTINATION_POINT": "Arrived at destination point",
+      "READY_FOR_PICKUP": "Ready for pickup",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled",
+      "RETURNED": "Returned",
+      "ALL": "All"
+    },
+    "title": "Parcel management",
+    "create": "New parcel",
+    "roleDescriptions": {
+      "transporter": "The deliveries that concern you, automatically filtered by your role.",
+      "collector": "Parcels visible from your collection and drop-off perimeter.",
+      "other": "Company parcel list, automatically filtered by your role."
+    },
+    "statusCards": {
+      "inTransit": "In transit",
+      "delivered": "Delivered",
+      "readyPickup": "Ready for pickup",
+      "receivedPoint": "Received at point"
+    },
+    "errors": {
+      "sessionExpired": "Session expired",
+      "load": "Unable to load the parcels.",
+      "detailLoad": "Unable to load the parcel details."
+    },
+    "count": "{{count}} parcels",
+    "empty": "No parcel found on this page.",
+    "filtersHint": "The search filters apply to the currently loaded page.",
+    "columns": {
+      "reference": "Reference",
+      "origin": "Origin",
+      "destination": "Destination",
+      "status": "Status",
+      "updatedAt": "Updated",
+      "actions": "Actions",
+      "sender": "Sender",
+      "recipient": "Receiver"
+    },
+    "mobile": {
+      "updatedAt": "Updated {{date}}",
+      "viewDetails": "View details"
+    },
+    "detail": {
+      "back": "Back to the list",
+      "label": "Parcel details",
+      "description": "Detailed parcel view, optimized for mobile.",
+      "fallbackId": "Parcel #{{id}}",
+      "company": "Company",
+      "lastUpdate": "Last update",
+      "origin": "Origin",
+      "destination": "Destination",
+      "createdAt": "Created",
+      "finalPrice": "Final price",
+      "collectionModeFallback": "Collection mode not specified",
+      "characteristics": "Characteristics",
+      "pricing": "Pricing",
+      "photos": "Parcel photos",
+      "photosEmpty": "No photo available.",
+      "photoNumber": "Photo #{{id}}",
+      "photoAdded": "Added on {{date}}",
+      "photoAlt": "Photo {{id}} of parcel {{reference}}",
+      "history": "Status history",
+      "historyDescription": "Detailed timeline of the parcel.",
+      "historyEmpty": "No status history available.",
+      "qrTitle": "Parcel QR code",
+      "qrDescription": "Code to scan to identify this parcel.",
+      "qrAlt": "QR code of parcel {{reference}}",
+      "qrEmpty": "No QR code available for this parcel.",
+      "openImage": "Open image",
+      "fields": {
+        "parcelType": "Parcel type",
+        "transportMode": "Transport mode",
+        "weight": "Weight",
+        "volume": "Volume",
+        "description": "Description",
+        "companyPrice": "Company price",
+        "fees": "Fees",
+        "discount": "Discount",
+        "finalPrice": "Final price",
+        "paymentStatus": "Payment status",
+        "collectionMode": "Collection mode"
+      },
+      "person": {
+        "contactHint": "Contact and identification information.",
+        "name": "Name",
+        "phone": "Phone",
+        "address": "Address",
+        "cityCountry": "City / country",
+        "idCard": "ID card",
+        "linkedProfile": "Linked profile",
+        "yes": "Yes",
+        "no": "No"
+      }
+    },
+    "timeline": {
+      "modifiedBy": "Modified by {{name}}"
+    },
+    "noInfo": "No information available.",
+    "fallbacks": {
+      "restrictedInfo": "Restricted information"
     }
   },
   "shipmentPayment": {
@@ -1008,10 +1206,10 @@
     "phoneHint": "Enter the local or international number that will receive the confirmation request.",
     "loadingCountries": "Loading available countries…",
     "countriesError": "Unable to load the countries available for this operator.",
-      "otpRequired": "The operator may require an OTP confirmation.",
-      "otpLabel": "OTP code",
-      "otpPlaceholder": "Enter the 6 digits",
-      "submitOtp": "Submit OTP code",
+    "otpRequired": "The operator may require an OTP confirmation.",
+    "otpLabel": "OTP code",
+    "otpPlaceholder": "Enter the 6 digits",
+    "submitOtp": "Submit OTP code",
     "walletDebit": "Amount requested from the wallet: {{amount}}",
     "pay": "Start payment",
     "payFullShipment": "Pay full shipment amount",
@@ -1037,22 +1235,22 @@
     "fullShipmentSuccessTitle": "Shipment payment confirmed",
     "fullShipmentSuccessDescription": "The full shipment amount has been paid. The shipment can proceed to collection.",
     "failedDescription": "This attempt did not complete. You can start a new one.",
-      "providers": {
-        "MTN": "MTN Mobile Money",
-        "ORANGE": "Orange Money",
-        "MOOV": "Moov Money",
-        "WAVE": "Wave Money",
-        "EXPRESSO": "Expresso Money",
-        "FREE": "Free Money",
-        "WLIGDICASH": "LigdiCash",
-        "CELTIIS": "Celtiis Money",
-        "CORIS": "Coris Money",
-        "TMONEY": "TMoney",
-        "AIRTEL": "Airtel Money",
-        "TELECEL": "Telecel Money",
-        "MPESA": "M-Pesa",
-        "AFRIMONEY": "AfriMoney",
-        "PAYPAL": "PayPal",
+    "providers": {
+      "MTN": "MTN Mobile Money",
+      "ORANGE": "Orange Money",
+      "MOOV": "Moov Money",
+      "WAVE": "Wave Money",
+      "EXPRESSO": "Expresso Money",
+      "FREE": "Free Money",
+      "WLIGDICASH": "LigdiCash",
+      "CELTIIS": "Celtiis Money",
+      "CORIS": "Coris Money",
+      "TMONEY": "TMoney",
+      "AIRTEL": "Airtel Money",
+      "TELECEL": "Telecel Money",
+      "MPESA": "M-Pesa",
+      "AFRIMONEY": "AfriMoney",
+      "PAYPAL": "PayPal",
       "STRIPE": "Stripe"
     },
     "statuses": {
@@ -1125,8 +1323,8 @@
     "history": {
       "actor": "Changed by {{actor}}",
       "empty": "No history available.",
-      "subtitle": "Events emitted by the backend for this shipment.",
-      "title": "Backend history",
+      "subtitle": "Processing steps for this shipment.",
+      "title": "Shipment history",
       "transition": "{{from}} -> {{to}}"
     },
     "lifecycle": {
@@ -1207,7 +1405,7 @@
   },
   "platformFinance": {
     "delete": {
-      "description": "This action calls the backend directly and cannot be undone from the dashboard.",
+      "description": "This action is definitive and cannot be undone from the dashboard.",
       "title": "Confirm deletion"
     },
     "fees": {
@@ -1365,7 +1563,7 @@
     },
     "brand": {
       "currentLogo": "Current logo or initials",
-      "description": "The logo is sent to the backend through the multipart logo field.",
+      "description": "Accepted formats: PNG, JPG or SVG. Your logo will appear across your workspace.",
       "logoAlt": "Company logo",
       "title": "Brand"
     },
@@ -1390,7 +1588,7 @@
       "saved": "Company profile updated."
     },
     "payment": {
-      "description": "Control where payments are collected using the modes exposed by the API.",
+      "description": "Control where payments are collected using the available payment methods.",
       "modes": {
         "COLLECTION_POINT": "Payment at collection point",
         "PLATFORM": "Payment through the platform"
@@ -1554,7 +1752,7 @@
       "address": "Address",
       "addressPlaceholder": "Street, district, landmark...",
       "city": "Attached city",
-      "cityFromZone": "Let the API infer it from the zone",
+      "cityFromZone": "Infer city from the zone",
       "cityHint": "If the zone cannot resolve the city automatically, you can set it here.",
       "createTitle": "Create a collection point",
       "description": "The point stays aligned with the management endpoints: photo, availability, commissions and manager.",
@@ -1577,7 +1775,7 @@
       "phone": "Phone",
       "phonePlaceholder": "+237 6 90 00 00 00",
       "photoAlt": "Collection point photo",
-      "photoDescription": "The API contract accepts an image as multipart.",
+      "photoDescription": "Accepted formats: PNG, JPG or SVG.",
       "photoTitle": "Point photo",
       "removePhoto": "Remove the new file",
       "replacePhoto": "Replace the photo",
@@ -1657,5 +1855,198 @@
       "listTitle": "Geographic zones",
       "pointCount": "{{count}} point(s)"
     }
+  },
+  "transporterDashboard": {
+    "noVehicleTitle": "No vehicle assigned",
+    "noVehicleDescription": "This transporter has no vehicle assigned in the team yet.",
+    "title": "Transporter dashboard",
+    "currentLoad": "Current load",
+    "loading": "Loading transporter dashboard…",
+    "metrics": {
+      "acceptedToLoad": "Accepted requests to load",
+      "onboard": "Parcels on board",
+      "completedTrips": "Completed trips",
+      "delivered": "Delivered parcels"
+    },
+    "commissions": {
+      "title": "My commissions",
+      "description": "Amounts generated by the deliveries you handled."
+    },
+    "vehicle": {
+      "title": "Vehicle and availability",
+      "description": "Load state of the assigned vehicle.",
+      "loadRate": "Load rate",
+      "loadRateDetail": "{{weight}} kg carried right now",
+      "statuses": {
+        "DISPONIBLE": "Available",
+        "EN_TRANSIT": "In transit",
+        "MAINTENANCE": "Under maintenance"
+      }
+    },
+    "requests": {
+      "title": "Requests to load",
+      "description": "Requests accepted by collectors and ready to be loaded.",
+      "collector": "Collector: {{name}}",
+      "fallbackPoint": "Collection point",
+      "parcels": "{{count}} parcels",
+      "pending": "{{count}} pending",
+      "empty": "No accepted request to load yet."
+    },
+    "onboard": {
+      "title": "Parcels currently on board",
+      "description": "Quick view of your active round.",
+      "receiver": "Receiver: {{name}}",
+      "empty": "No parcel currently loaded in this vehicle."
+    },
+    "columns": {
+      "reference": "Reference",
+      "sender": "Sender",
+      "receiver": "Receiver",
+      "destination": "Destination",
+      "weight": "Weight",
+      "status": "Status"
+    }
+  },
+  "transmissionStatuses": {
+    "PENDING_COLLECTOR_APPROVAL": "Waiting for collector",
+    "COLLECTOR_APPROVED": "Accepted",
+    "COLLECTOR_REJECTED": "Rejected",
+    "PARTIALLY_DISPATCHED": "Partially loaded",
+    "FULLY_DISPATCHED": "Fully loaded"
+  },
+  "transferRequests": {
+    "title": "Pickup requests",
+    "subtitleCollector": "Review transfer requests created by transporters.",
+    "subtitleTransporter": "Track your requests and confirm the parcels actually loaded.",
+    "restrictedTitle": "Reserved for collectors and transporters.",
+    "restrictedDescription": "This section is only available to collector and transporter profiles.",
+    "errors": {
+      "load": "Unable to load pickup requests.",
+      "detailTitle": "Details unavailable",
+      "detailLoad": "Unable to load the request.",
+      "approve": "Unable to approve the request.",
+      "reject": "Unable to reject the request.",
+      "embark": "Unable to load the parcels.",
+      "note": "Unable to add the note."
+    },
+    "toasts": {
+      "approvedTitle": "Request approved",
+      "approvedDescription": "The transporter can now load the parcels.",
+      "approveFailedTitle": "Approval failed",
+      "rejectedTitle": "Request rejected",
+      "rejectedDescription": "The transporter will see the rejection reason.",
+      "rejectFailedTitle": "Rejection failed",
+      "embarkedTitle": "Parcels loaded",
+      "embarkedDescription": "{{count}} parcels are now in transit.",
+      "embarkFailedTitle": "Loading failed",
+      "noteAddedTitle": "Note added",
+      "noteAddedDescription": "The transit note has been saved.",
+      "noteFailedTitle": "Note failed"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "embark": "Load",
+      "view": "View",
+      "viewRequest": "View request {{id}}",
+      "close": "Close",
+      "selectParcel": "Select {{id}}",
+      "addTransitNote": "Add a transit note"
+    },
+    "metrics": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "dispatched": "Loaded",
+      "rejected": "Rejected"
+    },
+    "empty": {
+      "title": "No request",
+      "description": "Accepted requests will appear here."
+    },
+    "columns": {
+      "request": "Request",
+      "originPoint": "Origin point",
+      "parties": "Parties",
+      "parcels": "Parcels",
+      "status": "Status",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "fallbacks": {
+      "noPoint": "Point not specified",
+      "noOriginPoint": "Origin point not specified",
+      "unspecified": "Not specified",
+      "unspecifiedFeminine": "Not specified",
+      "sender": "Sender",
+      "receiver": "receiver",
+      "system": "system"
+    },
+    "fields": {
+      "transporter": "Transporter: {{name}}",
+      "collector": "Collector: {{name}}",
+      "transporterLabel": "Transporter",
+      "collectorLabel": "Collector",
+      "parcelsLabel": "Parcels",
+      "embarkedShort": "loaded",
+      "dateLabel": "Date",
+      "remaining": "remaining",
+      "route": "{{sender}} to {{receiver}}",
+      "destination": "Destination: {{destination}}"
+    },
+    "detail": {
+      "requestTitle": "Request #{{id}}",
+      "description": "Parcels, actions and notes attached to this transfer.",
+      "requested": "Requested",
+      "embarked": "Loaded",
+      "remaining": "Remaining",
+      "history": "History"
+    },
+    "badges": {
+      "embarked": "Loaded",
+      "alreadyEmbarked": "Already loaded"
+    },
+    "form": {
+      "rejectReason": "Rejection reason",
+      "transitNote": "Transit note",
+      "note": "Note",
+      "optionalComment": "Optional comment"
+    },
+    "history": {
+      "actionBy": "{{type}} by {{actor}}",
+      "noNote": "No note"
+    },
+    "dialogTitles": {
+      "approve": "Approve the request",
+      "reject": "Reject the request",
+      "embark": "Confirm loading",
+      "note": "Add a transit note",
+      "action": "Action"
+    },
+    "dialogDescriptions": {
+      "approve": "The transporter will then confirm the loaded parcels.",
+      "reject": "The reason will be sent back to the transporter.",
+      "embark": "Select the parcels actually taken care of.",
+      "note": "The note will be attached to the selected parcels."
+    }
+  },
+  "shipmentPriority": {
+    "STANDARD": "Standard",
+    "EXPRESS": "Express"
+  },
+  "shipmentPaymentStatuses": {
+    "UNPAID": "Unpaid",
+    "PAID": "Paid",
+    "PAYMENT_AT_COLLECTION_POINT": "Payment at point"
+  },
+  "shipmentTransactionStatuses": {
+    "INITIATED": "Payment initiated",
+    "PLATFORM_FEE_PAID": "Platform fee paid",
+    "COMPLETED": "Transaction completed",
+    "FAILED": "Transaction failed",
+    "CANCELLED": "Transaction cancelled"
+  },
+  "shipmentCollectionModes": {
+    "PLATFORM": "Platform",
+    "COLLECTION_POINT": "Collection point"
   }
 }

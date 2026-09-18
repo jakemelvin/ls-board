@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  DASHBOARD_PERIOD_LABELS,
   formatDashboardDateParam,
   formatDateRange,
   getDashboardPeriodRange,
@@ -38,6 +38,8 @@ interface DashboardPeriodFilterProps {
 }
 
 export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }: DashboardPeriodFilterProps) {
+  const { t } = useTranslation();
+
   const handlePresetChange = (value: DashboardPeriodPreset) => {
     if (value === 'CUSTOM') {
       onChange(value, range);
@@ -68,7 +70,7 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
     <div className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:p-4 xl:w-auto xl:flex-row xl:flex-wrap xl:items-end">
       <div className="min-w-0 xl:w-56 xl:shrink-0">
         <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Periode d'analyse
+          {t('periodFilter.label')}
         </label>
         <Select value={preset} onValueChange={handlePresetChange}>
           <SelectTrigger className="w-full bg-secondary">
@@ -77,7 +79,7 @@ export function DashboardPeriodFilter({ preset, range, referenceDate, onChange }
           <SelectContent>
             {presets.map((item) => (
               <SelectItem key={item} value={item}>
-                {DASHBOARD_PERIOD_LABELS[item]}
+                {t(`periodFilter.presets.${item}`)}
               </SelectItem>
             ))}
           </SelectContent>

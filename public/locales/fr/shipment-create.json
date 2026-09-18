@@ -118,7 +118,7 @@
   },
   "review": {
     "title": "Vérifiez avant de créer",
-    "description": "Le tarif est calculé par le backend à partir de cette sélection.",
+    "description": "Le tarif est calculé automatiquement à partir de cette sélection.",
     "route": "Trajet",
     "service": "Transport et entreprise",
     "parcel": "Colis",

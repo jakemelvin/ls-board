@@ -102,7 +102,7 @@
   },
   "invoices": {
     "title": "Factures récentes",
-    "description": "Statuts et montants fournis par le backend.",
+    "description": "Vos dernières factures, statuts et montants.",
     "emptyTitle": "Aucune facture",
     "emptyDescription": "Les factures créées par les souscriptions apparaîtront ici.",
     "reference": "Référence",

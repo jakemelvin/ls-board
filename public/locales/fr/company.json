@@ -60,7 +60,7 @@
     "remaining": "Blocages restants",
     "noBlocking": "Aucun blocage critique détecté.",
     "blockingCount": "{{count}} élément(s) empêchent encore une exploitation complète.",
-    "allSatisfied": "Tous les prérequis critiques remontés par l'API sont satisfaits.",
+    "allSatisfied": "Tous les prérequis critiques sont satisfaits.",
     "checks": {
       "parcelTypes": "Types de colis",
       "transportModes": "Modes de transport",

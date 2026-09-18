@@ -1,21 +1,29 @@
 import type { UserRole } from '@/lib/mock-data';
 
-export const TRANSPORTER_PARTY_LABEL = 'Informations reservees';
+const TRANSPORTER_PARTY_LABEL_FALLBACK = 'Informations reservees';
 
-export function getSenderDisplayName(senderName: string, currentRole: UserRole) {
-  return currentRole === 'TRANSPORTER' ? TRANSPORTER_PARTY_LABEL : senderName;
+export function getSenderDisplayName(
+  senderName: string,
+  currentRole: UserRole,
+  restrictedLabel = TRANSPORTER_PARTY_LABEL_FALLBACK,
+) {
+  return currentRole === 'TRANSPORTER' ? restrictedLabel : senderName;
 }
 
-export function getRecipientDisplayName(recipientName: string, currentRole: UserRole) {
-  return currentRole === 'TRANSPORTER' ? TRANSPORTER_PARTY_LABEL : recipientName;
+export function getRecipientDisplayName(
+  recipientName: string,
+  currentRole: UserRole,
+  restrictedLabel = TRANSPORTER_PARTY_LABEL_FALLBACK,
+) {
+  return currentRole === 'TRANSPORTER' ? restrictedLabel : recipientName;
 }
 
-export function getSenderColumnLabel(currentRole: UserRole) {
-  return currentRole === 'TRANSPORTER' ? 'Expediteur' : 'Expediteur';
+export function getSenderColumnLabel(currentRole: UserRole, senderLabel = 'Expediteur') {
+  return senderLabel;
 }
 
-export function getRecipientColumnLabel(currentRole: UserRole) {
-  return currentRole === 'TRANSPORTER' ? 'Destinataire' : 'Destinataire';
+export function getRecipientColumnLabel(currentRole: UserRole, recipientLabel = 'Destinataire') {
+  return recipientLabel;
 }
 
 export function getParcelHistoryActorDisplayName(
@@ -24,7 +32,7 @@ export function getParcelHistoryActorDisplayName(
   currentRole: UserRole
 ) {
   if (currentRole === 'TRANSPORTER' && actorId === 'client') {
-    return TRANSPORTER_PARTY_LABEL;
+    return TRANSPORTER_PARTY_LABEL_FALLBACK;
   }
 
   return actorName;

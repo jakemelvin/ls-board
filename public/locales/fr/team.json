@@ -1,0 +1,96 @@
+{
+  "title": "Gestion d'équipe",
+  "subtitle": "Membres de {{company}} : employés, collecteurs et transporteurs.",
+  "actions": {
+    "addMember": "Ajouter un membre",
+    "retry": "Réessayer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "cancel": "Annuler",
+    "delete": "Supprimer"
+  },
+  "roles": {
+    "CLIENT": "Client",
+    "COLLECTOR": "Collecteur",
+    "TRANSPORTER": "Transporteur",
+    "ADMIN_COMPANY": "Admin",
+    "EMPLOYEE_COMPANY": "Employé",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "statuses": {
+    "ACTIVE": "Actif",
+    "INACTIVE": "Inactif",
+    "SUSPENDED": "Suspendu",
+    "DELETED": "Supprimé"
+  },
+  "stats": {
+    "members": "Membres",
+    "active": "Actifs",
+    "suspended": "Suspendus",
+    "collectors": "Collecteurs",
+    "transporters": "Transporteurs"
+  },
+  "search": {
+    "placeholder": "Rechercher par nom, identifiant, email ou téléphone…",
+    "all": "Tous ({{count}})",
+    "roleCount": "{{role}} ({{count}})"
+  },
+  "empty": {
+    "noMember": "Aucun membre",
+    "noMemberDescription": "Ajoutez votre premier membre d'équipe pour commencer.",
+    "noResult": "Aucun résultat",
+    "noResultDescription": "Aucun membre ne correspond à votre recherche."
+  },
+  "table": {
+    "member": "Membre",
+    "contact": "Contact",
+    "role": "Rôle",
+    "status": "Statut",
+    "commission": "Commission",
+    "actions": "Actions"
+  },
+  "memberActions": {
+    "phone": "Téléphone",
+    "password": "Mot de passe",
+    "commission": "Commission",
+    "suspend": "Suspendre",
+    "activate": "Activer"
+  },
+  "phoneDialog": {
+    "title": "Modifier le téléphone",
+    "phoneLabel": "Numéro de téléphone"
+  },
+  "passwordDialog": {
+    "title": "Changer le mot de passe",
+    "oldPassword": "Ancien mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirm": "Confirmer",
+    "mismatch": "Les mots de passe ne correspondent pas"
+  },
+  "commissionDialog": {
+    "title": "Modifier la commission",
+    "commissionLabel": "Commission (%)",
+    "placeholder": "Ex : 12"
+  },
+  "deleteDialog": {
+    "title": "Supprimer le membre",
+    "description": "Êtes-vous sûr de vouloir supprimer {{name}} ? Cette action est irréversible.",
+    "confirm": "Supprimer"
+  },
+  "errors": {
+    "loadTitle": "Erreur de chargement",
+    "load": "Erreur lors du chargement",
+    "action": "Action impossible",
+    "update": "Mise à jour impossible",
+    "delete": "Suppression impossible"
+  },
+  "messages": {
+    "memberAdded": "{{name}} ajouté",
+    "memberSuspended": "{{name}} suspendu",
+    "memberActivated": "{{name}} activé",
+    "memberDeleted": "{{name}} supprimé",
+    "phoneUpdated": "Téléphone mis à jour",
+    "passwordUpdated": "Mot de passe mis à jour",
+    "commissionUpdated": "Commission mise à jour"
+  }
+}

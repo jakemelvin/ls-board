@@ -9,7 +9,6 @@ import {
   RefreshCw,
   ShieldCheck,
   Truck,
-  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLatestRequest } from '@/hooks/use-latest-request';
@@ -40,6 +39,7 @@ import { toast } from '@/hooks/use-toast';
 import { usePaginatedQuery } from '@/hooks/use-paginated-query';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth/store';
+import { useTranslation } from '@/lib/i18n';
 import {
   deliverShipment,
   getCollectorDestinationDepositRequests,
@@ -67,6 +67,7 @@ import type {
 import { cn } from '@/lib/utils';
 
 export function LocalStock() {
+  const { t } = useTranslation('local-stock');
   const token = useAuthStore((state) => state.token);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -109,25 +110,25 @@ export function LocalStock() {
     query: depositQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les depots destination.',
+    errorMessage: t('errors.loadDeposits'),
   });
   const incomingShipmentPagination = usePaginatedQuery({
     query: incomingShipmentQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les colis entrants.',
+    errorMessage: t('errors.loadIncoming'),
   });
   const incomingGroupPagination = usePaginatedQuery({
     query: incomingGroupQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les groupes entrants.',
+    errorMessage: t('errors.loadGroups'),
   });
   const pickupPagination = usePaginatedQuery({
     query: pickupQuery,
     enabled: Boolean(token),
     initialPageSize: 50,
-    errorMessage: 'Impossible de charger les colis prets au retrait.',
+    errorMessage: t('errors.loadPickup'),
   });
   const depositRequests = depositPagination.items;
   const incomingShipments = incomingShipmentPagination.items;
@@ -193,9 +194,9 @@ export function LocalStock() {
     } catch (err) {
       if (isLatestDetailRequest(requestId)) {
         toast({
-          title: 'Detail indisponible',
+          title: t('toasts.detailUnavailable'),
           description:
-            err instanceof ApiError ? err.message : 'Impossible de charger la demande.',
+            err instanceof ApiError ? err.message : t('toasts.loadRequestFailed'),
           variant: 'destructive',
         });
       }
@@ -229,8 +230,8 @@ export function LocalStock() {
 
     if (missingReason) {
       toast({
-        title: 'Motif requis',
-        description: 'Chaque colis rejete doit avoir un motif.',
+        title: t('toasts.reasonRequiredTitle'),
+        description: t('toasts.reasonRequiredDescription'),
         variant: 'destructive',
       });
       return;
@@ -249,17 +250,19 @@ export function LocalStock() {
       });
 
       toast({
-        title: 'Depot controle',
-        description: `${acceptedIds.length} colis accepte(s), ${rejectedItems.length} rejete(s).`,
+        title: t('toasts.reviewSuccess'),
+        description: t('toasts.reviewSuccessDescription', {
+          values: { accepted: acceptedIds.length, rejected: rejectedItems.length },
+        }),
       });
       setIsReviewOpen(false);
       setSelectedDeposit(null);
       await loadStock();
     } catch (err) {
       toast({
-        title: 'Controle impossible',
+        title: t('toasts.reviewFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de controler le depot.',
+          err instanceof ApiError ? err.message : t('toasts.reviewFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -288,17 +291,19 @@ export function LocalStock() {
       });
 
       toast({
-        title: 'Colis livre',
-        description: `Le colis ${shipmentReference.trim()} a ete remis au destinataire.`,
+        title: t('toasts.deliveredTitle'),
+        description: t('toasts.deliveredDescription', {
+          values: { reference: shipmentReference.trim() },
+        }),
       });
       setIsDeliverOpen(false);
       setSelectedPickup(null);
       await loadStock();
     } catch (err) {
       toast({
-        title: 'Livraison impossible',
+        title: t('toasts.deliverFailedTitle'),
         description:
-          err instanceof ApiError ? err.message : 'Impossible de livrer le colis.',
+          err instanceof ApiError ? err.message : t('toasts.deliverFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -310,28 +315,28 @@ export function LocalStock() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Stock Local</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
           <p className="text-muted-foreground">
-            Controlez les depots destination et livrez les colis prets au retrait.
+            {t('subtitle')}
           </p>
         </div>
         <Button variant="outline" className="w-fit gap-2" onClick={() => void loadStock()}>
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Actualiser
+          {t('actions.refresh')}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StockMetric icon={ClipboardCheck} label="Depots a controler" value={counters.deposits} className="bg-warning/15 text-warning" />
-        <StockMetric icon={Truck} label="Entrants declares" value={counters.incoming} className="bg-primary/15 text-primary" />
-        <StockMetric icon={PackageCheck} label="Prets au retrait" value={counters.pickup} className="bg-success/15 text-success" />
+        <StockMetric icon={ClipboardCheck} label={t('metrics.depositsToReview')} value={counters.deposits} className="bg-warning/15 text-warning" />
+        <StockMetric icon={Truck} label={t('metrics.incomingDeclared')} value={counters.incoming} className="bg-primary/15 text-primary" />
+        <StockMetric icon={PackageCheck} label={t('metrics.readyForPickup')} value={counters.pickup} className="bg-success/15 text-success" />
       </div>
 
       {error ? (
         <Card className="border-destructive/30 bg-card">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" onClick={() => void loadStock()}>Reessayer</Button>
+            <Button variant="outline" onClick={() => void loadStock()}>{t('actions.retry')}</Button>
           </CardContent>
         </Card>
       ) : loading ? (
@@ -342,17 +347,17 @@ export function LocalStock() {
         <>
           <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle>Depots destination</CardTitle>
+              <CardTitle>{t('deposits.title')}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Acceptez ou rejetez les colis deposes par les transporteurs.
+                {t('deposits.description')}
               </p>
             </CardHeader>
             <CardContent className="p-0">
               {depositRequests.length === 0 ? (
                 <EmptyState
                   icon={ClipboardCheck}
-                  title="Aucune demande de depot"
-                  description="Les depots crees par les transporteurs apparaitront ici."
+                  title={t('deposits.emptyTitle')}
+                  description={t('deposits.emptyDescription')}
                 />
               ) : (
                 <>
@@ -369,12 +374,12 @@ export function LocalStock() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-muted-foreground">Demande</TableHead>
-                        <TableHead className="text-muted-foreground">Transporteur</TableHead>
-                        <TableHead className="text-muted-foreground">Destination</TableHead>
-                        <TableHead className="text-muted-foreground">Colis</TableHead>
-                        <TableHead className="text-muted-foreground">Statut</TableHead>
-                        <TableHead className="text-right text-muted-foreground">Action</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.request')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.transporter')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.destination')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.parcels')}</TableHead>
+                        <TableHead className="text-muted-foreground">{t('deposits.columns.status')}</TableHead>
+                        <TableHead className="text-right text-muted-foreground">{t('deposits.columns.action')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -382,17 +387,24 @@ export function LocalStock() {
                         <TableRow key={request.requestId} className="border-border">
                           <TableCell className="font-mono text-foreground">#{request.requestId}</TableCell>
                           <TableCell className="text-foreground">
-                            {request.transporterUsername ?? 'Transporteur non renseigne'}
+                            {request.transporterUsername ?? t('labels.transporterFallback')}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {request.destinationCollectionPointName ?? 'Destination non renseignee'}
+                            {request.destinationCollectionPointName ?? t('labels.destinationFallback')}
                           </TableCell>
                           <TableCell>
                             <p className="text-sm text-foreground">
-                              {request.acceptedShipmentCount ?? 0}/{request.totalShipmentCount ?? 0} acceptes
+                              {t('deposits.acceptedCount', {
+                                values: {
+                                  accepted: request.acceptedShipmentCount ?? 0,
+                                  total: request.totalShipmentCount ?? 0,
+                                },
+                              })}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {request.rejectedShipmentCount ?? 0} rejetes
+                              {t('deposits.rejectedCount', {
+                                values: { count: request.rejectedShipmentCount ?? 0 },
+                              })}
                             </p>
                           </TableCell>
                           <TableCell>
@@ -408,7 +420,7 @@ export function LocalStock() {
                               onClick={() => void openReview(request)}
                             >
                               <ShieldCheck className="h-4 w-4" />
-                              {request.status === 'PENDING_COLLECTOR_REVIEW' ? 'Controler' : 'Voir'}
+                              {request.status === 'PENDING_COLLECTOR_REVIEW' ? t('actions.review') : t('actions.view')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -436,17 +448,17 @@ export function LocalStock() {
           <div className="grid gap-6 2xl:grid-cols-2">
             <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle>Entrants declares</CardTitle>
+                <CardTitle>{t('incoming.title')}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Apercu des colis/groupes qui peuvent arriver au point destination.
+                  {t('incoming.description')}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {incomingShipments.length === 0 && incomingGroups.length === 0 ? (
                   <EmptyState
                     icon={Truck}
-                    title="Aucun entrant"
-                    description="Les colis en cours de depot destination seront listes ici."
+                    title={t('incoming.emptyTitle')}
+                    description={t('incoming.emptyDescription')}
                   />
                 ) : (
                   <>
@@ -460,9 +472,11 @@ export function LocalStock() {
                             <p className="font-mono text-sm font-medium text-foreground">
                               {group.reference ?? `Groupe #${group.groupId}`}
                             </p>
-                            <p className="text-xs text-muted-foreground">{group.name ?? 'Groupe transport'}</p>
+                            <p className="text-xs text-muted-foreground">{group.name ?? t('incoming.groupFallback')}</p>
                           </div>
-                          <Badge variant="outline">{group.activeShipmentCount ?? 0} colis</Badge>
+                          <Badge variant="outline">
+                            {t('incoming.parcelsCount', { values: { count: group.activeShipmentCount ?? 0 } })}
+                          </Badge>
                         </div>
                       </div>
                     ))}
@@ -497,17 +511,17 @@ export function LocalStock() {
 
             <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle>Colis prets au retrait</CardTitle>
+                <CardTitle>{t('pickup.title')}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Remettez le colis au destinataire apres verification du code.
+                  {t('pickup.description')}
                 </p>
               </CardHeader>
               <CardContent className="p-0">
                 {pickupShipments.length === 0 ? (
                   <EmptyState
                     icon={Package}
-                    title="Aucun colis pret"
-                    description="Les colis acceptes a destination et prets au retrait apparaitront ici."
+                    title={t('pickup.emptyTitle')}
+                    description={t('pickup.emptyDescription')}
                   />
                 ) : (
                   <>
@@ -524,11 +538,11 @@ export function LocalStock() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-border hover:bg-transparent">
-                          <TableHead className="text-muted-foreground">Reference</TableHead>
-                          <TableHead className="text-muted-foreground">Client</TableHead>
-                          <TableHead className="text-muted-foreground">Type</TableHead>
-                          <TableHead className="text-muted-foreground">Maj</TableHead>
-                          <TableHead className="text-right text-muted-foreground">Action</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickup.columns.reference')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickup.columns.client')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickup.columns.type')}</TableHead>
+                          <TableHead className="text-muted-foreground">{t('pickup.columns.updatedAt')}</TableHead>
+                          <TableHead className="text-right text-muted-foreground">{t('pickup.columns.action')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -546,14 +560,14 @@ export function LocalStock() {
                             </TableCell>
                             <TableCell>
                               <p className="text-sm text-foreground">
-                                {shipment.senderFullName ?? 'Expediteur'}
+                                {shipment.senderFullName ?? t('labels.senderFallback')}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                vers {shipment.receiverFullName ?? 'destinataire'}
+                                {t('labels.to')} {shipment.receiverFullName ?? t('labels.receiverFallback')}
                               </p>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
-                              {shipment.parcelTypeName ?? 'Type non renseigne'}
+                              {shipment.parcelTypeName ?? t('labels.typeFallback')}
                               {shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
@@ -562,7 +576,7 @@ export function LocalStock() {
                             <TableCell className="text-right">
                               <Button size="sm" className="gap-2" onClick={() => openDeliver(shipment)}>
                                 <PackageCheck className="h-4 w-4" />
-                                Livrer
+                                {t('actions.deliver')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -594,20 +608,22 @@ export function LocalStock() {
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              Controle depot #{selectedDeposit?.requestId}
+              {t('reviewDialog.title', { values: { id: selectedDeposit?.requestId ?? '' } })}
             </DialogTitle>
             <DialogDescription>
-              Decochez un colis pour le rejeter et renseignez son motif.
+              {t('reviewDialog.description')}
             </DialogDescription>
           </DialogHeader>
           {selectedDeposit && (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-secondary p-4">
                 <p className="font-medium text-foreground">
-                  {selectedDeposit.destinationCollectionPointName ?? 'Destination non renseignee'}
+                  {selectedDeposit.destinationCollectionPointName ?? t('labels.destinationFallback')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Transporteur: {selectedDeposit.transporterUsername ?? 'Non renseigne'}
+                  {t('reviewDialog.transporter', {
+                    values: { name: selectedDeposit.transporterUsername ?? t('labels.notSpecified') },
+                  })}
                 </p>
               </div>
               <div className="space-y-3">
@@ -625,7 +641,7 @@ export function LocalStock() {
               </div>
               {selectedDeposit.status === 'PENDING_COLLECTOR_REVIEW' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Note globale</label>
+                  <label className="text-sm font-medium text-foreground">{t('reviewDialog.globalNote')}</label>
                   <Textarea
                     value={reviewNote}
                     onChange={(event) => setReviewNote(event.target.value)}
@@ -638,12 +654,12 @@ export function LocalStock() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReviewOpen(false)} disabled={actionLoading}>
-              Fermer
+              {t('actions.close')}
             </Button>
             {selectedDeposit?.status === 'PENDING_COLLECTOR_REVIEW' && (
               <Button onClick={() => void handleReview()} disabled={actionLoading} className="gap-2">
                 {actionLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
-                Confirmer le controle
+                {t('actions.confirmReview')}
               </Button>
             )}
           </DialogFooter>
@@ -653,14 +669,14 @@ export function LocalStock() {
       <Dialog open={isDeliverOpen} onOpenChange={setIsDeliverOpen}>
         <DialogContent className="border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-foreground">Livrer au destinataire</DialogTitle>
+            <DialogTitle className="text-foreground">{t('deliverDialog.title')}</DialogTitle>
             <DialogDescription>
-              Verifiez la reference et saisissez le code fourni au destinataire.
+              {t('deliverDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Reference shipment</label>
+              <label className="text-sm font-medium text-foreground">{t('deliverDialog.reference')}</label>
               <Input
                 value={shipmentReference}
                 onChange={(event) => setShipmentReference(event.target.value)}
@@ -669,17 +685,17 @@ export function LocalStock() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Code de retrait</label>
+              <label className="text-sm font-medium text-foreground">{t('deliverDialog.pickupCode')}</label>
               <Input
                 value={shipmentCode}
                 onChange={(event) => setShipmentCode(event.target.value)}
-                placeholder="Code remis au destinataire"
+                placeholder={t('deliverDialog.pickupCodePlaceholder')}
                 className="bg-secondary"
                 disabled={actionLoading}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Note</label>
+              <label className="text-sm font-medium text-foreground">{t('deliverDialog.note')}</label>
               <Textarea
                 value={deliverNote}
                 onChange={(event) => setDeliverNote(event.target.value)}
@@ -690,7 +706,7 @@ export function LocalStock() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeliverOpen(false)} disabled={actionLoading}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button
               onClick={() => void handleDeliver()}
@@ -698,7 +714,7 @@ export function LocalStock() {
               className="gap-2 bg-success text-success-foreground hover:bg-success/90"
             >
               {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Livrer
+              {t('actions.deliver')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -752,6 +768,8 @@ function EmptyState({
 }
 
 function IncomingShipmentRow({ shipment }: { shipment: ShipmentDestinationIncomingShipment }) {
+  const { t } = useTranslation('local-stock');
+
   return (
     <div className="rounded-lg border border-border bg-secondary p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -763,12 +781,13 @@ function IncomingShipmentRow({ shipment }: { shipment: ShipmentDestinationIncomi
             {shipment.reference && <CopyTrackingNumberButton trackingNumber={shipment.reference} />}
           </div>
           <p className="text-sm text-muted-foreground">
-            {shipment.senderFullName ?? 'Expediteur'} vers {shipment.receiverFullName ?? 'destinataire'}
+            {shipment.senderFullName ?? t('labels.senderFallback')} {t('labels.to')}{' '}
+            {shipment.receiverFullName ?? t('labels.receiverFallback')}
           </p>
         </div>
         <div className="text-sm text-muted-foreground sm:text-right">
-          <p>{shipment.transporterUsername ?? 'Transporteur non renseigne'}</p>
-          <p>{shipment.sourceGroupReference ?? 'Sans groupe'}</p>
+          <p>{shipment.transporterUsername ?? t('labels.transporterFallback')}</p>
+          <p>{shipment.sourceGroupReference ?? t('incoming.noGroup')}</p>
         </div>
       </div>
     </div>
@@ -782,13 +801,15 @@ function MobileDepositRequestCard({
   request: ShipmentDestinationDepositRequestSummary;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation('local-stock');
+
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-foreground">#{request.requestId}</p>
           <p className="truncate text-sm text-muted-foreground">
-            {request.destinationCollectionPointName ?? 'Destination non renseignee'}
+            {request.destinationCollectionPointName ?? t('labels.destinationFallback')}
           </p>
         </div>
         <Badge className={cn('shrink-0 border-0', getShipmentDestinationDepositStatusClassName(request.status))}>
@@ -796,12 +817,20 @@ function MobileDepositRequestCard({
         </Badge>
       </div>
       <div className="grid gap-2 text-sm">
-        <MobileInfo label="Transporteur" value={request.transporterUsername} />
+        <MobileInfo label={t('deposits.columns.transporter')} value={request.transporterUsername} />
         <MobileInfo
-          label="Colis acceptes"
-          value={`${request.acceptedShipmentCount ?? 0}/${request.totalShipmentCount ?? 0}`}
+          label={t('deposits.acceptedCount', {
+            values: {
+              accepted: request.acceptedShipmentCount ?? 0,
+              total: request.totalShipmentCount ?? 0,
+            },
+          })}
+          value=""
         />
-        <MobileInfo label="Rejetes" value={request.rejectedShipmentCount ?? 0} />
+        <MobileInfo
+          label={t('deposits.rejectedCount', { values: { count: request.rejectedShipmentCount ?? 0 } })}
+          value=""
+        />
       </div>
       <Button
         size="sm"
@@ -810,7 +839,7 @@ function MobileDepositRequestCard({
         onClick={onOpen}
       >
         <ShieldCheck className="h-4 w-4" />
-        {request.status === 'PENDING_COLLECTOR_REVIEW' ? 'Controler' : 'Voir'}
+        {request.status === 'PENDING_COLLECTOR_REVIEW' ? t('actions.review') : t('actions.view')}
       </Button>
     </div>
   );
@@ -823,6 +852,8 @@ function MobilePickupShipmentCard({
   shipment: CollectorPickupShipment;
   onDeliver: () => void;
 }) {
+  const { t } = useTranslation('local-stock');
+
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="min-w-0">
@@ -833,30 +864,33 @@ function MobilePickupShipmentCard({
           {shipment.reference && <CopyTrackingNumberButton trackingNumber={shipment.reference} />}
         </div>
         <p className="text-sm text-muted-foreground">
-          {shipment.senderFullName ?? 'Expediteur'} vers {shipment.receiverFullName ?? 'destinataire'}
+          {shipment.senderFullName ?? t('labels.senderFallback')} {t('labels.to')}{' '}
+          {shipment.receiverFullName ?? t('labels.receiverFallback')}
         </p>
       </div>
       <div className="grid gap-2 text-sm">
         <MobileInfo
-          label="Type"
-          value={`${shipment.parcelTypeName ?? 'Non renseigne'}${shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}`}
+          label={t('pickup.columns.type')}
+          value={`${shipment.parcelTypeName ?? t('labels.notSpecified')}${shipment.transportModeName ? ` - ${shipment.transportModeName}` : ''}`}
         />
-        <MobileInfo label="Maj" value={formatShipmentDate(shipment.updatedAt)} />
+        <MobileInfo label={t('labels.updatedAt')} value={formatShipmentDate(shipment.updatedAt)} />
       </div>
       <Button size="sm" className="w-full gap-2" onClick={onDeliver}>
         <PackageCheck className="h-4 w-4" />
-        Livrer
+        {t('actions.deliver')}
       </Button>
     </div>
   );
 }
 
 function MobileInfo({ label, value }: { label: string; value?: string | number }) {
+  const { t } = useTranslation('local-stock');
+
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-muted-foreground">{label}</span>
       <span className="truncate text-right font-medium text-foreground">
-        {value || 'Non renseigne'}
+        {value || t('labels.notSpecified')}
       </span>
     </div>
   );
@@ -877,6 +911,8 @@ function ReviewItem({
   onToggle: () => void;
   onReasonChange: (reason: string) => void;
 }) {
+  const { t } = useTranslation('local-stock');
+
   return (
     <div
       className={cn(
@@ -889,7 +925,9 @@ function ReviewItem({
           checked={accepted}
           disabled={disabled}
           onCheckedChange={onToggle}
-          aria-label={`Accepter ${item.shipmentReference ?? item.shipmentId}`}
+          aria-label={t('labels.acceptAria', {
+            values: { reference: item.shipmentReference ?? item.shipmentId },
+          })}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -903,10 +941,13 @@ function ReviewItem({
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                {item.senderFullName ?? 'Expediteur'} vers {item.receiverFullName ?? 'destinataire'}
+                {item.senderFullName ?? t('labels.senderFallback')} {t('labels.to')}{' '}
+                {item.receiverFullName ?? t('labels.receiverFallback')}
               </p>
               {item.sourceGroupReference && (
-                <p className="text-xs text-muted-foreground">Groupe: {item.sourceGroupReference}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('labels.group', { values: { reference: item.sourceGroupReference } })}
+                </p>
               )}
             </div>
             {item.status && (
@@ -917,17 +958,19 @@ function ReviewItem({
           </div>
           {!accepted && !disabled && (
             <div className="mt-3 space-y-2">
-              <label className="text-xs font-medium text-foreground">Motif de rejet</label>
+              <label className="text-xs font-medium text-foreground">{t('reviewDialog.rejectReason')}</label>
               <Input
                 value={reason}
                 onChange={(event) => onReasonChange(event.target.value)}
-                placeholder="Colis absent, endommage..."
+                placeholder={t('reviewDialog.rejectReasonPlaceholder')}
                 className="bg-secondary"
               />
             </div>
           )}
           {item.rejectionReason && (
-            <p className="mt-2 text-sm text-destructive">Motif: {item.rejectionReason}</p>
+            <p className="mt-2 text-sm text-destructive">
+              {t('labels.reason', { values: { reason: item.rejectionReason } })}
+            </p>
           )}
         </div>
       </div>

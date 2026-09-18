@@ -32,6 +32,18 @@ import defaultPickups from '@/public/locales/fr/pickups.json'
 import englishPickups from '@/public/locales/en/pickups.json'
 import defaultCompany from '@/public/locales/fr/company.json'
 import englishCompany from '@/public/locales/en/company.json'
+import defaultPricing from '@/public/locales/fr/pricing.json'
+import englishPricing from '@/public/locales/en/pricing.json'
+import defaultDeliveryEstimates from '@/public/locales/fr/delivery-estimates.json'
+import englishDeliveryEstimates from '@/public/locales/en/delivery-estimates.json'
+import defaultFleet from '@/public/locales/fr/fleet.json'
+import englishFleet from '@/public/locales/en/fleet.json'
+import defaultLocalStock from '@/public/locales/fr/local-stock.json'
+import englishLocalStock from '@/public/locales/en/local-stock.json'
+import defaultTeam from '@/public/locales/fr/team.json'
+import englishTeam from '@/public/locales/en/team.json'
+import defaultTransporterTour from '@/public/locales/fr/transporter-tour.json'
+import englishTransporterTour from '@/public/locales/en/transporter-tour.json'
 
 import { defaultLocale, defaultNamespace, fallbackNamespace, locales, namespaces } from './settings'
 import type { Locale, Namespace } from './settings'
@@ -45,7 +57,7 @@ type TranslationFile = Record<string, TranslationValue>
 type TranslationResources = Partial<Record<Namespace, TranslationFile>>
 type TranslationValues = Record<string, number | string>
 
-type TranslateOptions = {
+export type TranslateOptions = {
   defaultValue?: string
   ns?: Namespace
   values?: TranslationValues
@@ -75,6 +87,12 @@ const bundledResources: Record<Locale, TranslationResources> = {
     pickups: defaultPickups as TranslationFile,
     legal: defaultLegal as TranslationFile,
     company: defaultCompany as TranslationFile,
+    pricing: defaultPricing as TranslationFile,
+    'delivery-estimates': defaultDeliveryEstimates as TranslationFile,
+    fleet: defaultFleet as TranslationFile,
+    'local-stock': defaultLocalStock as TranslationFile,
+    team: defaultTeam as TranslationFile,
+    'transporter-tour': defaultTransporterTour as TranslationFile,
   },
   en: {
     common: englishCommon as TranslationFile,
@@ -88,6 +106,12 @@ const bundledResources: Record<Locale, TranslationResources> = {
     pickups: englishPickups as TranslationFile,
     legal: englishLegal as TranslationFile,
     company: englishCompany as TranslationFile,
+    pricing: englishPricing as TranslationFile,
+    'delivery-estimates': englishDeliveryEstimates as TranslationFile,
+    fleet: englishFleet as TranslationFile,
+    'local-stock': englishLocalStock as TranslationFile,
+    team: englishTeam as TranslationFile,
+    'transporter-tour': englishTransporterTour as TranslationFile,
   },
 }
 

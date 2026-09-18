@@ -45,5 +45,38 @@
   "navigation": {
     "back": "Retour",
     "logout": "Se déconnecter"
+  },
+  "periodFilter": {
+    "label": "Période d'analyse",
+    "presets": {
+      "TODAY": "Aujourd'hui",
+      "LAST_7_DAYS": "7 derniers jours",
+      "CURRENT_MONTH": "Mois courant",
+      "PREVIOUS_MONTH": "Mois précédent",
+      "CURRENT_YEAR": "Année courante",
+      "CUSTOM": "Personnalisé"
+    }
+  },
+  "tracking": {
+    "rejectedTitle": "Colis rejeté",
+    "rejectedFallback": "Non conforme",
+    "steps": {
+      "CREATED": "Demande client",
+      "TRANSIT_TO_COLLECTION": "En transit vers le point",
+      "RECEIVED_AT_COLLECTION_POINT": "Reçu au point",
+      "IN_TRANSIT": "En transit",
+      "ARRIVED_AT_DESTINATION": "Arrivé au point",
+      "DELIVERED": "Livré"
+    }
+  },
+  "copyTracking": {
+    "copyTitle": "Référence copiée",
+    "copyFailedTitle": "Copie impossible",
+    "copyFailedDescription": "Le numéro de référence n'a pas pu être copié.",
+    "copyAria": "Copier la référence {{reference}}",
+    "copyTitleAttr": "Copier la référence"
+  },
+  "company": {
+    "fallbackName": "Entreprise"
   }
 }
