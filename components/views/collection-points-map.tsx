@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Building2,
   CheckCircle2,
@@ -53,6 +54,13 @@ interface CollectionPointsMapProps {
 const SCOPE_FILTERS: ScopeFilter[] = ['ALL', 'COMPANY', 'NETWORK'];
 const GEOLOCATION_CACHE_MAX_AGE_MS = 15 * 60_000;
 const GEOLOCATION_TIMEOUT_MS = 30_000;
+const CollectionPointsGeographicMap = dynamic(
+  () => import('@/components/views/collection-points-geographic-map'),
+  {
+    ssr: false,
+    loading: () => <div className="h-full w-full animate-pulse bg-secondary" />,
+  },
+);
 const WEEKDAY_LABELS: Record<CollectionPointDayOfWeek, string> = {
   MONDAY: 'Lun',
   TUESDAY: 'Mar',
@@ -105,20 +113,6 @@ function getGoogleMapsUrl(item: PlatformCollectionPointSearchResponse) {
   return `https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}`;
 }
 
-function getMarkerPosition(
-  item: PlatformCollectionPointSearchResponse,
-  bounds: { minLatitude: number; maxLatitude: number; minLongitude: number; maxLongitude: number },
-) {
-  const coordinates = getCoordinates(item);
-  if (!coordinates) return { left: 50, top: 50 };
-  const longitudeRange = Math.max(bounds.maxLongitude - bounds.minLongitude, 0.000001);
-  const latitudeRange = Math.max(bounds.maxLatitude - bounds.minLatitude, 0.000001);
-  return {
-    left: Math.min(Math.max(((coordinates.longitude - bounds.minLongitude) / longitudeRange) * 100, 4), 96),
-    top: Math.min(Math.max(100 - ((coordinates.latitude - bounds.minLatitude) / latitudeRange) * 100, 4), 96),
-  };
-}
-
 function formatOpeningHours(hours: CollectionPointOpeningHourResponse[]) {
   const openDays = hours.filter((item) => !item.closed);
   if (openDays.length === 0) return null;
@@ -135,7 +129,7 @@ function statusClassName(status?: CollectionPointAvailabilityStatus, openNow?: b
   return 'bg-destructive/15 text-destructive';
 }
 
-export function CollectionPointsMap({ currentRole, currentUser }: CollectionPointsMapProps) {
+export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
   const { t } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const companyId = useAuthStore((state) => state.companyId);
@@ -341,38 +335,6 @@ export function CollectionPointsMap({ currentRole, currentUser }: CollectionPoin
   const selectedPoint =
     filteredResults.find((item) => pointKey(item) === selectedPointKey) ?? filteredResults[0] ?? null;
 
-  const mapBounds = useMemo(() => {
-    const coordinates = pointsWithCoordinates.flatMap((item) => {
-      const value = getCoordinates(item);
-      return value ? [value] : [];
-    });
-    if (userLocation) coordinates.push(userLocation);
-    if (coordinates.length === 0) {
-      return { minLatitude: 0, maxLatitude: 1, minLongitude: 0, maxLongitude: 1 };
-    }
-    const latitudes = coordinates.map((item) => item.latitude);
-    const longitudes = coordinates.map((item) => item.longitude);
-    const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.14, 0.02);
-    const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.14, 0.02);
-    return {
-      minLatitude: Math.min(...latitudes) - latitudePadding,
-      maxLatitude: Math.max(...latitudes) + latitudePadding,
-      minLongitude: Math.min(...longitudes) - longitudePadding,
-      maxLongitude: Math.max(...longitudes) + longitudePadding,
-    };
-  }, [pointsWithCoordinates, userLocation]);
-
-  const userPosition = userLocation
-    ? (() => {
-        const longitudeRange = Math.max(mapBounds.maxLongitude - mapBounds.minLongitude, 0.000001);
-        const latitudeRange = Math.max(mapBounds.maxLatitude - mapBounds.minLatitude, 0.000001);
-        return {
-          left: Math.min(Math.max(((userLocation.longitude - mapBounds.minLongitude) / longitudeRange) * 100, 4), 96),
-          top: Math.min(Math.max(100 - ((userLocation.latitude - mapBounds.minLatitude) / latitudeRange) * 100, 4), 96),
-        };
-      })()
-    : null;
-
   const getDistance = (item: PlatformCollectionPointSearchResponse) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
     const coordinates = getCoordinates(item);
@@ -468,35 +430,15 @@ export function CollectionPointsMap({ currentRole, currentUser }: CollectionPoin
             </CardHeader>
             <CardContent className="p-3 sm:p-6">
               <div className="relative min-h-[55dvh] overflow-hidden rounded-2xl border border-border bg-secondary/20 sm:min-h-[520px]">
-                <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] [background-size:72px_72px]" />
-                <div className="absolute inset-6 rounded-[2rem] border border-border/70" />
-                {pointsWithCoordinates.map((item) => {
-                  const key = pointKey(item);
-                  const scope = getScope(item);
-                  const position = getMarkerPosition(item, mapBounds);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-label={t('collectionPointsMap.map.showPoint', { values: { name: item.collectionPoint.name } })}
-                      onClick={() => setSelectedPointKey(key)}
-                      className={cn(
-                        'absolute z-10 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 shadow-lg transition-transform hover:scale-110',
-                        SCOPE_STYLES[scope].marker,
-                        selectedPoint && pointKey(selectedPoint) === key && 'scale-125 ring-4 ring-primary/25',
-                      )}
-                      style={{ left: `${position.left}%`, top: `${position.top}%` }}
-                    >
-                      <MapPin className="h-5 w-5" />
-                    </button>
-                  );
-                })}
-                {userPosition && (
-                  <div aria-label={t('collectionPointsMap.map.yourPosition')} className="absolute z-20 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-warning bg-warning text-warning-foreground shadow-lg" style={{ left: `${userPosition.left}%`, top: `${userPosition.top}%` }}>
-                    <Crosshair className="h-5 w-5" />
-                  </div>
-                )}
-                {selectedPoint && <MapPopup item={selectedPoint} scope={getScope(selectedPoint)} distance={getDistance(selectedPoint)} t={t} />}
+                <div className="absolute inset-0">
+                  <CollectionPointsGeographicMap
+                    points={filteredResults}
+                    userLocation={userLocation}
+                    selectedPointKey={selectedPointKey}
+                    getScope={getScope}
+                    onSelect={setSelectedPointKey}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -518,7 +460,6 @@ export function CollectionPointsMap({ currentRole, currentUser }: CollectionPoin
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">{t('collectionPointsMap.roleHint', { values: { role: currentRole } })}</p>
     </div>
   );
 }
@@ -528,16 +469,6 @@ type Translate = ReturnType<typeof useTranslation>['t'];
 function MapMetric({ icon: Icon, value, label }: { icon: typeof MapPin; value: number; label: string }) {
   return (
     <Card className="border-border bg-card"><CardContent className="flex items-center gap-3 p-4"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><div><p className="text-2xl font-bold text-foreground">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div></CardContent></Card>
-  );
-}
-
-function MapPopup({ item, scope, distance, t }: { item: PlatformCollectionPointSearchResponse; scope: Exclude<ScopeFilter, 'ALL'>; distance: number | null; t: Translate }) {
-  return (
-    <div className="absolute bottom-3 left-3 right-3 z-30 rounded-2xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur md:left-auto md:w-[370px]">
-      <div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-foreground">{item.collectionPoint.name}</p><p className="text-sm text-muted-foreground">{item.companyName}</p></div><Badge className={SCOPE_STYLES[scope].badge}>{t(`collectionPointsMap.scopes.${scope}`)}</Badge></div>
-      <p className="mt-3 text-sm text-foreground">{[item.collectionPoint.address, item.collectionPoint.city?.cityName].filter(Boolean).join(', ')}</p>
-      <div className="mt-3 flex flex-wrap gap-2"><Badge className={statusClassName(item.collectionPoint.availabilityStatus, item.collectionPoint.openNow)}>{item.collectionPoint.availabilityMessage ?? (item.collectionPoint.openNow ? t('collectionPointsMap.status.open') : t('collectionPointsMap.status.closed'))}</Badge>{distance != null && <Badge variant="outline">{formatDistanceKm(distance)}</Badge>}</div>
-    </div>
   );
 }
 

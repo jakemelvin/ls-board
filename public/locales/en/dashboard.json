@@ -71,6 +71,7 @@
       "billing": "Billing",
       "financialOperations": "Transactions and payments",
       "catalog": "Catalog",
+      "cities": "Cities",
       "collectionPoints": "Territory management",
       "companyProfile": "Company profile",
       "commissions": "Commissions",
@@ -96,11 +97,40 @@
       "reception": "Reception flow",
       "routeExceptions": "Route exceptions",
       "settings": "Settings",
+      "support": "Support",
       "team": "Team management",
       "transferRequests": "Pickup requests",
       "transportModes": "Transport modes",
-      "pickupAdministration": "Pickup administration"
+      "pickupAdministration": "Pickup administration",
+      "supportContacts": "Support contacts"
     }
+  },
+  "supportManagement": {
+    "title": "Support contacts",
+    "subtitle": "Configure the channels shown to users when they need help.",
+    "add": "Add contact",
+    "search": "Search contacts...",
+    "emptyTitle": "No support contacts",
+    "emptyDescription": "Add a first way to contact support.",
+    "active": "Active", "inactive": "Inactive", "activate": "Activate", "deactivate": "Deactivate", "edit": "Edit", "delete": "Delete", "order": "Order {{order}}",
+    "dialog": { "createTitle": "New support contact", "editTitle": "Edit support contact", "description": "Inactive contacts are not shown to users.", "type": "Contact type", "title": "Label", "titlePlaceholder": "E.g. WhatsApp support", "value": "Contact detail", "valuePlaceholder": "E.g. +237 6 00 00 00 00", "actionUri": "Action link", "actionUriPlaceholder": "E.g. https://... or mailto:...", "descriptionLabel": "Description", "descriptionPlaceholder": "Optional additional information", "displayOrder": "Display order", "active": "Show this contact", "save": "Save" },
+    "types": { "EMAIL": "Email", "PHONE": "Phone", "WHATSAPP": "WhatsApp", "LIVE_CHAT": "Live chat", "WEBSITE": "Website", "FAQ": "FAQ", "OTHER": "Other" },
+    "deleteTitle": "Delete this contact?", "deleteDescription": "The contact will no longer be shown and can only be restored by a technical administrator.",
+    "errors": { "load": "Unable to load support contacts.", "save": "Unable to save the contact.", "updateStatus": "Unable to update the status.", "delete": "Unable to delete the contact." },
+    "messages": { "created": "Contact created.", "updated": "Contact updated.", "statusUpdated": "Contact status updated.", "deleted": "Contact deleted." }
+  },
+  "support": {
+    "title": "Support centre",
+    "subtitle": "Choose the most convenient way to contact the support team.",
+    "emptyTitle": "No contact method available",
+    "emptyDescription": "Support details will be available soon.",
+    "errors": { "load": "Unable to load support contacts." }
+  },
+  "citiesManagement": {
+    "title": "City management", "subtitle": "Review and maintain the city directory used by operations.", "add": "Add city", "search": "Search a city or country...", "emptyTitle": "No cities", "emptyDescription": "Add a first city to the directory.", "country": "Country", "edit": "Edit", "delete": "Delete", "restrictedDelete": "Only the Super Admin can delete a city.",
+    "dialog": { "createTitle": "New city", "editTitle": "Edit city", "name": "City name", "namePlaceholder": "E.g. Douala", "country": "Country", "selectCountry": "Select a country", "save": "Save" },
+    "deleteTitle": "Delete this city?", "deleteDescription": "This action is reserved for the Super Admin and may be refused when the city is already in use.",
+    "errors": { "load": "Unable to load cities.", "countries": "Unable to load countries.", "save": "Unable to save the city.", "delete": "Unable to delete the city." }, "messages": { "created": "City created.", "updated": "City updated.", "deleted": "City deleted." }
   },
   "profile": {
     "description": "Review your information and keep your profile up to date.",

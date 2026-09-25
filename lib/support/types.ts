@@ -19,3 +19,13 @@ export interface SupportContactResponse {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface SupportContactRequest {
+  type: SupportContactType;
+  title: string;
+  description?: string;
+  value: string;
+  actionUri?: string;
+  displayOrder?: number;
+  active?: boolean;
+}

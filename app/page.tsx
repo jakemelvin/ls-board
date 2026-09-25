@@ -39,6 +39,9 @@ import { CompanyPaymentTraceability } from '@/components/views/platform-payment-
 import { CompanyAnnouncements } from '@/components/views/announcements';
 import { NotificationsManagement } from '@/components/views/notifications-management';
 import { CompanyProfileView } from '@/components/views/company-profile';
+import { CitiesManagement } from '@/components/views/cities-management';
+import { SupportContactsManagement } from '@/components/views/support-contacts-management';
+import { SupportView } from '@/components/views/support';
 import type { UserRole, User } from '@/lib/mock-data';
 import { isAdminLikeRole } from '@/lib/roles';
 import { CompanyContextProvider, useCompanyContext } from '@/lib/company/use-company';
@@ -72,10 +75,11 @@ function mapApiRoleToUserRole(role: ApiRole | undefined): UserRole {
 export default function DashboardPage() {
   const router = useRouter();
   const { token, role: authRole, isHydrated, user: authUser } = useAuthStore();
-  const shouldShowCompanyBrand =
+  const shouldResolveCompany = authRole !== 'SUPER_ADMIN' && authRole !== 'CLIENT';
+  const shouldLoadCompanyBilling =
     authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY';
   const companyContext = useCompanyContext({
-    enabled: isHydrated && Boolean(token) && shouldShowCompanyBrand,
+    enabled: isHydrated && Boolean(token) && shouldResolveCompany,
   });
   const {
     status: companyStatus,
@@ -88,7 +92,7 @@ export default function DashboardPage() {
     enabled:
       isHydrated &&
       Boolean(token) &&
-      shouldShowCompanyBrand &&
+       shouldLoadCompanyBilling &&
       companyStatus === 'resolved',
   });
   const didSyncRoleFromAuth = useRef(false);
@@ -220,6 +224,12 @@ export default function DashboardPage() {
         return <CatalogManagement />;
       case 'platform-finance':
         return <PlatformFinanceSettings />;
+      case 'support-contacts':
+        return authRole === 'SUPER_ADMIN' ? <SupportContactsManagement /> : <AdminDashboard />;
+      case 'support':
+        return authRole === 'SUPER_ADMIN' ? <SuperAdminManagement /> : <SupportView />;
+      case 'cities':
+        return authRole === 'SUPER_ADMIN' || authRole === 'ADMIN_COMPANY' || authRole === 'EMPLOYEE_COMPANY' ? <CitiesManagement /> : <AdminDashboard />;
 
       case 'announcements':
         return <CompanyAnnouncements />;
@@ -255,7 +265,7 @@ export default function DashboardPage() {
         currentRole={currentRole}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        company={shouldShowCompanyBrand ? company : null}
+        company={company}
         className="hidden md:flex"
       />
 
@@ -264,7 +274,7 @@ export default function DashboardPage() {
         {/* Header */}
         <DashboardHeader
           currentUser={currentUser}
-          company={shouldShowCompanyBrand ? company : null}
+          company={company}
           billingDashboard={companyBillingStatus.dashboard}
         />
 
@@ -285,7 +295,7 @@ export default function DashboardPage() {
           currentRole={currentRole}
           activeSection={activeSection}
           onSectionChange={setActiveSection}
-          company={shouldShowCompanyBrand ? company : null}
+          company={company}
         />
       </div>
     </CompanyContextProvider>

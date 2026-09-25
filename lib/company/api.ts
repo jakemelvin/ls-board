@@ -253,6 +253,18 @@ export function createCity(token: string, payload: CityRequest): Promise<CityRes
   return apiClient.post<CityResponse>('/api/cities', payload, token);
 }
 
+export function updateCity(
+  token: string,
+  cityId: number,
+  payload: CityRequest,
+): Promise<CityResponse> {
+  return apiClient.put<CityResponse>(`/api/cities/${cityId}`, payload, token);
+}
+
+export function deleteCity(token: string, cityId: number): Promise<void> {
+  return apiClient.delete<void>(`/api/cities/${cityId}`, token);
+}
+
 export function getZones(token: string, companyId: number): Promise<ZoneResponse[]> {
   return apiClient.get<ZoneResponse[]>(`/api/delivery/companies/${companyId}/zones`, token);
 }

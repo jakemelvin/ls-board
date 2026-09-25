@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 import { useAuthStore } from '@/lib/auth/store';
 import { getActiveSupportContacts } from '@/lib/support/api';
+import { getSupportContactAction } from '@/lib/support/contact-action';
 import type { SupportContactResponse } from '@/lib/support/types';
 
 function getSupportEmail(contacts: SupportContactResponse[]) {
@@ -18,8 +19,7 @@ function getSupportEmail(contacts: SupportContactResponse[]) {
           (left.displayOrder ?? Number.MAX_SAFE_INTEGER) -
           (right.displayOrder ?? Number.MAX_SAFE_INTEGER),
       )
-      .map((contact) => contact.value.trim())
-      .find(Boolean) ?? null
+      .find((contact) => Boolean(contact.value.trim())) ?? null
   );
 }
 
@@ -28,7 +28,7 @@ export default function PendingPage() {
   const { t } = useTranslation('pending');
   const token = useAuthStore((state) => state.token);
   const isHydrated = useAuthStore((state) => state.isHydrated);
-  const [supportEmail, setSupportEmail] = useState<string | null>(null);
+  const [supportEmail, setSupportEmail] = useState<SupportContactResponse | null>(null);
   const [isLoadingSupportEmail, setIsLoadingSupportEmail] = useState(true);
   const steps = [
     { icon: CheckCircle2, label: t('steps.requestReceived.label'), description: t('steps.requestReceived.description'), done: true },
@@ -120,7 +120,7 @@ export default function PendingPage() {
             {isLoadingSupportEmail
               ? t('estimatedTime.loading')
               : supportEmail
-                ? t('estimatedTime.description', { values: { email: supportEmail } })
+                ? <>{t('estimatedTime.description', { values: { email: supportEmail.value } })}{' '}<a href={getSupportContactAction(supportEmail).href ?? undefined} className="font-medium text-primary underline underline-offset-2">{t('estimatedTime.contactAction')}</a></>
                 : t('estimatedTime.unavailable')}
           </p>
         </div>

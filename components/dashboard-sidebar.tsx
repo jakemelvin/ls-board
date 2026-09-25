@@ -7,6 +7,7 @@ import {
   Boxes,
   Clock3,
   CreditCard,
+  Headset,
   DollarSign,
   HandCoins,
   LayoutDashboard,
@@ -67,7 +68,9 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'pickup-request', labelKey: 'shell.sections.pickupRequest', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
   { id: 'announcements', labelKey: 'shell.sections.announcements', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
   { id: 'notifications', labelKey: 'shell.sections.notifications', icon: Bell, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
+  { id: 'support', labelKey: 'shell.sections.support', icon: Headset, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'company-profile', labelKey: 'shell.sections.companyProfile', icon: Settings, roles: ADMIN_LIKE_ROLES },
+  { id: 'cities', labelKey: 'shell.sections.cities', icon: MapPin, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES] },
 ];
 
 interface DashboardSidebarProps {
@@ -133,6 +136,18 @@ export function DashboardSidebar({
             >
               <ShieldCheck className="h-5 w-5" />
               {t('shell.sections.administration')}
+            </button>
+            <button
+              onClick={() => onSectionChange('support-contacts')}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors',
+                activeSection === 'support-contacts'
+                  ? 'bg-sidebar-accent text-sidebar-primary'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+              )}
+            >
+              <Headset className="h-5 w-5" />
+              {t('shell.sections.supportContacts')}
             </button>
             <button
               onClick={() => onSectionChange('pickup-administration')}

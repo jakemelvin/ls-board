@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const API_ORIGIN = 'https://dstest.easywaka.com';
 
-test('map uses nearby and location collection-point endpoints', async ({ page }) => {
+test('map uses nearby and location collection-point endpoints with a Carto tile fallback', async ({ page }) => {
   const requestedUrls: string[] = [];
 
   await page.addInitScript(() => {
@@ -50,30 +50,49 @@ test('map uses nearby and location collection-point endpoints', async ({ page })
       return;
     }
     if (url.pathname === '/api/countries/operational-served') {
-      await json([{ countryId: 47, countryName: 'Cameroun', countryCode: 237, isoCode: 'CM' }]);
+      await json([
+        { countryId: 47, countryName: 'Cameroun', countryCode: 237, isoCode: 'CM' },
+        { countryId: 48, countryName: 'Senegal', countryCode: 221, isoCode: 'SN' },
+      ]);
       return;
     }
     if (url.pathname === '/api/cities/countries/47/operational-served') {
       await json([{ cityId: 1, cityName: 'Douala', countryId: 47, countryName: 'Cameroun' }]);
       return;
     }
+    if (url.pathname === '/api/cities/countries/48/operational-served') {
+      await json([{ cityId: 2, cityName: 'Dakar', countryId: 48, countryName: 'Senegal' }]);
+      return;
+    }
     if (url.pathname === '/api/delivery/collection-points/search/nearby') {
       await json([
         searchResult({ id: 2, name: 'Point Messassi', companyId: 1, companyName: 'Express Delivery', distanceKm: 7.05, latitude: 4.0511, longitude: 9.7679 }),
-        searchResult({ id: 5, name: 'Agence partenaire', companyId: 9, companyName: 'WTL Services', distanceKm: 12.4, latitude: 4.071, longitude: 9.81 }),
+        searchResult({ id: 5, name: 'Agence partenaire', companyId: 9, companyName: 'WTL Services', distanceKm: 12.4 }),
       ]);
       return;
     }
     if (url.pathname === '/api/delivery/collection-points/search/by-location') {
-      await json([
-        searchResult({ id: 7, name: 'Point Bonapriso', companyId: 1, companyName: 'Express Delivery', latitude: 4.02, longitude: 9.69 }),
-        searchResult({ id: 8, name: 'Point Yaounde', companyId: 2, companyName: 'Reseau Centre', latitude: 3.8667, longitude: 11.5167, cityId: 2, cityName: 'Yaounde' }),
-      ]);
+      await json(url.searchParams.get('countryId') === '48'
+        ? [searchResult({ id: 9, name: 'Point Dakar', companyId: 3, companyName: 'Senam Transit', latitude: 14.7167, longitude: -17.4677, cityId: 2, cityName: 'Dakar', countryId: 48, countryName: 'Senegal' })]
+        : [
+            searchResult({ id: 7, name: 'Point Bonapriso', companyId: 1, companyName: 'Express Delivery', latitude: 4.02, longitude: 9.69 }),
+            searchResult({ id: 8, name: 'Point Yaounde', companyId: 2, companyName: 'Reseau Centre', latitude: 3.8667, longitude: 11.5167, cityId: 2, cityName: 'Yaounde' }),
+          ]);
       return;
     }
 
     await json({ content: [], totalPages: 0, totalElements: 0 });
   });
+  await page.route('https://basemaps.cartocdn.com/rastertiles/voyager/**', (route) => route.abort());
+  await page.route('https://*.basemaps.cartocdn.com/light_all/**', (route) => route.abort());
+  await page.route('https://*.tile.openstreetmap.org/**', (route) => route.fulfill({
+    contentType: 'image/png',
+    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLz4QAAAABJRU5ErkJggg==', 'base64'),
+  }));
+  await page.route('https://nominatim.openstreetmap.org/**', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{ lat: '50.8503', lon: '4.3517' }]),
+  }));
 
   await page.goto('/login');
   await page.getByLabel(/Identifiant|Username/).fill('marc.collecteur');
@@ -91,16 +110,46 @@ test('map uses nearby and location collection-point endpoints', async ({ page })
   await expect(page.getByText('Point Messassi').first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('Agence partenaire').first()).toBeVisible();
   await expect(page.getByText(/du plus proche au plus éloigné|from closest to farthest/i)).toBeVisible();
+  const map = page.locator('.leaflet-container');
+  await map.scrollIntoViewIfNeeded();
+  await expect(map).toBeVisible();
+  await expect(map.locator('.leaflet-control-zoom')).toBeVisible();
+  await expect(map.locator('img.leaflet-tile').first()).toHaveAttribute(
+    'src',
+    /tile\.openstreetmap\.org/,
+  );
+  await expect(map.locator('img.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: /Agence partenaire WTL Services/ }).click();
+  await expect.poll(() => map.evaluate((container) => {
+    const mapRect = container.getBoundingClientRect();
+    return Array.from(container.querySelectorAll<HTMLElement>('.leaflet-marker-icon')).some((marker) => {
+      const markerRect = marker.getBoundingClientRect();
+      return (
+        Math.abs(markerRect.left + markerRect.width / 2 - (mapRect.left + mapRect.width / 2)) < 4 &&
+        Math.abs(markerRect.top + markerRect.height / 2 - (mapRect.top + mapRect.height / 2)) < 4
+      );
+    });
+  })).toBe(true);
   expect(requestedUrls.find((entry) => entry.includes('/search/nearby'))).toContain('latitude=4.0511');
   expect(requestedUrls.find((entry) => entry.includes('/search/nearby'))).toContain('longitude=9.7043');
 
   await page.getByLabel(/Pays|Country/).selectOption('47');
   await page.getByLabel(/Ville|City/).selectOption('1');
   await expect(page.getByText('Point Bonapriso').first()).toBeVisible();
+  await map.scrollIntoViewIfNeeded();
+  await expect(map).toBeVisible();
+  await expect(map.locator('img.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15_000 });
   const locationRequest = requestedUrls.find((entry) => entry.includes('/search/by-location'));
   await expect(page.getByText('Point Yaounde')).not.toBeVisible();
   expect(locationRequest).toContain('countryId=47');
   expect(locationRequest).toContain('cityId=1');
+
+  await page.getByLabel(/Pays|Country/).selectOption('48');
+  await page.getByLabel(/Ville|City/).selectOption('2');
+  await expect(page.getByText('Point Dakar').first()).toBeVisible();
+  await map.scrollIntoViewIfNeeded();
+  await expect(map.locator('img.leaflet-tile-loaded').first()).toBeVisible({ timeout: 15_000 });
+  await expect(map.locator('img.leaflet-tile').first()).toHaveAttribute('src', /tile\.openstreetmap\.org/);
 });
 
 function searchResult({
@@ -113,16 +162,20 @@ function searchResult({
   longitude,
   cityId = 1,
   cityName = 'Douala',
+  countryId = 47,
+  countryName = 'Cameroun',
 }: {
   id: number;
   name: string;
   companyId: number;
   companyName: string;
   distanceKm?: number;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   cityId?: number;
   cityName?: string;
+  countryId?: number;
+  countryName?: string;
 }) {
   return {
     companyId,
@@ -133,7 +186,7 @@ function searchResult({
       id,
       reference: `CP-${id}`,
       name,
-      city: { cityId, cityName, countryId: 47, countryName: 'Cameroun' },
+      city: { cityId, cityName, countryId, countryName },
       zone: { id: 1, name: cityName, city: { cityName } },
       address: `${cityName}, Cameroun`,
       phone: '237600000000',
