@@ -232,7 +232,7 @@ export function PlatformFinanceSettings() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const formAnchorRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false) => {
     if (!token) return;
     setLoading(true);
     setLoadError(null);
@@ -240,9 +240,9 @@ export function PlatformFinanceSettings() {
       const [countriesResponse, feesResponse, promosResponse, paymentsResponse] =
         await Promise.all([
           getCountries(),
-          getShipmentFees(token),
-          getPromoCodes(token),
-          getPaymentModes(token),
+          getShipmentFees(token, forceRefresh),
+          getPromoCodes(token, forceRefresh),
+          getPaymentModes(token, forceRefresh),
         ]);
 
       setCountries(countriesResponse);
@@ -321,7 +321,7 @@ export function PlatformFinanceSettings() {
         title="Erreur de chargement"
         description={loadError}
         action={
-          <Button variant="outline" onClick={() => void load()} className="gap-2">
+          <Button variant="outline" onClick={() => void load(true)} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             {t('common.retry')}
           </Button>
@@ -480,7 +480,7 @@ export function PlatformFinanceSettings() {
         title={t('platformFinance.title')}
         subtitle={t('platformFinance.subtitle')}
         action={
-          <Button variant="outline" onClick={() => void load()} className="gap-2">
+          <Button variant="outline" onClick={() => void load(true)} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             {t('common.refresh')}
           </Button>

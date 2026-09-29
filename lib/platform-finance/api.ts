@@ -88,7 +88,13 @@ export function getAdminPayment(
   );
 }
 
-export function getShipmentFees(token?: string | null): Promise<ShipmentFeeResponse[]> {
+export function getShipmentFees(
+  token?: string | null,
+  forceRefresh = false,
+): Promise<ShipmentFeeResponse[]> {
+  if (forceRefresh) {
+    return apiClient.get<ShipmentFeeResponse[]>('/api/delivery/shipment-fees', token);
+  }
   return apiClient.getCached<ShipmentFeeResponse[]>('/api/delivery/shipment-fees', token, 2 * 60_000);
 }
 
@@ -125,7 +131,13 @@ export function deleteShipmentFee(token: string, shipmentFeeId: number): Promise
   return apiClient.delete<void>(`/api/delivery/shipment-fees/${shipmentFeeId}`, token);
 }
 
-export function getPromoCodes(token?: string | null): Promise<PromoCodeResponse[]> {
+export function getPromoCodes(
+  token?: string | null,
+  forceRefresh = false,
+): Promise<PromoCodeResponse[]> {
+  if (forceRefresh) {
+    return apiClient.get<PromoCodeResponse[]>('/api/delivery/promo-codes', token);
+  }
   return apiClient.getCached<PromoCodeResponse[]>('/api/delivery/promo-codes', token, 2 * 60_000);
 }
 
@@ -156,7 +168,13 @@ export function deletePromoCode(token: string, promoCodeId: number): Promise<voi
   return apiClient.delete<void>(`/api/delivery/promo-codes/${promoCodeId}`, token);
 }
 
-export function getPaymentModes(token?: string | null): Promise<PaymentModeResponse[]> {
+export function getPaymentModes(
+  token?: string | null,
+  forceRefresh = false,
+): Promise<PaymentModeResponse[]> {
+  if (forceRefresh) {
+    return apiClient.get<PaymentModeResponse[]>('/api/delivery/payment-modes', token);
+  }
   return apiClient.getCached<PaymentModeResponse[]>('/api/delivery/payment-modes', token, 2 * 60_000);
 }
 

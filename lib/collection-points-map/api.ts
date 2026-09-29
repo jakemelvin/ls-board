@@ -22,14 +22,14 @@ export function searchNearbyCollectionPoints(
 export function searchCollectionPointsByLocation(
   token: string,
   params: CollectionPointLocationSearchParams,
+  forceRefresh = false,
 ): Promise<PlatformCollectionPointSearchResponse[]> {
   const query = new URLSearchParams({
     countryId: String(params.countryId),
     cityId: String(params.cityId),
   });
-  return apiClient.getCached<PlatformCollectionPointSearchResponse[]>(
-    `/api/delivery/collection-points/search/by-location?${query.toString()}`,
-    token,
-    2 * 60_000,
-  );
+  const path = `/api/delivery/collection-points/search/by-location?${query.toString()}`;
+  return forceRefresh
+    ? apiClient.get<PlatformCollectionPointSearchResponse[]>(path, token)
+    : apiClient.getCached<PlatformCollectionPointSearchResponse[]>(path, token, 2 * 60_000);
 }

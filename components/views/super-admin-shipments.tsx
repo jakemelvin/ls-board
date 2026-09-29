@@ -14,7 +14,6 @@ import {
   Package,
   RefreshCw,
   RotateCcw,
-  Search,
   Truck,
   User,
   XCircle,
@@ -25,7 +24,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataPagination } from '@/components/ui/data-pagination';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -55,7 +53,6 @@ import type { Shipment, ShipmentStatus } from '@/lib/shipments/types';
 import {
   getSuperAdminShipment,
   getSuperAdminShipments,
-  type SuperAdminShipmentCompanyOption,
   type SuperAdminShipmentStatusFilter,
 } from '@/lib/super-admin-shipments/api';
 import { cn } from '@/lib/utils';
@@ -94,16 +91,11 @@ export function SuperAdminShipmentsView() {
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
   const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [companies, setCompanies] = useState<SuperAdminShipmentCompanyOption[]>([]);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [query, setQuery] = useState('');
   const [status, setStatus] = useState<SuperAdminShipmentStatusFilter>('ALL');
-  const [companyId, setCompanyId] = useState<number | 'ALL'>('ALL');
-  const [createdFrom, setCreatedFrom] = useState('');
-  const [createdTo, setCreatedTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
@@ -121,15 +113,10 @@ export function SuperAdminShipmentsView() {
       const response = await getSuperAdminShipments(token, {
         page,
         size: pageSize,
-        query,
         status,
-        companyId,
-        createdFrom,
-        createdTo,
       });
 
       setShipments(response.content);
-      setCompanies(response.companies);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
     } catch (err) {
@@ -137,7 +124,7 @@ export function SuperAdminShipmentsView() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, createdFrom, createdTo, page, pageSize, query, status, t, token]);
+  }, [page, pageSize, status, t, token]);
 
   useEffect(() => {
     void loadShipments();
@@ -195,11 +182,7 @@ export function SuperAdminShipmentsView() {
   );
 
   const resetFilters = () => {
-    setQuery('');
     setStatus('ALL');
-    setCompanyId('ALL');
-    setCreatedFrom('');
-    setCreatedTo('');
     setPage(0);
   };
 
@@ -270,24 +253,7 @@ export function SuperAdminShipmentsView() {
 
       <Card className="border-border bg-card">
         <CardContent className="space-y-4 p-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.3fr)_repeat(4,minmax(140px,1fr))_auto] lg:items-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="shipment-search">{t('superAdminShipments.filters.search')}</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="shipment-search"
-                  value={query}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setPage(0);
-                  }}
-                  placeholder={t('superAdminShipments.filters.searchPlaceholder')}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="space-y-1.5">
               <Label>{t('superAdminShipments.filters.status')}</Label>
               <Select
@@ -312,61 +278,10 @@ export function SuperAdminShipmentsView() {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>{t('superAdminShipments.filters.company')}</Label>
-              <Select
-                value={String(companyId)}
-                onValueChange={(value) => {
-                  setCompanyId(value === 'ALL' ? 'ALL' : Number(value));
-                  setPage(0);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">
-                    {t('superAdminShipments.filters.allCompanies')}
-                  </SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={String(company.id)}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="created-from">{t('superAdminShipments.filters.from')}</Label>
-              <Input
-                id="created-from"
-                type="date"
-                value={createdFrom}
-                onChange={(event) => {
-                  setCreatedFrom(event.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="created-to">{t('superAdminShipments.filters.to')}</Label>
-              <Input
-                id="created-to"
-                type="date"
-                value={createdTo}
-                onChange={(event) => {
-                  setCreatedTo(event.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-
             <Button
               type="button"
               variant="outline"
-              className="gap-2"
+              className="gap-2 sm:mb-0.5"
               onClick={resetFilters}
             >
               <RotateCcw className="h-4 w-4" />

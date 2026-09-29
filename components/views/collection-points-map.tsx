@@ -180,7 +180,7 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
   }, []);
 
   const loadByLocation = useCallback(
-    async (nextCountryId: number, nextCityId: number) => {
+    async (nextCountryId: number, nextCityId: number, forceRefresh = false) => {
       if (!token) return;
       const requestId = beginRequest();
       setResultsLoading(true);
@@ -190,7 +190,7 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
         const response = await searchCollectionPointsByLocation(token, {
           countryId: nextCountryId,
           cityId: nextCityId,
-        });
+        }, forceRefresh);
         if (!isLatestRequest(requestId)) return;
         setSearchMode('LOCATION');
         const matchingLocation = response.filter(
@@ -307,7 +307,7 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
   const refreshResults = () => {
     if (searchMode === 'NEARBY' && userLocation) void loadNearby(userLocation);
     if (searchMode === 'LOCATION' && countryId && cityId) {
-      void loadByLocation(Number(countryId), Number(cityId));
+      void loadByLocation(Number(countryId), Number(cityId), true);
     }
   };
 
