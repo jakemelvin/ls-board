@@ -39,6 +39,23 @@
       "status": "Statut",
       "createdAt": "Créé le"
     },
+    "statuses": {
+      "CREATED": "Créé",
+      "PAID": "Payé",
+      "AWAITING_DROP_OFF": "En attente de dépôt",
+      "RECEIVED_AT_COLLECTION_POINT": "Reçu au point",
+      "READY_FOR_TRANSPORT": "Prêt au transport",
+      "IN_TRANSIT": "En transit",
+      "ARRIVED_DESTINATION_POINT": "Arrivé au point destination",
+      "READY_FOR_PICKUP": "Prêt au retrait",
+      "DELIVERED": "Livré",
+      "CANCELLED": "Annulé",
+      "RETURNED": "Retourné"
+    },
+    "priorities": {
+      "STANDARD": "Standard",
+      "EXPRESS": "Express"
+    },
     "parcelsCount": "{{count}} colis"
   },
   "groups": {

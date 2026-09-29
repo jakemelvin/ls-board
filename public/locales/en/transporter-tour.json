@@ -39,6 +39,23 @@
       "status": "Status",
       "createdAt": "Created"
     },
+    "statuses": {
+      "CREATED": "Created",
+      "PAID": "Paid",
+      "AWAITING_DROP_OFF": "Awaiting drop-off",
+      "RECEIVED_AT_COLLECTION_POINT": "Received at point",
+      "READY_FOR_TRANSPORT": "Ready for transport",
+      "IN_TRANSIT": "In transit",
+      "ARRIVED_DESTINATION_POINT": "Arrived at destination point",
+      "READY_FOR_PICKUP": "Ready for pickup",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled",
+      "RETURNED": "Returned"
+    },
+    "priorities": {
+      "STANDARD": "Standard",
+      "EXPRESS": "Express"
+    },
     "parcelsCount": "{{count}} parcels"
   },
   "groups": {

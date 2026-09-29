@@ -17,6 +17,12 @@ const ZONE = {
   city: { cityName: 'Douala', countryId: 47 },
 };
 
+const YAOUNDE_ZONE = {
+  id: 2,
+  name: 'Bastos',
+  city: { cityName: 'Yaounde', countryId: 47 },
+};
+
 const STORED_POINT = {
   id: 9,
   reference: 'CP-9',
@@ -45,6 +51,14 @@ let collectionPoints: unknown[] = [];
 test.beforeEach(async ({ page }) => {
   collectionPoints = [];
 
+  await page.route('https://nominatim.openstreetmap.org/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ lat: '3.8480', lon: '11.5021' }]),
+    });
+  });
+
   await page.route(`${API_ORIGIN}/**`, async (route) => {
     const url = new URL(route.request().url());
     const json = (body: unknown) =>
@@ -72,11 +86,14 @@ test.beforeEach(async ({ page }) => {
       return;
     }
     if (url.pathname === '/api/cities') {
-      await json([CITY]);
+      await json([
+        CITY,
+        { cityId: 2, cityName: 'Yaounde', countryId: 47, countryName: 'Cameroun' },
+      ]);
       return;
     }
     if (url.pathname === '/api/delivery/companies/1/zones') {
-      await json([ZONE]);
+      await json([ZONE, YAOUNDE_ZONE]);
       return;
     }
     if (url.pathname === '/api/delivery/companies/1/collection-points') {
@@ -107,7 +124,7 @@ async function signInAndOpenCollectionPoints(page: Page) {
   await page.goto('/login');
   await page.getByLabel(/Nom d'utilisateur|Identifiant|Username/).fill('alice.admin');
   await page.getByLabel(/Mot de passe|Password/).fill('1234');
-  await page.getByRole('button', { name: /Se connecter|Sign in/ }).click();
+  await page.getByRole('button', { name: /Se connecter|Sign In/i }).click();
 
   const sectionButton = /Points de collecte|Gestion territoriale|Territory management|Collection points/;
 
@@ -249,6 +266,27 @@ test('location picker opens an existing point on its own position', async ({ pag
     expect(url).toContain('/16/');
     expect(url).not.toContain('/32768/32768.png');
   });
+});
+
+test('selecting a zone recentres a new point map on that zone city', async ({ page }) => {
+  const map = await openPointDialog(page);
+  const initial = await readMap(map);
+  const geocodeRequest = page.waitForRequest(
+    (request) =>
+      request.url().startsWith('https://nominatim.openstreetmap.org/search') &&
+      request.url().includes('Yaounde'),
+  );
+
+  await page.getByRole('dialog').getByRole('combobox').first().click();
+  await page.getByRole('option', { name: /Bastos/ }).click();
+  await geocodeRequest;
+
+  await expect(
+    page.getByRole('dialog').getByText('Yaounde, Cameroun', { exact: true }).last(),
+  ).toBeVisible();
+  await expect
+    .poll(async () => (await readMap(map)).tileUrls.join('|'))
+    .not.toBe(initial.tileUrls.join('|'));
 });
 
 test('the position picked on the map is sent when creating the point', async ({ page }) => {

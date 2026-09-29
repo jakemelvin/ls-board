@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { divIcon, type LatLngExpression } from 'leaflet';
 import { useTranslation } from '@/lib/i18n';
@@ -10,6 +10,7 @@ type Coordinates = { latitude: number; longitude: number };
 type CollectionPointLocationPickerProps = {
   latitude: string;
   longitude: string;
+  cityLocationQuery?: string;
   onChange: (coordinates: Coordinates) => void;
 };
 
@@ -17,6 +18,8 @@ type CollectionPointLocationPickerProps = {
 const DEFAULT_CENTER: LatLngExpression = [4.0511, 9.7679];
 const DEFAULT_ZOOM = 13;
 const SELECTED_ZOOM = 16;
+
+type GeocodingResult = { lat: string; lon: string };
 
 type UserAdjustedRef = { current: boolean };
 
@@ -81,9 +84,11 @@ function MapClickHandler({
 
 function MapViewport({
   coordinates,
+  cityCoordinates,
   userAdjustedRef,
 }: {
   coordinates?: Coordinates;
+  cityCoordinates?: Coordinates;
   userAdjustedRef: UserAdjustedRef;
 }) {
   const map = useMap();
@@ -98,6 +103,19 @@ function MapViewport({
 
     map.setView([coordinates.latitude, coordinates.longitude], SELECTED_ZOOM, { animate: false });
   }, [coordinates, map, userAdjustedRef]);
+
+  useEffect(() => {
+    // A zone determines the city where a new point is being created. It is a
+    // deliberate selection, so it should take precedence over a previous map
+    // pan and make the city visible before the user places the marker.
+    if (!coordinates && cityCoordinates) {
+      map.setView(
+        [cityCoordinates.latitude, cityCoordinates.longitude],
+        DEFAULT_ZOOM,
+        { animate: false },
+      );
+    }
+  }, [cityCoordinates, coordinates, map]);
 
   useEffect(() => {
     // The dialog animates open, so Leaflet's first measurement of the container is
@@ -119,12 +137,50 @@ function MapViewport({
 export default function CollectionPointLocationPicker({
   latitude,
   longitude,
+  cityLocationQuery,
   onChange,
 }: CollectionPointLocationPickerProps) {
   const { t } = useTranslation('dashboard');
   const userAdjustedRef = useRef(false);
+  const [cityCoordinates, setCityCoordinates] = useState<Coordinates>();
 
   const coordinates = useMemo(() => parseCoordinates(latitude, longitude), [latitude, longitude]);
+
+  useEffect(() => {
+    setCityCoordinates(undefined);
+    const query = cityLocationQuery?.trim();
+    if (!query || coordinates) {
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    void fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`,
+      { signal: abortController.signal },
+    )
+      .then((response) => (response.ok ? response.json() as Promise<GeocodingResult[]> : []))
+      .then((results) => {
+        const result = results[0];
+        const nextLatitude = Number(result?.lat);
+        const nextLongitude = Number(result?.lon);
+
+        if (
+          !abortController.signal.aborted &&
+          Number.isFinite(nextLatitude) &&
+          Number.isFinite(nextLongitude)
+        ) {
+          setCityCoordinates({ latitude: nextLatitude, longitude: nextLongitude });
+        }
+      })
+      .catch((error: unknown) => {
+        if ((error as { name?: string }).name !== 'AbortError') {
+          setCityCoordinates(undefined);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [cityLocationQuery, coordinates]);
 
   const center: LatLngExpression = coordinates
     ? [coordinates.latitude, coordinates.longitude]
@@ -160,7 +216,11 @@ export default function CollectionPointLocationPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapClickHandler onChange={onChange} userAdjustedRef={userAdjustedRef} />
-          <MapViewport coordinates={coordinates} userAdjustedRef={userAdjustedRef} />
+          <MapViewport
+            coordinates={coordinates}
+            cityCoordinates={cityCoordinates}
+            userAdjustedRef={userAdjustedRef}
+          />
           {coordinates && (
             <Marker position={[coordinates.latitude, coordinates.longitude]} icon={MARKER_ICON} />
           )}

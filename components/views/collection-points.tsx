@@ -850,6 +850,16 @@ function PointDialog({
               <CollectionPointLocationPicker
                 latitude={value.latitude}
                 longitude={value.longitude}
+                cityLocationQuery={
+                  selectedZone
+                    ? [
+                        resolvedCity?.cityName ?? selectedZone.city.cityName,
+                        resolvedCity?.countryName,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')
+                    : undefined
+                }
                 onChange={({ latitude, longitude }) =>
                   onChange({ ...value, latitude: String(latitude), longitude: String(longitude) })
                 }

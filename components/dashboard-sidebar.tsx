@@ -68,9 +68,9 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'pickup-request', labelKey: 'shell.sections.pickupRequest', icon: ArrowRightLeft, roles: ['TRANSPORTER'] },
   { id: 'announcements', labelKey: 'shell.sections.announcements', icon: Megaphone, roles: ADMIN_LIKE_ROLES },
   { id: 'notifications', labelKey: 'shell.sections.notifications', icon: Bell, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
-  { id: 'support', labelKey: 'shell.sections.support', icon: Headset, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
   { id: 'company-profile', labelKey: 'shell.sections.companyProfile', icon: Settings, roles: ADMIN_LIKE_ROLES },
   { id: 'cities', labelKey: 'shell.sections.cities', icon: MapPin, roles: ['SUPER_ADMIN', ...ADMIN_LIKE_ROLES] },
+  { id: 'support', labelKey: 'shell.sections.support', icon: Headset, roles: [...ADMIN_LIKE_ROLES, 'COLLECTOR', 'TRANSPORTER'] },
 ];
 
 interface DashboardSidebarProps {

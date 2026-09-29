@@ -425,11 +425,11 @@ export function TransporterTour() {
                                   <div className="flex flex-wrap gap-2">
                                     {shipment.status && (
                                       <Badge className={cn('border-0', getShipmentStatusClassName(shipment.status))}>
-                                        {t(`parcelManagement.statuses.${shipment.status}`)}
+                                        {t(`transit.statuses.${shipment.status}`)}
                                       </Badge>
                                     )}
                                     {shipment.priority && (
-                                      <Badge variant="outline">{t(`shipmentPriority.${shipment.priority}`)}</Badge>
+                                      <Badge variant="outline">{t(`transit.priorities.${shipment.priority}`)}</Badge>
                                     )}
                                   </div>
                                 </TableCell>
