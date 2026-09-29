@@ -1,0 +1,12 @@
+.git
+.github
+.next
+node_modules
+playwright-report
+test-results
+tests
+.env*.local
+.env.production
+.agents
+.codex
+*.md

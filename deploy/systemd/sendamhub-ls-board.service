@@ -1,0 +1,18 @@
+[Unit]
+Description=SENDAMhub LS Board
+After=network.target
+
+[Service]
+Type=simple
+User=sendamhub
+Group=sendamhub
+WorkingDirectory={{APP_DIR}}
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile={{APP_DIR}}/.env.production
+ExecStart=/usr/bin/env pnpm start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
