@@ -1159,6 +1159,10 @@
       "readyPickup": "Prêt retrait",
       "receivedPoint": "Reçus au point"
     },
+    "statusSummary": {
+      "title": "Statuts affichés",
+      "page": "Page {{page}} / {{total}}"
+    },
     "errors": {
       "sessionExpired": "Session expirée",
       "load": "Impossible de charger les colis.",
@@ -1435,6 +1439,10 @@
       "exceptions": "Exceptions",
       "inTransit": "En transit",
       "total": "Total filtre"
+    },
+    "statusSummary": {
+      "title": "Statuts affichés",
+      "page": "Page {{page}} / {{total}}"
     },
     "pagination": {
       "current": "{{page}} / {{total}}",

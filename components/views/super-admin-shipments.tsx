@@ -154,12 +154,6 @@ export function SuperAdminShipmentsView() {
   const metrics = useMemo(
     () => [
       {
-        key: 'total',
-        label: t('superAdminShipments.metrics.total'),
-        value: totalElements,
-        icon: Package,
-      },
-      {
         key: 'transit',
         label: t('superAdminShipments.metrics.inTransit'),
         value: shipments.filter((shipment) => shipment.status === 'IN_TRANSIT').length,
@@ -178,7 +172,7 @@ export function SuperAdminShipmentsView() {
         icon: XCircle,
       },
     ],
-    [shipments, t, totalElements],
+    [shipments, t],
   );
 
   const resetFilters = () => {
@@ -240,16 +234,28 @@ export function SuperAdminShipmentsView() {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <MetricCard
-            key={metric.key}
-            label={metric.label}
-            value={metric.value}
-            icon={metric.icon}
-          />
-        ))}
-      </div>
+      <section aria-labelledby="platform-shipment-status-summary" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="platform-shipment-status-summary" className="text-sm font-semibold text-foreground">
+            {t('superAdminShipments.statusSummary.title')}
+          </h2>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+            {t('superAdminShipments.statusSummary.page', {
+              values: { page: page + 1, total: Math.max(totalPages, 1) },
+            })}
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {metrics.map((metric) => (
+            <MetricCard
+              key={metric.key}
+              label={metric.label}
+              value={metric.value}
+              icon={metric.icon}
+            />
+          ))}
+        </div>
+      </section>
 
       <Card className="border-border bg-card">
         <CardContent className="space-y-4 p-4">

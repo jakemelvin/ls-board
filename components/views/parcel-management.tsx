@@ -262,29 +262,29 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
       {
         key: 'IN_TRANSIT',
         label: t('parcelManagement.statusCards.inTransit'),
-        value: shipments.filter((item) => item.status === 'IN_TRANSIT').length,
+        value: filteredShipments.filter((item) => item.status === 'IN_TRANSIT').length,
         icon: Truck,
       },
       {
         key: 'DELIVERED',
         label: t('parcelManagement.statusCards.delivered'),
-        value: shipments.filter((item) => item.status === 'DELIVERED').length,
+        value: filteredShipments.filter((item) => item.status === 'DELIVERED').length,
         icon: ShieldCheck,
       },
       {
         key: 'READY_FOR_PICKUP',
         label: t('parcelManagement.statusCards.readyPickup'),
-        value: shipments.filter((item) => item.status === 'READY_FOR_PICKUP').length,
+        value: filteredShipments.filter((item) => item.status === 'READY_FOR_PICKUP').length,
         icon: Package,
       },
       {
         key: 'RECEIVED_AT_COLLECTION_POINT',
         label: t('parcelManagement.statusCards.receivedPoint'),
-        value: shipments.filter((item) => item.status === 'RECEIVED_AT_COLLECTION_POINT').length,
+        value: filteredShipments.filter((item) => item.status === 'RECEIVED_AT_COLLECTION_POINT').length,
         icon: MapPin,
       },
     ],
-    [shipments, t],
+    [filteredShipments, t],
   );
 
   const roleDescription =
@@ -340,24 +340,36 @@ export function ParcelManagement({ currentRole }: ParcelManagementProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {statusCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.key} className="border-border bg-card">
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
-                  <p className="mt-2 text-2xl font-bold text-foreground">{card.value}</p>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <section aria-labelledby="parcel-status-summary" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 id="parcel-status-summary" className="text-sm font-semibold text-foreground">
+            {t('parcelManagement.statusSummary.title')}
+          </h3>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+            {t('parcelManagement.statusSummary.page', {
+              values: { page: page + 1, total: Math.max(totalPages, 1) },
+            })}
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {statusCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.key} className="border-border bg-card">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-foreground">{card.value}</p>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="space-y-4">
         <div className="relative">

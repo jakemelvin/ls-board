@@ -17,25 +17,26 @@ test.beforeEach(async ({ page }) => {
     }
 
     if (url.pathname === '/api/delivery/shipments') {
+      const page = Number(url.searchParams.get('page') ?? '0');
       await json({
         content: [
           {
-            id: 42,
-            reference: 'SHP-LIVE-001',
-            code: 'LIVE-42',
+            id: page === 0 ? 42 : 43,
+            reference: page === 0 ? 'SHP-LIVE-001' : 'SHP-LIVE-002',
+            code: page === 0 ? 'LIVE-42' : 'LIVE-43',
             companyId: 9,
             companyName: 'Entreprise réelle',
             priority: 'STANDARD',
-            status: 'IN_TRANSIT',
+            status: page === 0 ? 'IN_TRANSIT' : 'DELIVERED',
             sender: { fullName: 'Alice' },
             receiver: { fullName: 'Bob' },
             createdAt: '2026-09-28T10:00:00Z',
             updatedAt: '2026-09-28T10:00:00Z',
           },
         ],
-        totalPages: 1,
-        totalElements: 1,
-        number: 0,
+        totalPages: 2,
+        totalElements: 12,
+        number: page,
         size: 8,
       });
       return;
@@ -68,6 +69,27 @@ test('platform shipments load and refresh from the shipment API', async ({ page 
     )
     .toBe(true);
   await expect(page.getByText('SHP-2026-07001')).toHaveCount(0);
+  await expect(page.getByLabel('Displayed statuses').getByText('Page 1 / 2')).toBeVisible();
+
+  const nextPageRequest = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' &&
+      new URL(request.url()).pathname === '/api/delivery/shipments' &&
+      new URL(request.url()).searchParams.get('page') === '1',
+  );
+  await page.getByTestId('pagination-next').click();
+  await nextPageRequest;
+  await expect(page.getByLabel('Displayed statuses').getByText('Page 2 / 2')).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.getByText('SHP-LIVE-002', { exact: true }).evaluateAll((elements) =>
+        elements.some((element) => {
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        }),
+      ),
+    )
+    .toBe(true);
 
   const refreshRequest = page.waitForRequest(
     (request) => request.method() === 'GET' && new URL(request.url()).pathname === '/api/delivery/shipments',

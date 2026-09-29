@@ -1125,6 +1125,10 @@
       "readyPickup": "Ready for pickup",
       "receivedPoint": "Received at point"
     },
+    "statusSummary": {
+      "title": "Displayed statuses",
+      "page": "Page {{page}} / {{total}}"
+    },
     "errors": {
       "sessionExpired": "Session expired",
       "load": "Unable to load the parcels.",
@@ -1401,6 +1405,10 @@
       "exceptions": "Exceptions",
       "inTransit": "In transit",
       "total": "Filtered total"
+    },
+    "statusSummary": {
+      "title": "Displayed statuses",
+      "page": "Page {{page}} / {{total}}"
     },
     "pagination": {
       "current": "{{page}} / {{total}}",
