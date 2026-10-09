@@ -58,7 +58,7 @@
   },
   "payment": {
     "title": "Invoice payment", "subtitle": "Invoice {{reference}} — {{plan}}", "amountDue": "Amount due in accounting currency",
-    "chooseProvider": "Choose a payment method", "countryLabel": "Mobile Money wallet country", "countryPlaceholder": "Choose a country", "phoneLabel": "Mobile Money number", "phonePlaceholder": "+237 6XX XXX XXX", "phoneHint": "Enter the local or international number that will receive the confirmation request.", "loadingCountries": "Loading available countries…", "countriesError": "Unable to load the countries available for this operator.", "otpRequired": "The operator may require an OTP confirmation.", "walletDebit": "Amount requested from the wallet: {{amount}}", "promoPlaceholder": "Promo code",
+    "chooseProvider": "Choose a payment method", "countryLabel": "Mobile Money wallet country", "countryPlaceholder": "Choose a country", "phoneLabel": "Mobile Money number", "phonePlaceholder": "Local number", "phoneHint": "Enter your local number, without the country code: it will receive the confirmation request.", "loadingCountries": "Loading available countries…", "countriesError": "Unable to load the countries available for this operator.", "otpRequired": "The operator may require an OTP confirmation.", "walletDebit": "Amount requested from the wallet: {{amount}}", "promoPlaceholder": "Promo code",
     "applyPromo": "Apply", "continueProvider": "Continue with provider", "payLater": "Pay later", "pay": "Start payment",
     "retry": "New attempt", "check": "Check payment", "confirmCard": "Confirm card payment", "description": "{{plan}} subscription",
     "errorTitle": "Payment was not completed", "success": "Payment is confirmed. The dashboard will refresh.",

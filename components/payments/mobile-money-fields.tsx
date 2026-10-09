@@ -22,6 +22,22 @@ interface MobileMoneyFieldsProps {
   };
 }
 
+// Local-format example numbers (without calling code), keyed by ISO country code.
+const LOCAL_NUMBER_EXAMPLES: Record<string, string> = {
+  CI: '07 01 23 45 67',
+  CM: '6 90 12 34 56',
+  SN: '77 123 45 67',
+  BJ: '01 90 12 34 56',
+  BF: '70 12 34 56',
+  TG: '90 12 34 56',
+  ML: '70 12 34 56',
+  NE: '90 12 34 56',
+  GN: '620 12 34 56',
+  GA: '06 12 34 56',
+  CG: '06 123 4567',
+  CD: '81 234 5678',
+};
+
 export function MobileMoneyFields({
   countries,
   country,
@@ -34,6 +50,8 @@ export function MobileMoneyFields({
   labels,
 }: MobileMoneyFieldsProps) {
   const selectedCountry = countries.find((item) => item.code === country);
+  const localExample = selectedCountry ? LOCAL_NUMBER_EXAMPLES[selectedCountry.code.toUpperCase()] : undefined;
+  const phonePlaceholder = localExample ? `Ex. ${localExample}` : labels.phonePlaceholder;
 
   return (
     <div className="space-y-3">
@@ -65,7 +83,7 @@ export function MobileMoneyFields({
             onChange={(event) => onPayerMsisdnChange(event.target.value)}
             inputMode="tel"
             autoComplete="tel"
-            placeholder={labels.phonePlaceholder}
+            placeholder={phonePlaceholder}
             className="border-0 shadow-none focus-visible:ring-0"
           />
         </div>

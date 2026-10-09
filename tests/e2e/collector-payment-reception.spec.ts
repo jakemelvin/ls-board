@@ -270,7 +270,7 @@ test('collector receives an unpaid collection-point shipment only after physical
   const paymentDialog = page.getByRole('dialog');
   await paymentDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
   await paymentDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
-  await paymentDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await paymentDialog.getByPlaceholder(/Numéro local|Local number|^Ex. /).fill('237690123456');
   await paymentDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
   await expect.poll(() => platformPaymentBody).toContain('237690123456');
   await expect(paymentDialog).toBeHidden();

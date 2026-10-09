@@ -161,6 +161,7 @@
     "title": "My profile"
   },
   "collectorDashboard": {
+    "hoursUnavailable": "Opening hours unavailable",
     "availability": "Point availability",
     "capacity": "Capacity",
     "loading": "Loading collector dashboard...",
@@ -1236,8 +1237,8 @@
     "phoneLabel": "Mobile Money number",
     "countryLabel": "Mobile Money wallet country",
     "countryPlaceholder": "Choose a country",
-    "phonePlaceholder": "E.g. 237690000000",
-    "phoneHint": "Enter the local or international number that will receive the confirmation request.",
+    "phonePlaceholder": "Local number",
+    "phoneHint": "Enter your local number, without the country code: it will receive the confirmation request.",
     "loadingCountries": "Loading available countries…",
     "countriesError": "Unable to load the countries available for this operator.",
     "otpRequired": "The operator may require an OTP confirmation.",

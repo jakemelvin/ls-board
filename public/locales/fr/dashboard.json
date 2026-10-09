@@ -195,6 +195,7 @@
     "title": "Mon profil"
   },
   "collectorDashboard": {
+    "hoursUnavailable": "Horaires indisponibles",
     "availability": "Disponibilité du point",
     "capacity": "Capacité",
     "loading": "Chargement du tableau de bord collecteur...",
@@ -1270,8 +1271,8 @@
     "phoneLabel": "Numéro Mobile Money",
     "countryLabel": "Pays du portefeuille Mobile Money",
     "countryPlaceholder": "Choisissez un pays",
-    "phonePlaceholder": "Ex. 237690000000",
-    "phoneHint": "Saisissez le numéro local ou international qui recevra la demande de confirmation.",
+    "phonePlaceholder": "Numéro local",
+    "phoneHint": "Saisissez votre numéro local, sans l'indicatif du pays : il recevra la demande de confirmation.",
     "loadingCountries": "Chargement des pays disponibles…",
     "countriesError": "Impossible de charger les pays disponibles pour cet opérateur.",
     "otpRequired": "Une confirmation OTP peut être demandée par l’opérateur.",

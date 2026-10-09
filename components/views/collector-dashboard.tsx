@@ -38,7 +38,7 @@ interface CollectorDashboardProps {
 }
 
 export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
-  const { t } = useTranslation('dashboard');
+  const { t, locale } = useTranslation('dashboard');
   const token = useAuthStore((state) => state.token);
   const [dashboard, setDashboard] = useState<CollectorDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
             <div>
               <p className="text-sm text-muted-foreground">{t('collectorDashboard.availability')}</p>
               <p className="mt-1 text-sm font-semibold text-foreground">
-                {formatOpeningHours(point?.openingHours)}
+                {formatOpeningHours(point?.openingHours, t('collectorDashboard.hoursUnavailable'))}
               </p>
             </div>
             <span
@@ -200,7 +200,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
           <PointLocationMap
             location={dashboard?.location}
             address={formatPointAddress(point)}
-            updatedAt={formatDateTime(dashboard?.location?.lastUpdatedAt)}
+            updatedAt={formatDateTime(dashboard?.location?.lastUpdatedAt, locale)}
             t={t}
           />
         </CardContent>
@@ -213,20 +213,22 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
             <CardDescription>{t('collectorDashboard.priorities.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {(dashboard?.priorities ?? []).map((priority) => (
-              <div key={priority.key ?? priority.label} className="rounded-2xl border border-border bg-secondary/20 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">{priority.label ?? '-'}</p>
-                      <p className="text-sm text-muted-foreground">{priority.description ?? '-'}</p>
+            {(dashboard?.priorities ?? []).map((priority) => {
+              return (
+                <div key={priority.key ?? priority.label} className="rounded-2xl border border-border bg-secondary/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">{priority.label ?? '-'}</p>
+                        <p className="text-sm text-muted-foreground">{priority.description ?? '-'}</p>
+                      </div>
                     </div>
+                    <span className="text-xl font-bold text-foreground">{round(priority.count)}</span>
                   </div>
-                  <span className="text-xl font-bold text-foreground">{round(priority.count)}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {!dashboard?.priorities?.length && <EmptyState label={t('common.noResults')} />}
           </CardContent>
         </Card>
@@ -250,7 +252,7 @@ export function CollectorDashboard({ currentUser }: CollectorDashboardProps) {
                 <p className="mt-2 text-sm text-muted-foreground">{operation.collectionPointName ?? point?.name ?? '-'}</p>
                 <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock3 className="h-3.5 w-3.5" />
-                  <span>{formatDateTime(operation.operatedAt)}</span>
+                  <span>{formatDateTime(operation.operatedAt, locale)}</span>
                 </div>
               </div>
             ))}
@@ -391,17 +393,17 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-function formatOpeningHours(hours?: OpeningHourSnapshot[]) {
+function formatOpeningHours(hours: OpeningHourSnapshot[] | undefined, unavailableLabel: string) {
   const firstOpen = hours?.find((hour) => !hour.closed && hour.openingTime && hour.closingTime);
-  if (!firstOpen) return 'Horaires indisponibles';
+  if (!firstOpen) return unavailableLabel;
   return `${firstOpen.openingTime} - ${firstOpen.closingTime}`;
 }
 
-function formatDateTime(value?: string) {
+function formatDateTime(value: string | undefined, locale: string) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('fr-FR');
+  return date.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-US');
 }
 
 function round(value?: number) {

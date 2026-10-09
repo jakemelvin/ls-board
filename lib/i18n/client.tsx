@@ -71,7 +71,7 @@ type I18nContextValue = {
 }
 
 const STORAGE_KEY = 'sendam_locale'
-const I18N_ASSET_VERSION = '2026-09-18-collection-points-translations'
+const I18N_ASSET_VERSION = '2026-10-09-payment-phone-placeholder'
 const localeResourceRequests = new Map<Locale, Promise<TranslationResources>>()
 
 const bundledResources: Record<Locale, TranslationResources> = {

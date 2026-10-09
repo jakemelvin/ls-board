@@ -277,7 +277,7 @@ test('collector can pay any shipment visible in their collection scope', async (
   await resumedDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
   await expect(resumedDialog.getByRole('radio', { name: /MTN Mobile Money/ })).toBeVisible();
   await resumedDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
-  await resumedDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await resumedDialog.getByPlaceholder(/Numéro local|Local number|^Ex. /).fill('237690123456');
   await resumedDialog.getByRole('button', { name: /Initier le paiement|Start payment/ }).click();
 
   await expect.poll(() => paymentBody).toContain('237690123456');
@@ -319,7 +319,7 @@ test('collector can pay any shipment visible in their collection scope', async (
   await expect(reopenedDialog.getByText(/Paiement échoué|Payment failed/)).toHaveCount(0);
   await reopenedDialog.getByLabel(/Pays du portefeuille|wallet country/).selectOption('CM');
   await reopenedDialog.getByRole('radio', { name: /MTN Mobile Money/ }).click();
-  await reopenedDialog.getByPlaceholder(/237690000000/).fill('237690123456');
+  await reopenedDialog.getByPlaceholder(/Numéro local|Local number|^Ex. /).fill('237690123456');
   await expect(reopenedDialog.getByRole('button', { name: /Initier le paiement|Start payment/ })).toBeEnabled();
   await reopenedDialog.getByRole('button', { name: /Payer plus tard|Pay later/ }).click();
   includeCompletedAttempt = true;
