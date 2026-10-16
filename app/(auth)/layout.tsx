@@ -72,7 +72,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <footer className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span className="lg:hidden">{t('authLayout.legal', { values: { year: currentYear } })}</span>
           <span aria-hidden className="lg:hidden">·</span>
-          <LegalLink className="py-1" />
+          <LegalLink showIcon className="py-1 text-sm text-primary underline hover:text-primary/80" />
         </footer>
       </main>
     </div>
