@@ -107,6 +107,7 @@
   },
   "messages": {
     "countriesLoadFailed": "Unable to load countries. Check your connection and",
+    "termsConsent": "By creating your account, you agree to our",
     "reviewConsent": "By submitting, you agree that your request will be reviewed by our team. You will receive a notification once your account is approved.",
     "unexpectedError": "An unexpected error occurred. Please try again."
   },

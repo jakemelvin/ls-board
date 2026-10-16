@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 
 import { CompanyBrand } from '@/components/company-brand';
+import { LegalLink } from '@/components/legal-link';
 import { SendamLogo } from '@/components/sendam-logo';
 import type { CompanyResponse } from '@/lib/auth/types';
 import { useAuthStore } from '@/lib/auth/store';
@@ -198,6 +199,10 @@ export function DashboardSidebar({
             </button>
           </>
         )}
+        <LegalLink
+          showIcon
+          className="w-full px-4 py-2 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:no-underline"
+        />
       </div>
     </aside>
   );

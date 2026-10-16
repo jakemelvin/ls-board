@@ -1,4 +1,8 @@
 {
+  "legalLink": {
+    "label": "Terms & conditions",
+    "newTab": "(opens in a new tab)"
+  },
   "authLayout": {
     "description": "Manage parcels, transporters, and collection points from one unified dashboard.",
     "features": {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Boxes, CreditCard, Headset, LayoutDashboard, Map, Menu, PackageSearch, ShieldCheck } from 'lucide-react';
 
 import { SIDEBAR_ITEMS } from '@/components/dashboard-sidebar';
+import { LegalLink } from '@/components/legal-link';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -151,6 +152,12 @@ export function DashboardMobileNav({
                 })}
               </>
             )}
+
+            <div className="my-1 border-t border-border" />
+            <LegalLink
+              showIcon
+              className="h-12 gap-3 px-4 text-sm text-muted-foreground hover:no-underline"
+            />
           </div>
         </SheetContent>
       </Sheet>

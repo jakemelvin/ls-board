@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { LegalLink } from '@/components/legal-link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { registerCompany, getCountries } from '@/lib/auth/api';
@@ -748,6 +749,11 @@ function ReviewStep({
 
       <p className="text-xs text-muted-foreground text-center leading-relaxed">
         {t('messages.reviewConsent')}
+      </p>
+
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        {t('messages.termsConsent')}{' '}
+        <LegalLink className="text-primary underline" />.
       </p>
 
       <div className="flex gap-3">

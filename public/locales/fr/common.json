@@ -1,4 +1,8 @@
 {
+  "legalLink": {
+    "label": "Conditions générales",
+    "newTab": "(s'ouvre dans un nouvel onglet)"
+  },
   "authLayout": {
     "description": "Gérez vos colis, transporteurs et points de collecte depuis un seul tableau de bord unifié.",
     "features": {

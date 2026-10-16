@@ -107,6 +107,7 @@
   },
   "messages": {
     "countriesLoadFailed": "Impossible de charger les pays. Vérifiez votre connexion et",
+    "termsConsent": "En créant votre compte, vous acceptez nos",
     "reviewConsent": "En soumettant, vous acceptez que votre demande soit examinée par notre équipe. Vous recevrez une notification dès l'approbation de votre compte.",
     "unexpectedError": "Une erreur inattendue est survenue. Veuillez réessayer."
   },

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Banknote, Camera, Check, ChevronDown, Languages, LogOut, RefreshCw, UserRound } from 'lucide-react';
+import Link from 'next/link';
+import { Banknote, Camera, Check, ChevronDown, FileText, Languages, LogOut, RefreshCw, UserRound } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { LEGAL_TERMS_PATH } from '@/components/legal-link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
@@ -320,6 +322,13 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
               </DropdownMenuItem>
             );
           })}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={LEGAL_TERMS_PATH} target="_blank" rel="noopener noreferrer">
+              <FileText className="h-4 w-4" />
+              {tCommon('legalLink.label')}
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { BarChart3, MapPin, Package2 } from 'lucide-react';
 
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { LegalLink } from '@/components/legal-link';
 import { SendamLogo } from '@/components/sendam-logo';
 import { useTranslation } from '@/lib/i18n';
 
@@ -67,6 +68,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           </div>
           {children}
         </div>
+
+        <footer className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span className="lg:hidden">{t('authLayout.legal', { values: { year: currentYear } })}</span>
+          <span aria-hidden className="lg:hidden">·</span>
+          <LegalLink className="py-1" />
+        </footer>
       </main>
     </div>
   );
