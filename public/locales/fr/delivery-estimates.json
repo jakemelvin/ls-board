@@ -51,6 +51,7 @@
       "DAYS": "Jours"
     },
     "preview": "Aperçu",
+    "configuring": "Vous configurez",
     "previewFallback": "Le libellé final sera généré automatiquement."
   },
   "validation": {

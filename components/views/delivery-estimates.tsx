@@ -1,6 +1,14 @@
 'use client';
 
-import { type ElementType, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type ElementType,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -346,10 +354,24 @@ function DeliveryEstimatesInner({
     return estimates.find((estimate) => estimateMatchesSelection(estimate, selection)) ?? null;
   };
 
+  // Below xl the form is stacked under the lists: bring it into view after a pick.
+  const formCardRef = useRef<HTMLDivElement>(null);
+  const scrollToForm = () => {
+    if (window.matchMedia('(min-width: 1280px)').matches) return;
+    requestAnimationFrame(() =>
+      formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+  };
+
   const selectEstimate = (estimate: CompanyDeliveryEstimateResponse) => {
     setSelectedEstimateId(estimate.id);
     setValidationErrors([]);
     setForm(buildFormFromEstimate(estimate));
+  };
+
+  const selectEstimateFromList = (estimate: CompanyDeliveryEstimateResponse) => {
+    selectEstimate(estimate);
+    scrollToForm();
   };
 
   const startNewEstimate = () => {
@@ -433,6 +455,7 @@ function DeliveryEstimatesInner({
       durationValue: '',
       durationUnit: 'DAYS',
     }));
+    scrollToForm();
   };
 
   const saveEstimate = async () => {
@@ -505,6 +528,22 @@ function DeliveryEstimatesInner({
     form.originCollectionPointId && form.destinationCollectionPointId
       ? buildRouteKey(Number(form.originCollectionPointId), Number(form.destinationCollectionPointId))
       : '';
+
+  const formRoute = requirements?.availableRoutes.find(
+    (route) =>
+      buildRouteKey(route.originCollectionPointId, route.destinationCollectionPointId) ===
+      routeValue,
+  );
+  const formParcel = requirements?.availableParcelTypes.find(
+    (parcel) => String(parcel.id) === form.parcelTypeId,
+  );
+  const formContextLabel =
+    formRoute && formParcel
+      ? {
+          title: `${formRoute.originCollectionPointName} - ${formRoute.destinationCollectionPointName}`,
+          subtitle: `${selectedMode?.name ?? ''} - ${formParcel.name}`,
+        }
+      : null;
 
   if (loading) {
     return (
@@ -591,7 +630,7 @@ function DeliveryEstimatesInner({
               selectedId={selectedEstimateId}
               search={search}
               onSearchChange={setSearch}
-              onSelect={selectEstimate}
+              onSelect={selectEstimateFromList}
             />
             <CoveragePanel
               requirements={requirements}
@@ -602,7 +641,7 @@ function DeliveryEstimatesInner({
             />
           </div>
 
-          <Card className="min-w-0 border-border bg-card">
+          <Card ref={formCardRef} className="min-w-0 scroll-mt-2 border-border bg-card">
             <CardHeader className="space-y-2">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -612,6 +651,19 @@ function DeliveryEstimatesInner({
                   <p className="text-sm text-muted-foreground">
                     {t('actions.description')}
                   </p>
+                  {formContextLabel && (
+                    <div className="mt-3 rounded-lg border border-primary/40 bg-primary/10 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                        {t('form.configuring')}
+                      </p>
+                      <p className="break-words text-sm font-semibold text-foreground">
+                        {formContextLabel.title}
+                      </p>
+                      <p className="break-words text-xs text-muted-foreground">
+                        {formContextLabel.subtitle}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {selectedEstimateId && (
                   <Button

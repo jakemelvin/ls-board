@@ -44,6 +44,7 @@
     "editTitle": "Edit grid",
     "newTitle": "New grid",
     "description": "One grid covers one route, one parcel type and one transport mode.",
+    "configuring": "You are configuring",
     "route": "Route",
     "routePlaceholder": "Origin -> destination",
     "parcelType": "Parcel type",

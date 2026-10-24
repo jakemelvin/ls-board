@@ -51,6 +51,7 @@
       "DAYS": "Days"
     },
     "preview": "Preview",
+    "configuring": "You are configuring",
     "previewFallback": "The final label will be generated automatically."
   },
   "validation": {

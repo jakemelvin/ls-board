@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ElementType } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ElementType } from 'react';
 import {
   AlertTriangle,
   Calculator,
@@ -878,10 +878,24 @@ function CompanyPricingInner({
     t,
   ]);
 
+  // Below xl the form is stacked under the lists: bring it into view after a pick.
+  const formCardRef = useRef<HTMLDivElement>(null);
+  const scrollToForm = () => {
+    if (window.matchMedia('(min-width: 1280px)').matches) return;
+    requestAnimationFrame(() =>
+      formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+  };
+
   const selectPricing = (pricing: CompanyPricingResponse) => {
     setSelectedPricingId(pricing.id);
     setValidationErrors([]);
     setForm(buildFormFromPricing(pricing));
+  };
+
+  const selectPricingFromList = (pricing: CompanyPricingResponse) => {
+    selectPricing(pricing);
+    scrollToForm();
   };
 
   const findPricingForSelection = (selection: PricingSelection) => {
@@ -1000,6 +1014,7 @@ function CompanyPricingInner({
       parcelTypeId: String(parcel.id),
       selectedCriteria: isEnvelopeParcel(parcel) ? ['FIXED'] : ['FIXED'],
     }));
+    scrollToForm();
   };
 
   const handleCheckSelection = async () => {
@@ -1105,6 +1120,18 @@ function CompanyPricingInner({
       : '';
   const selectedPricing = pricingList.find((item) => item.id === selectedPricingId) ?? null;
   const activeEnvelope = isEnvelopeParcel(selectedParcel);
+  const formRoute = requirements?.availableRoutes.find(
+    (route) =>
+      buildRouteKey(route.originCollectionPointId, route.destinationCollectionPointId) ===
+      routeValue,
+  );
+  const formContextLabel =
+    formRoute && selectedParcel
+      ? {
+          title: `${formRoute.originCollectionPointName} - ${formRoute.destinationCollectionPointName}`,
+          subtitle: `${selectedMode?.name ?? ''} - ${selectedParcel.name}`,
+        }
+      : null;
 
   return (
     <div className="space-y-6">
@@ -1200,11 +1227,11 @@ function CompanyPricingInner({
             selectedId={selectedPricingId}
             search={search}
             onSearchChange={setSearch}
-            onSelect={selectPricing}
+            onSelect={selectPricingFromList}
           />
         </div>
 
-        <Card className="border-border bg-card">
+        <Card ref={formCardRef} className="scroll-mt-2 border-border bg-card">
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
@@ -1214,6 +1241,19 @@ function CompanyPricingInner({
                 <p className="mt-1 text-sm text-muted-foreground">
                   {t('form.description')}
                 </p>
+                {formContextLabel && (
+                  <div className="mt-3 rounded-lg border border-primary/40 bg-primary/10 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                      {t('form.configuring')}
+                    </p>
+                    <p className="break-words text-sm font-semibold text-foreground">
+                      {formContextLabel.title}
+                    </p>
+                    <p className="break-words text-xs text-muted-foreground">
+                      {formContextLabel.subtitle}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button

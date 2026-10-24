@@ -44,6 +44,7 @@
     "editTitle": "Modifier la grille",
     "newTitle": "Nouvelle grille",
     "description": "Une grille couvre une route, un type de colis et un mode de transport.",
+    "configuring": "Vous configurez",
     "route": "Route",
     "routePlaceholder": "Origine -> destination",
     "parcelType": "Type de colis",
