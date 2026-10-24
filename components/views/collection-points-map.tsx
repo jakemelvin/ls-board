@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Building2,
@@ -52,7 +52,9 @@ interface CollectionPointsMapProps {
 }
 
 const SCOPE_FILTERS: ScopeFilter[] = ['ALL', 'COMPANY', 'NETWORK'];
-const GEOLOCATION_CACHE_MAX_AGE_MS = 15 * 60_000;
+const NEARBY_RADIUS_OPTIONS_KM = [5, 10, 25, 50, 100];
+const DEFAULT_NEARBY_RADIUS_KM = 50;
+const GEOLOCATION_CACHE_MAX_AGE_MS = 60_000;
 const GEOLOCATION_TIMEOUT_MS = 30_000;
 const CollectionPointsGeographicMap = dynamic(
   () => import('@/components/views/collection-points-geographic-map'),
@@ -149,7 +151,9 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('ALL');
   const [selectedPointKey, setSelectedPointKey] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_NEARBY_RADIUS_KM);
   const { beginRequest, isLatestRequest } = useLatestRequest();
+  const messageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -176,6 +180,8 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
 
   const setSearchResults = useCallback((items: PlatformCollectionPointSearchResponse[]) => {
     setResults(items);
+    setScopeFilter('ALL');
+    setSearchTerm('');
     setSelectedPointKey(items[0] ? pointKey(items[0]) : null);
   }, []);
 
@@ -248,12 +254,15 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
         if (!isLatestRequest(requestId)) return;
         setSearchMode('NEARBY');
         setUserLocation(coordinates);
+        // The country/city filters no longer describe what is displayed.
+        setCountryId('');
+        setCityId('');
+        setCities([]);
         setSearchResults(response);
-        setMessage(
-          response.length > 0
-            ? t('collectionPointsMap.messages.nearbyResults', { values: { count: response.length } })
-            : t('collectionPointsMap.messages.noNearbyResults'),
+        requestAnimationFrame(() =>
+          messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
         );
+        setMessage(null);
       } catch (cause) {
         if (isLatestRequest(requestId)) {
           setError(cause instanceof ApiError ? cause.message : t('collectionPointsMap.errors.search'));
@@ -311,9 +320,22 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
     }
   };
 
+  const getDistance = useCallback(
+    (item: PlatformCollectionPointSearchResponse) => {
+      if (typeof item.distanceKm === 'number') return item.distanceKm;
+      const coordinates = getCoordinates(item);
+      return userLocation && coordinates ? calculateDistanceKm(userLocation, coordinates) : null;
+    },
+    [userLocation],
+  );
+
   const filteredResults = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return results.filter((item) => {
+      if (searchMode === 'NEARBY') {
+        const distance = getDistance(item);
+        if (distance !== null && distance > radiusKm) return false;
+      }
       if (scopeFilter !== 'ALL' && getScope(item) !== scopeFilter) return false;
       if (!query) return true;
       const point = item.collectionPoint;
@@ -329,17 +351,21 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
-  }, [getScope, results, scopeFilter, searchTerm]);
+  }, [getDistance, getScope, radiusKm, results, scopeFilter, searchMode, searchTerm]);
 
   const pointsWithCoordinates = filteredResults.filter(hasCoordinates);
   const selectedPoint =
     filteredResults.find((item) => pointKey(item) === selectedPointKey) ?? filteredResults[0] ?? null;
 
-  const getDistance = (item: PlatformCollectionPointSearchResponse) => {
-    if (typeof item.distanceKm === 'number') return item.distanceKm;
-    const coordinates = getCoordinates(item);
-    return userLocation && coordinates ? calculateDistanceKm(userLocation, coordinates) : null;
-  };
+  const displayedMessage =
+    searchMode === 'NEARBY' && !isLocating && !resultsLoading && !error
+      ? t(
+          results.length > 0 && filteredResults.length > 0
+            ? 'collectionPointsMap.messages.nearbyResults'
+            : 'collectionPointsMap.messages.noNearbyResults',
+          { values: { count: filteredResults.length, radius: radiusKm } },
+        )
+      : message;
 
   const companyPointCount = filteredResults.filter((item) => getScope(item) === 'COMPANY').length;
   const networkPointCount = filteredResults.filter((item) => getScope(item) === 'NETWORK').length;
@@ -388,11 +414,23 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
             <RefreshCw className={cn('h-4 w-4', resultsLoading && 'animate-spin')} />
             {t('collectionPointsMap.actions.refresh')}
           </Button>
+          {searchMode === 'NEARBY' && (
+            <label className="space-y-2 text-sm font-medium text-foreground lg:col-span-3">
+              {t('collectionPointsMap.filters.radius')}
+              <select
+                value={radiusKm}
+                onChange={(event) => setRadiusKm(Number(event.target.value))}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {NEARBY_RADIUS_OPTIONS_KM.map((km) => <option key={km} value={km}>{km} km</option>)}
+              </select>
+            </label>
+          )}
         </CardContent>
       </Card>
 
       {error && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
-      {message && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">{message}</div>}
+      {displayedMessage && <div ref={messageRef} className="scroll-mt-2 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">{displayedMessage}</div>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <MapMetric icon={Building2} value={companyPointCount} label={t('collectionPointsMap.metrics.company')} />

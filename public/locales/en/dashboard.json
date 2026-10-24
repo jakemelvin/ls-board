@@ -916,6 +916,7 @@
       "loadingCities": "Loading cities...",
       "search": "Search for a point, company, or address...",
       "selectCity": "Select a city",
+      "radius": "Radius around me",
       "selectCountry": "Select a country"
     },
     "map": {
@@ -927,9 +928,9 @@
     "messages": {
       "locating": "Retrieving your position...",
       "locationResults": "{{count}} point(s) available in this city.",
-      "nearbyResults": "{{count}} point(s), from closest to farthest.",
+      "nearbyResults": "{{count}} point(s) within {{radius}} km, from closest to farthest.",
       "noLocationResults": "No point available in this city.",
-      "noNearbyResults": "No point found around this position."
+      "noNearbyResults": "No point within {{radius}} km. Widen the radius or search by city."
     },
     "metrics": {
       "company": "Your company",
