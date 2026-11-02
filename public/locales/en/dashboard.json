@@ -150,6 +150,10 @@
       "open": "View profile"
     },
     "messages": {
+      "addressTooLong": "The address must not exceed 255 characters.",
+      "emailInvalid": "Enter a valid email address (100 characters maximum).",
+      "emailRequired": "The email address cannot be empty.",
+      "phoneRequired": "The phone number cannot be empty.",
       "loadFailed": "Unable to load the profile.",
       "loading": "Loading profile...",
       "saved": "Profile updated",

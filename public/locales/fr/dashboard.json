@@ -184,6 +184,10 @@
       "open": "Voir le profil"
     },
     "messages": {
+      "addressTooLong": "L'adresse ne doit pas dépasser 255 caractères.",
+      "emailInvalid": "Saisissez une adresse e-mail valide (100 caractères maximum).",
+      "emailRequired": "L'adresse e-mail ne peut pas être vide.",
+      "phoneRequired": "Le numéro de téléphone ne peut pas être vide.",
       "loadFailed": "Impossible de charger le profil.",
       "loading": "Chargement du profil...",
       "saved": "Profil mis a jour",

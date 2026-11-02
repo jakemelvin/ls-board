@@ -52,6 +52,8 @@ type ProfileForm = {
   lastName: string;
   city: string;
   address: string;
+  email: string;
+  phone: string;
   idCardNumber: string;
   language: string;
 };
@@ -61,6 +63,8 @@ const EMPTY_FORM: ProfileForm = {
   lastName: '',
   city: '',
   address: '',
+  email: '',
+  phone: '',
   idCardNumber: '',
   language: '',
 };
@@ -94,8 +98,15 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
   const [error, setError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // Last values loaded from the API, used to send only the fields that changed.
+  const baselineRef = useRef<ProfileForm>(form);
   const sessionUserRef = useRef(sessionUser);
   const currentUserRef = useRef(currentUser);
+
+  const applyForm = (next: ProfileForm) => {
+    baselineRef.current = next;
+    setForm(next);
+  };
 
   const displayUser = useMemo(
     () => mergeDisplayUser(sessionUser, currentUser),
@@ -131,7 +142,7 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
     let isCurrent = true;
 
     setSelectedPhoto(null);
-    setForm(formFromUser(sessionUserRef.current, currentUserRef.current));
+    applyForm(formFromUser(sessionUserRef.current, currentUserRef.current));
 
     if (!token || !userId) {
       return;
@@ -147,7 +158,7 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
           return;
         }
         setUser(profile);
-        setForm(formFromUser(profile, currentUserRef.current));
+        applyForm(formFromUser(profile, currentUserRef.current));
       } catch (err) {
         if (!isCurrent) {
           return;
@@ -157,7 +168,7 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
             ? err.message
             : t('profile.messages.loadFailed'),
         );
-        setForm(formFromUser(sessionUserRef.current, currentUserRef.current));
+        applyForm(formFromUser(sessionUserRef.current, currentUserRef.current));
       } finally {
         if (isCurrent) {
           setLoading(false);
@@ -196,8 +207,15 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
     setSaving(true);
     setError(null);
 
+    const validationError = validateContactFields(form, baselineRef.current, t);
+    if (validationError) {
+      setError(validationError);
+      setSaving(false);
+      return;
+    }
+
     try {
-      const payload = buildProfilePayload(form);
+      const payload = buildProfilePayload(form, baselineRef.current);
       let updatedUser = await updateMyProfile(token, payload);
 
       if (selectedPhoto) {
@@ -406,8 +424,24 @@ export function DashboardProfileMenu({ currentUser, onLogout }: DashboardProfile
                 disabled={saving}
               />
               <ReadonlyField label={t('profile.fields.username')} value={displayUser.username} />
-              <ReadonlyField label={t('profile.fields.email')} value={displayUser.email} />
-              <ReadonlyField label={t('profile.fields.phone')} value={displayUser.phone} />
+              <ProfileField
+                id="profile-email"
+                label={t('profile.fields.email')}
+                value={form.email}
+                onChange={(value) => updateField('email', value)}
+                disabled={saving}
+                type="email"
+                autoComplete="email"
+              />
+              <ProfileField
+                id="profile-phone"
+                label={t('profile.fields.phone')}
+                value={form.phone}
+                onChange={(value) => updateField('phone', value)}
+                disabled={saving}
+                type="tel"
+                autoComplete="tel"
+              />
               <ProfileField
                 id="profile-city"
                 label={t('profile.fields.city')}
@@ -483,6 +517,8 @@ function ProfileField({
   onChange,
   disabled,
   placeholder,
+  type,
+  autoComplete,
 }: {
   id: string;
   label: string;
@@ -490,6 +526,8 @@ function ProfileField({
   onChange: (value: string) => void;
   disabled: boolean;
   placeholder?: string;
+  type?: string;
+  autoComplete?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -500,6 +538,8 @@ function ProfileField({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         placeholder={placeholder}
+        type={type}
+        autoComplete={autoComplete}
         className="bg-secondary"
       />
     </div>
@@ -523,6 +563,8 @@ function formFromUser(user: AuthUser | UserResponse | undefined, fallback: User)
     lastName: user?.lastName ?? fallback.lastName ?? '',
     city: user?.city ?? '',
     address: user?.address ?? fallback.address ?? '',
+    email: user?.email ?? fallback.email ?? '',
+    phone: user?.phone ?? fallback.phone ?? '',
     idCardNumber: user?.idCardNumber ?? '',
     language:
       typeof user?.language === 'string'
@@ -562,15 +604,42 @@ function getInitials(name: string) {
   return initials || 'U';
 }
 
-function buildProfilePayload(form: ProfileForm): UpdateUserProfileRequest {
+function buildProfilePayload(form: ProfileForm, baseline: ProfileForm): UpdateUserProfileRequest {
+  const email = form.email.trim();
+  const phone = form.phone.trim();
+  const address = form.address.trim();
+
   return {
     firstName: trimToUndefined(form.firstName),
     lastName: trimToUndefined(form.lastName),
     city: trimToUndefined(form.city),
-    address: trimToUndefined(form.address),
+    // An empty string deletes the address; only send it when the user cleared it.
+    address: address || (baseline.address.trim() ? '' : undefined),
+    // Never send an empty email or phone, and leave unchanged values out.
+    email: email && email !== baseline.email.trim() ? email : undefined,
+    phone: phone && phone !== baseline.phone.trim() ? phone : undefined,
     idCardNumber: trimToUndefined(form.idCardNumber),
     language: trimToUndefined(form.language),
   };
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateContactFields(
+  form: ProfileForm,
+  baseline: ProfileForm,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const email = form.email.trim();
+  if (email !== baseline.email.trim()) {
+    if (!email) return t('profile.messages.emailRequired');
+    if (email.length > 100 || !EMAIL_PATTERN.test(email)) return t('profile.messages.emailInvalid');
+  }
+  if (form.phone.trim() !== baseline.phone.trim() && !form.phone.trim()) {
+    return t('profile.messages.phoneRequired');
+  }
+  if (form.address.trim().length > 255) return t('profile.messages.addressTooLong');
+  return null;
 }
 
 function trimToUndefined(value: string) {

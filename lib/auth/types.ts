@@ -149,6 +149,8 @@ export interface UpdateUserProfileRequest {
   lastName?: string;
   city?: string;
   address?: string;
+  phone?: string;
+  email?: string;
   gender?: Gender;
   language?: string;
   idCardNumber?: string;
