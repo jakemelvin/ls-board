@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataPagination } from '@/components/ui/data-pagination';
 import { Input } from '@/components/ui/input';
+import { DateTimeField } from '@/components/ui/time-field';
 import { Label } from '@/components/ui/label';
 import {
   Command,
@@ -1062,11 +1063,10 @@ function ComposerTab({ token }: { token: string }) {
             <Label htmlFor="notification-expires-at">
               {t('notifications.composer.fields.expiresAt')}
             </Label>
-            <Input
+            <DateTimeField
               id="notification-expires-at"
-              type="datetime-local"
               value={form.expiresAt}
-              onChange={(event) => update('expiresAt', event.target.value)}
+              onChange={(next) => update('expiresAt', next)}
             />
           </div>
         </div>

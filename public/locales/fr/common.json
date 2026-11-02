@@ -16,6 +16,10 @@
     },
     "legal": "© {{year}} SENDAMhub. Tous droits réservés."
   },
+  "time": {
+    "hour": "Heure",
+    "minute": "Minute"
+  },
   "actions": {
     "cancel": "Annuler",
     "confirm": "Confirmer",

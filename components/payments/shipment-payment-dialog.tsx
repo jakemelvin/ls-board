@@ -28,6 +28,7 @@ import { MobileMoneyFields } from '@/components/payments/mobile-money-fields';
 import { ProviderBrandIcon } from '@/components/payments/provider-brand-icon';
 import { toast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api-client';
+import { isReviewRequired } from '@/lib/payments/status';
 import { useAuthStore } from '@/lib/auth/store';
 import { useCurrency } from '@/lib/currency';
 import { useTranslation } from '@/lib/i18n';
@@ -255,6 +256,7 @@ export function ShipmentPaymentDialog({
       !provider ||
       attempt.provider === 'STRIPE' ||
       TERMINAL_STATUSES.has(attempt.status) ||
+      isReviewRequired(attempt) ||
       needsStripeClientSecret(attempt)
     ) return;
 
@@ -335,6 +337,9 @@ export function ShipmentPaymentDialog({
 
   async function initiatePayment() {
     if (!token || !provider) return;
+    // An attempt that is still running (or waiting for support review) must not
+    // be duplicated; only an OTP continuation may be resubmitted.
+    if (hasActiveAttempt && !requiresOtp) return;
 
     const isMobileMoney = provider !== 'PAYPAL' && provider !== 'STRIPE';
     if (isMobileMoney) {
@@ -462,7 +467,9 @@ export function ShipmentPaymentDialog({
   const canRetry = attempt ? ['FAILED', 'CANCELLED', 'EXPIRED'].includes(attempt.status) : false;
   const hasActiveAttempt = Boolean(attempt && !TERMINAL_STATUSES.has(attempt.status));
   const stripeClientSecret = attempt?.provider === 'STRIPE' ? attempt.clientSecret : undefined;
+  const reviewRequired = isReviewRequired(attempt);
   const requiresOtp = attempt?.status === 'REQUIRES_ACTION'
+    && !reviewRequired
     && (attempt.providerDetails?.confirmationMode === 'OTP_CODE' || attempt.providerDetails?.otpRequired);
   const providerLink = attempt?.providerDetails?.providerLink ?? attempt?.approvalUrl;
 
@@ -728,7 +735,7 @@ export function ShipmentPaymentDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting || applyingPromo}>
             {isSuccessful ? t('shipmentPayment.close') : t('shipmentPayment.payLater')}
           </Button>
-          {!promoCompleted && (!hasActiveAttempt || canRetry || requiresOtp) ? (
+          {reviewRequired ? null : !promoCompleted && (!hasActiveAttempt || canRetry || requiresOtp) ? (
             <Button type="button" onClick={() => void initiatePayment()} disabled={submitting || !provider || providers.length === 0 || (provider !== 'PAYPAL' && provider !== 'STRIPE' && (!country || (requiresOtp && otpCode.length !== (attempt?.providerDetails?.otpLength ?? 6))))} className="gap-2">
               {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
               {requiresOtp ? t('shipmentPayment.submitOtp') : canRetry ? t('shipmentPayment.retry') : t(isPlatformPayment ? 'shipmentPayment.payFullShipment' : 'shipmentPayment.pay')}
@@ -790,6 +797,21 @@ function PaymentAttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
   const successful = attempt.status === 'SUCCEEDED';
   const failed = ['FAILED', 'CANCELLED', 'EXPIRED'].includes(attempt.status);
 
+  if (isReviewRequired(attempt)) {
+    return (
+      <Alert variant="destructive">
+        <CircleAlert />
+        <AlertTitle>{t('shipmentPayment.reviewRequiredTitle')}</AlertTitle>
+        <AlertDescription>
+          <p>{t('shipmentPayment.reviewRequiredDescription')}</p>
+          <p className="break-all font-mono text-xs">{attempt.reference}</p>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const providerMessage = attempt.providerDetails?.message ?? attempt.providerDetails?.customerInstruction;
+
   return (
     <Alert className={cn(successful && 'border-success/40 bg-success/10', failed && 'border-destructive/30')} variant={failed ? 'destructive' : 'default'}>
       {successful ? <CheckCircle2 /> : failed ? <CircleAlert /> : <LoaderCircle className="animate-spin" />}
@@ -797,11 +819,11 @@ function PaymentAttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
       <AlertDescription>
         <p>{t(successful ? 'shipmentPayment.successDescription' : failed ? 'shipmentPayment.failedDescription' : 'shipmentPayment.pendingDescription')}</p>
         {attempt.providerDetails?.pendingAction && <p>{attempt.providerDetails.pendingAction}</p>}
-        {!successful && !failed && attempt.providerDetails?.message && <p>{attempt.providerDetails.message}</p>}
+        {!successful && !failed && providerMessage && <p>{providerMessage}</p>}
         {attempt.providerAmount !== undefined && attempt.providerCurrency && (
           <p>{t('shipmentPayment.walletDebit', { values: { amount: formatPaymentAmount(attempt.providerAmount, attempt.providerCurrency) } })}</p>
         )}
-        <p className="font-mono text-xs">{attempt.reference}</p>
+        <p className="break-all font-mono text-xs">{attempt.reference}</p>
         {attempt.failureReason && <p>{attempt.failureReason}</p>}
       </AlertDescription>
     </Alert>

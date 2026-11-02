@@ -313,11 +313,23 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
     );
   };
 
-  const refreshResults = () => {
-    if (searchMode === 'NEARBY' && userLocation) void loadNearby(userLocation);
-    if (searchMode === 'LOCATION' && countryId && cityId) {
-      void loadByLocation(Number(countryId), Number(cityId), true);
-    }
+  const resetSearch = () => {
+    beginRequest();
+    setCountryId('');
+    setCityId('');
+    setCities([]);
+    setCitiesLoading(false);
+    setResults([]);
+    setSearchMode(null);
+    setUserLocation(null);
+    setSearchTerm('');
+    setScopeFilter('ALL');
+    setSelectedPointKey(null);
+    setRadiusKm(DEFAULT_NEARBY_RADIUS_KM);
+    setResultsLoading(false);
+    setIsLocating(false);
+    setError(null);
+    setMessage(null);
   };
 
   const getDistance = useCallback(
@@ -410,7 +422,7 @@ export function CollectionPointsMap({ currentUser }: CollectionPointsMapProps) {
               {cities.map((city) => <option key={city.cityId} value={city.cityId}>{city.cityName}</option>)}
             </select>
           </label>
-          <Button variant="outline" onClick={refreshResults} disabled={!searchMode || resultsLoading} className="gap-2">
+          <Button variant="outline" onClick={resetSearch} disabled={isLocating} className="gap-2">
             <RefreshCw className={cn('h-4 w-4', resultsLoading && 'animate-spin')} />
             {t('collectionPointsMap.actions.refresh')}
           </Button>

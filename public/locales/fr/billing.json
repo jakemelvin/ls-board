@@ -139,6 +139,8 @@
     "errorTitle": "Le paiement n’a pas abouti",
     "success": "Le paiement est confirmé. Le dashboard va être actualisé.",
     "failed": "Cette tentative est terminée. Vous pouvez en créer une nouvelle.",
+    "reviewRequiredTitle": "Contactez le support",
+    "reviewRequiredDescription": "Contactez le support. Ne relancez pas le paiement. Communiquez la référence ci-dessous.",
     "pending": "Le fournisseur traite encore la tentative. Ne relancez pas un second paiement.",
     "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Stripe" },
     "statuses": {

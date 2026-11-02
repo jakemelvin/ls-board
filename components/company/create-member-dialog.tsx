@@ -13,9 +13,9 @@ import { useTranslation } from '@/lib/i18n';
 
 /** Roles a company admin is allowed to provision through sub-accounts. */
 export const MEMBER_ROLES: { value: ApiRole; labelKey: string }[] = [
-  { value: 'EMPLOYEE_COMPANY', labelKey: 'roles.employee' },
-  { value: 'COLLECTOR', labelKey: 'roles.collector' },
-  { value: 'TRANSPORTER', labelKey: 'roles.transporter' },
+  { value: 'EMPLOYEE_COMPANY', labelKey: 'memberDialog.roles.employee' },
+  { value: 'COLLECTOR', labelKey: 'memberDialog.roles.collector' },
+  { value: 'TRANSPORTER', labelKey: 'memberDialog.roles.transporter' },
 ];
 
 const COMMISSION_ROLES: ApiRole[] = ['COLLECTOR', 'TRANSPORTER'];
@@ -330,7 +330,7 @@ export function CreateMemberDialog({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>{t('common.cancel')}</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>{t('memberDialog.actions.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting ? (
               <span className="flex items-center gap-2">

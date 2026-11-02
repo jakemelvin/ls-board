@@ -62,7 +62,7 @@
     "applyPromo": "Apply", "continueProvider": "Continue with provider", "payLater": "Pay later", "pay": "Start payment",
     "retry": "New attempt", "check": "Check payment", "confirmCard": "Confirm card payment", "description": "{{plan}} subscription",
     "errorTitle": "Payment was not completed", "success": "Payment is confirmed. The dashboard will refresh.",
-    "failed": "This attempt is final. You can create a new one.", "pending": "The provider is still processing this attempt. Do not start another payment.",
+    "failed": "This attempt is final. You can create a new one.", "reviewRequiredTitle": "Contact support", "reviewRequiredDescription": "Contact support. Do not retry the payment. Share the reference below.", "pending": "The provider is still processing this attempt. Do not start another payment.",
     "providers": { "MTN": "MTN MoMo", "ORANGE": "Orange Money", "PAYPAL": "PayPal", "STRIPE": "Stripe" },
     "statuses": { "CREATED": "Attempt created", "PENDING": "Payment pending", "REQUIRES_ACTION": "Action required", "PROCESSING": "Payment processing", "SUCCEEDED": "Payment confirmed", "FAILED": "Payment failed", "CANCELLED": "Payment cancelled", "EXPIRED": "Payment expired" },
     "errors": {

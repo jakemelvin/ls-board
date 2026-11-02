@@ -102,7 +102,7 @@ async function executeRequest<T>(
     } catch {
       if (text) message = text;
     }
-    if (token && isAuthFailure(response.status)) {
+    if (token && isAuthFailure(response.status, message)) {
       redirectToLoginAfterAuthFailure();
     }
 
@@ -119,8 +119,17 @@ async function executeRequest<T>(
   return JSON.parse(text) as T;
 }
 
-function isAuthFailure(status: number) {
-  return status === 401 || status === 403;
+/**
+ * A 403 with a business message ("you do not have permission") means the session
+ * is valid but the action is not allowed for this role: the user must stay
+ * signed in. Only 401 and other 403 (e.g. an expired token) end the session.
+ */
+const PERMISSION_DENIED_PATTERN = /access denied|permission|forbidden|not allowed|accès refusé|non autoris/i;
+
+function isAuthFailure(status: number, message: string) {
+  if (status === 401) return true;
+  if (status !== 403) return false;
+  return !PERMISSION_DENIED_PATTERN.test(message);
 }
 
 export const apiClient = {

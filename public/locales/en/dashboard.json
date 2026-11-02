@@ -1266,6 +1266,8 @@
     "unavailableDescription": "No online payment provider is currently configured.",
     "errorTitle": "Payment was not completed",
     "successTitle": "Payment confirmed",
+    "reviewRequiredTitle": "Contact support",
+    "reviewRequiredDescription": "Contact support. Do not retry the payment. Share the reference below.",
     "pendingDescription": "Approve the provider request. The status is checked automatically.",
     "successDescription": "The platform fee has been paid. The shipment can proceed to collection.",
     "fullShipmentSuccessTitle": "Shipment payment confirmed",
@@ -1773,7 +1775,12 @@
       "description": "Click the map to place the collection point marker.",
       "notSelected": "No location selected",
       "selected": "Location selected",
-      "title": "Position on the map"
+      "title": "Position on the map",
+      "denied": "Location access was denied. Allow it in the browser or click the map.",
+      "failed": "Unable to get your position. Click the map to place it.",
+      "locating": "Locating...",
+      "unsupported": "Geolocation is not available in this browser.",
+      "useMyPosition": "Use my position"
     },
     "messages": {
       "pointActivated": "Point activated",

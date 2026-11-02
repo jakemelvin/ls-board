@@ -1302,7 +1302,7 @@ function CompanyPricingInner({
               <div className="space-y-2">
                 <Label>{t('form.route')}</Label>
                 <Select value={routeValue} onValueChange={handleRouteChange}>
-                  <SelectTrigger className="bg-secondary">
+                  <SelectTrigger className="data-[size=default]:h-auto min-h-9 bg-secondary text-left whitespace-normal *:data-[slot=select-value]:line-clamp-none">
                     <SelectValue placeholder={t('form.routePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>

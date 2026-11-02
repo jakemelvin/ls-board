@@ -44,6 +44,7 @@
       "create": "Erreur lors de la création"
     },
     "actions": {
+      "cancel": "Annuler",
       "creating": "Création",
       "create": "Créer le membre"
     }

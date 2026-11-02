@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { divIcon, type LatLngExpression } from 'leaflet';
+import { LocateFixed } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/lib/i18n';
 
 type Coordinates = { latitude: number; longitude: number };
@@ -18,6 +20,9 @@ type CollectionPointLocationPickerProps = {
 const DEFAULT_CENTER: LatLngExpression = [4.0511, 9.7679];
 const DEFAULT_ZOOM = 13;
 const SELECTED_ZOOM = 16;
+const GEOLOCATION_HIGH_ACCURACY_TIMEOUT_MS = 8_000;
+const GEOLOCATION_TIMEOUT_MS = 20_000;
+const GEOLOCATION_CACHE_MAX_AGE_MS = 60_000;
 
 type GeocodingResult = { lat: string; lon: string };
 
@@ -143,6 +148,8 @@ export default function CollectionPointLocationPicker({
   const { t } = useTranslation('dashboard');
   const userAdjustedRef = useRef(false);
   const [cityCoordinates, setCityCoordinates] = useState<Coordinates>();
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const coordinates = useMemo(() => parseCoordinates(latitude, longitude), [latitude, longitude]);
 
@@ -182,6 +189,52 @@ export default function CollectionPointLocationPicker({
     return () => abortController.abort();
   }, [cityLocationQuery, coordinates]);
 
+  const handleLocateUser = () => {
+    if (!('geolocation' in navigator)) {
+      setLocationError(t('collectionPointsManagement.locationPicker.unsupported'));
+      return;
+    }
+    setIsLocating(true);
+    setLocationError(null);
+
+    const applyPosition = (position: GeolocationPosition) => {
+      // The position comes from outside the map, so let the viewport follow it.
+      userAdjustedRef.current = false;
+      onChange({
+        latitude: Number(position.coords.latitude.toFixed(6)),
+        longitude: Number(position.coords.longitude.toFixed(6)),
+      });
+      setIsLocating(false);
+    };
+
+    const fail = (error: GeolocationPositionError) => {
+      setIsLocating(false);
+      setLocationError(
+        error.code === error.PERMISSION_DENIED
+          ? t('collectionPointsManagement.locationPicker.denied')
+          : t('collectionPointsManagement.locationPicker.failed'),
+      );
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      applyPosition,
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          fail(error);
+          return;
+        }
+        // High accuracy often times out on desktops without GPS: a coarse
+        // position is still better than none.
+        navigator.geolocation.getCurrentPosition(applyPosition, fail, {
+          enableHighAccuracy: false,
+          maximumAge: GEOLOCATION_CACHE_MAX_AGE_MS,
+          timeout: GEOLOCATION_TIMEOUT_MS,
+        });
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: GEOLOCATION_HIGH_ACCURACY_TIMEOUT_MS },
+    );
+  };
+
   const center: LatLngExpression = coordinates
     ? [coordinates.latitude, coordinates.longitude]
     : DEFAULT_CENTER;
@@ -203,6 +256,25 @@ export default function CollectionPointLocationPicker({
             : t('collectionPointsManagement.locationPicker.notSelected')}
         </p>
       </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full gap-2 sm:w-auto"
+        onClick={handleLocateUser}
+        disabled={isLocating}
+      >
+        <LocateFixed className="h-4 w-4" />
+        {isLocating
+          ? t('collectionPointsManagement.locationPicker.locating')
+          : t('collectionPointsManagement.locationPicker.useMyPosition')}
+      </Button>
+      {locationError && (
+        <p className="text-xs text-destructive" role="alert">
+          {locationError}
+        </p>
+      )}
 
       <div className="h-56 overflow-hidden rounded-xl border border-border bg-secondary sm:h-64">
         <MapContainer

@@ -1,5 +1,6 @@
 'use client';
 
+import { isReviewRequired } from '@/lib/payments/status';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -188,6 +189,7 @@ export function SubscriptionPaymentDialog({
       !provider ||
       attempt.provider === 'STRIPE' ||
       TERMINAL_STATUSES.has(attempt.status) ||
+      isReviewRequired(attempt) ||
       needsStripeClientSecret(attempt)
     ) return;
     const timer = window.setTimeout(() => {
@@ -262,6 +264,7 @@ export function SubscriptionPaymentDialog({
         document.visibilityState === 'visible' &&
         attempt.provider !== 'STRIPE' &&
         !TERMINAL_STATUSES.has(attempt.status) &&
+        !isReviewRequired(attempt) &&
         !needsStripeClientSecret(attempt)
       ) {
         const attemptProvider = provider ?? (
@@ -501,7 +504,7 @@ export function SubscriptionPaymentDialog({
               {canRetry ? t('payment.retry') : t('payment.pay')}
             </Button>
           )}
-          {hasActiveAttempt && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret && (
+          {hasActiveAttempt && !isReviewRequired(attempt) && attempt?.provider !== 'STRIPE' && !attempt?.clientSecret && (
             <Button type="button" onClick={() => void check()} disabled={checking} className="gap-2">
               <RefreshCw className={cn('h-4 w-4', checking && 'animate-spin')} />
               {t('payment.check')}
@@ -517,6 +520,21 @@ function AttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
   const { t } = useTranslation('billing');
   const success = attempt.status === 'SUCCEEDED';
   const failed = FAILED_STATUSES.has(attempt.status);
+  const providerMessage = attempt.providerDetails?.message ?? attempt.providerDetails?.customerInstruction;
+
+  if (isReviewRequired(attempt)) {
+    return (
+      <Alert variant="destructive">
+        <CircleAlert />
+        <AlertTitle>{t('payment.reviewRequiredTitle')}</AlertTitle>
+        <AlertDescription className="space-y-1">
+          <p>{t('payment.reviewRequiredDescription')}</p>
+          <p className="break-all font-mono text-xs">{attempt.reference}</p>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <Alert
       variant={failed ? 'destructive' : 'default'}
@@ -533,7 +551,7 @@ function AttemptState({ attempt }: { attempt: PaymentAttemptResponse }) {
       <AlertDescription className="space-y-1">
         <p>{t(success ? 'payment.success' : failed ? 'payment.failed' : 'payment.pending')}</p>
         {attempt.providerDetails?.pendingAction && <p>{attempt.providerDetails.pendingAction}</p>}
-        {!success && !failed && attempt.providerDetails?.message && <p>{attempt.providerDetails.message}</p>}
+        {!success && !failed && providerMessage && <p>{providerMessage}</p>}
         {attempt.providerAmount !== undefined && attempt.providerCurrency && (
           <p>{t('payment.walletDebit', { values: { amount: formatAmount(attempt.providerAmount, attempt.providerCurrency) } })}</p>
         )}

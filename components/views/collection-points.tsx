@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { TimeField } from '@/components/ui/time-field';
 import {
   Badge,
   CompanyGuard,
@@ -1026,23 +1027,15 @@ function PointDialog({
                       ? t('collectionPointsManagement.status.closed')
                       : t('collectionPointsManagement.status.open')}
                   </Button>
-                  <Input
-                    type="time"
+                  <TimeField
                     disabled={value.openingHours[day].closed}
                     value={value.openingHours[day].openingTime}
-                    onChange={(event) =>
-                      onHourChange(day, { openingTime: event.target.value })
-                    }
-                    className="bg-secondary"
+                    onChange={(next) => onHourChange(day, { openingTime: next })}
                   />
-                  <Input
-                    type="time"
+                  <TimeField
                     disabled={value.openingHours[day].closed}
                     value={value.openingHours[day].closingTime}
-                    onChange={(event) =>
-                      onHourChange(day, { closingTime: event.target.value })
-                    }
-                    className="bg-secondary"
+                    onChange={(next) => onHourChange(day, { closingTime: next })}
                   />
                 </div>
               ))}

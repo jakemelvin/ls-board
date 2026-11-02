@@ -29,6 +29,7 @@ import { SuperAdminCompanyBilling } from '@/components/billing/super-admin-compa
 import { PlatformPaymentTraceability } from '@/components/views/platform-payment-traceability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { DateTimeField } from '@/components/ui/time-field';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -989,12 +990,16 @@ function Field({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <Input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-      />
+      {type === 'datetime-local' ? (
+        <DateTimeField value={value} onChange={onChange} />
+      ) : (
+        <Input
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      )}
     </div>
   );
 }

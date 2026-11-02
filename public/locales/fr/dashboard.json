@@ -1300,6 +1300,8 @@
     "unavailableDescription": "Aucun fournisseur de paiement en ligne n’est actuellement configuré.",
     "errorTitle": "Le paiement n’a pas abouti",
     "successTitle": "Paiement confirmé",
+    "reviewRequiredTitle": "Contactez le support",
+    "reviewRequiredDescription": "Contactez le support. Ne relancez pas le paiement. Communiquez la référence ci-dessous.",
     "pendingDescription": "Validez la demande chez le fournisseur. Le statut est vérifié automatiquement.",
     "successDescription": "Les frais plateforme ont été réglés. Le shipment peut poursuivre sa prise en charge.",
     "fullShipmentSuccessTitle": "Paiement du colis confirmé",
@@ -1807,7 +1809,12 @@
       "description": "Cliquez sur la carte pour placer le repère du point de collecte.",
       "notSelected": "Aucun emplacement sélectionné",
       "selected": "Emplacement sélectionné",
-      "title": "Position sur la carte"
+      "title": "Position sur la carte",
+      "denied": "La localisation a été refusée. Autorisez-la dans le navigateur ou cliquez sur la carte.",
+      "failed": "Impossible de récupérer votre position. Cliquez sur la carte pour la placer.",
+      "locating": "Localisation...",
+      "unsupported": "La géolocalisation n'est pas disponible sur ce navigateur.",
+      "useMyPosition": "Utiliser ma position"
     },
     "messages": {
       "pointActivated": "Point activé",

@@ -23,10 +23,10 @@
       "transporter": "Transporter"
     },
     "options": {
-      "choose": "Choosk�u���f",
+      "choose": "Choose",
       "french": "French",
-      "loading": "Loadinf��y��y�",
-      "select": "Select�w^~)�v",
+      "loading": "Loading...",
+      "select": "Select",
       "unspecified": "Unspecified",
       "male": "Male",
       "female": "Female",
@@ -44,7 +44,8 @@
       "create": "Unable to create the member"
     },
     "actions": {
-      "creating": "Creatinf��y��y�",
+      "cancel": "Cancel",
+      "creating": "Creating...",
       "create": "Create member"
     }
   },

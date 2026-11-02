@@ -9,7 +9,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Trash2,
   Truck,
   UserCheck,
   UserMinus,
@@ -30,7 +29,6 @@ import {
   getCompanyEmployees,
   suspendUser,
   activateUser,
-  deleteUser,
   updateUserPhone,
   changeUserPassword,
   updateUserCommission,
@@ -39,7 +37,6 @@ import type { UserResponse, ApiRole, UserStatus } from '@/lib/admin/types';
 import {
   Badge,
   CompanyGuard,
-  ConfirmDialog,
   SectionHeader,
   StatusState,
   ToastBar,
@@ -222,7 +219,7 @@ function StatCard({ icon: Icon, value, label, tone }: {
 // ─── Action buttons ───────────────────────────────────────────────────────
 
 function MemberActions({
-  user, busy, onPhone, onPassword, onCommission, onToggleStatus, onDelete,
+  user, busy, onPhone, onPassword, onCommission, onToggleStatus,
 }: {
   user: UserResponse;
   busy: boolean;
@@ -230,7 +227,6 @@ function MemberActions({
   onPassword: () => void;
   onCommission: () => void;
   onToggleStatus: () => void;
-  onDelete: () => void;
 }) {
   const { t } = useTranslation('team');
   const isActive = user.status === 'ACTIVE';
@@ -250,9 +246,6 @@ function MemberActions({
         title={isActive ? t('memberActions.suspend') : t('memberActions.activate')}
       >
         {busy ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : isActive ? <UserMinus className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
-      </button>
-      <button className={cn(btn, 'hover:bg-destructive/10 hover:text-destructive')} onClick={onDelete} disabled={busy} title={t('actions.delete')}>
-        <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -277,7 +270,6 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
   const [passwordTarget, setPasswordTarget] = useState<UserResponse | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [commissionTarget, setCommissionTarget] = useState<UserResponse | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -321,21 +313,6 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
       showError(err instanceof ApiError ? err.message : t('errors.action'));
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDialogLoading(true);
-    try {
-      await deleteUser(token, deleteTarget.id);
-      setMembers((prev) => prev.filter((m) => m.id !== deleteTarget.id));
-      success(t('messages.memberDeleted', { values: { name: fullName(deleteTarget) } }));
-      setDeleteTarget(null);
-    } catch (err) {
-      showError(err instanceof ApiError ? err.message : t('errors.delete'));
-    } finally {
-      setDialogLoading(false);
     }
   };
 
@@ -448,18 +425,7 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
         onSave={handleCommission}
         onClose={() => setCommissionTarget(null)}
       />
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title={t('deleteDialog.title')}
-        description={t('deleteDialog.description', {
-          values: { name: deleteTarget ? fullName(deleteTarget) : '' },
-        })}
-        confirmLabel={t('deleteDialog.confirm')}
-        destructive
-        loading={dialogLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+
 
       <SectionHeader
         title={t('title')}
@@ -565,7 +531,6 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
                       onPassword={() => setPasswordTarget(m)}
                       onCommission={() => setCommissionTarget(m)}
                       onToggleStatus={() => handleToggleStatus(m)}
-                      onDelete={() => setDeleteTarget(m)}
                     />
                   </div>
                 </CardContent>
@@ -626,7 +591,6 @@ function TeamManagementInner({ companyId, companyName }: { companyId: number; co
                           onPassword={() => setPasswordTarget(m)}
                           onCommission={() => setCommissionTarget(m)}
                           onToggleStatus={() => handleToggleStatus(m)}
-                          onDelete={() => setDeleteTarget(m)}
                         />
                       </div>
                     </td>
